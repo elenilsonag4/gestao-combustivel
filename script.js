@@ -4,7 +4,10 @@ let indiceEditando = null;
 let indiceExcluindo = null;
 const SENHA = "frot@AG4";
 
-// FORÇA MAIUSCULO NOS CAMPOS
+// 1. FORÇA ORDEM ALFABÉTICA AO CARREGAR
+veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
+
+// 2. FORÇA MAIUSCULO NOS CAMPOS
 document.addEventListener('input', function(e) {
     if(e.target.id === 'placaNova' || e.target.id === 'nomeVeiculo' || e.target.id === 'motorista' || e.target.id === 'editMotorista') {
         e.target.value = e.target.value.toUpperCase();
@@ -14,13 +17,10 @@ document.addEventListener('input', function(e) {
 function atualizarSelects() {
     if(veiculos.length === 0) return;
 
-    // ORDENA ALFABETICAMENTE PELO NOME
-    let veiculosOrdenados = [...veiculos].sort((a, b) => a.nome.localeCompare(b.nome));
-
-    let options = veiculosOrdenados.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
+    let options = veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
     document.getElementById('selectVeiculo').innerHTML = options;
 
-    let checks = veiculosOrdenados.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
+    let checks = veiculos.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
     document.getElementById('listaVeiculosCheck').innerHTML = checks;
     mostrar();
 }
@@ -32,12 +32,15 @@ function mudaTipoRel() {
 
 function cadastrarVeiculo() {
     let placa = document.getElementById('placaNova').value.toUpperCase();
-    let nome = document.getElementById('nomeVeiculo').value.toUpperCase(); // GARANTE MAIUSCULO
-    if(!placa ||!nome) return alert('Preencha placa e nome');
-    if(veiculos.find(v => v.placa === placa)) return alert('Placa já cadastrada');
+    let nome = document.getElementById('nomeVeiculo').value.toUpperCase();
+    if(!placa ||!nome) return alert('PREENCHA PLACA E NOME');
+    if(veiculos.find(v => v.placa === placa)) return alert('PLACA JÁ CADASTRADA');
+
     veiculos.push({placa, nome});
+    veiculos.sort((a, b) => a.nome.localeCompare(b.nome)); // REORDENA
+
     localStorage.setItem('veiculos', JSON.stringify(veiculos));
-    alert('Veículo cadastrado!');
+    alert('VEÍCULO CADASTRADO!');
     document.getElementById('placaNova').value = '';
     document.getElementById('nomeVeiculo').value = '';
     atualizarSelects();
@@ -47,20 +50,20 @@ function salvar() {
     let novo = {
         placa: document.getElementById('selectVeiculo').value,
         data: document.getElementById('data').value,
-        motorista: document.getElementById('motorista').value.toUpperCase(), // GARANTE MAIUSCULO
+        motorista: document.getElementById('motorista').value.toUpperCase(),
         litros: parseFloat(document.getElementById('litros').value),
         valor: parseFloat(document.getElementById('valor').value),
         km: parseInt(document.getElementById('km').value)
     };
-    if(!novo.placa ||!novo.data ||!novo.litros) return alert('Preencha os campos obrigatórios');
+    if(!novo.placa ||!novo.data ||!novo.litros) return alert('PREENCHA OS CAMPOS OBRIGATÓRIOS');
 
     if(indiceEditando!== null) {
         abastecimentos[indiceEditando] = novo;
         indiceEditando = null;
-        alert('Abastecimento Editado!');
+        alert('ABASTECIMENTO EDITADO!');
     } else {
         abastecimentos.push(novo);
-        alert('Abastecimento Salvo!');
+        alert('ABASTECIMENTO SALVO!');
     }
 
     localStorage.setItem('abastecimentos', JSON.stringify(abastecimentos));
@@ -86,7 +89,7 @@ function mostrar() {
 function pedirSenha(indice, acao) {
     if(acao === 'editar') indiceEditando = indice;
     if(acao === 'excluir') indiceExcluindo = indice;
-    document.getElementById('tituloModal').innerText = "Digite a senha para continuar";
+    document.getElementById('tituloModal').innerText = "DIGITE A SENHA PARA CONTINUAR";
     document.getElementById('corpoModal').innerHTML = `
         <input type="password" id="senhaInput" placeholder="Senha">
         <button onclick="validarSenha('${acao}')">Confirmar</button>
@@ -99,26 +102,26 @@ function validarSenha(acao) {
         if(acao === 'editar') abrirFormularioEdicao();
         if(acao === 'excluir') excluirItem();
     } else {
-        alert('Senha incorreta!');
+        alert('SENHA INCORRETA!');
     }
 }
 
 function abrirFormularioEdicao() {
     let a = abastecimentos[indiceEditando];
-    document.getElementById('tituloModal').innerText = "Editar Abastecimento";
+    document.getElementById('tituloModal').innerText = "EDITAR ABASTECIMENTO";
     document.getElementById('corpoModal').innerHTML = `
         <input type="date" id="editData" value="${a.data}">
-        <input type="text" id="editMotorista" value="${a.motorista || ''}" placeholder="Motorista">
-        <input type="number" id="editLitros" value="${a.litros}" step="0.01" placeholder="Litros">
-        <input type="number" id="editValor" value="${a.valor}" step="0.01" placeholder="Valor">
+        <input type="text" id="editMotorista" value="${a.motorista || ''}" placeholder="MOTORISTA">
+        <input type="number" id="editLitros" value="${a.litros}" step="0.01" placeholder="LITROS">
+        <input type="number" id="editValor" value="${a.valor}" step="0.01" placeholder="VALOR">
         <input type="number" id="editKm" value="${a.km}" placeholder="KM">
-        <button onclick="salvarEdicao()">Salvar Alterações</button>
+        <button onclick="salvarEdicao()">SALVAR ALTERAÇÕES</button>
     `;
 }
 
 function salvarEdicao() {
     document.getElementById('data').value = document.getElementById('editData').value;
-    document.getElementById('motorista').value = document.getElementById('editMotorista').value.toUpperCase(); // GARANTE MAIUSCULO
+    document.getElementById('motorista').value = document.getElementById('editMotorista').value.toUpperCase();
     document.getElementById('litros').value = document.getElementById('editLitros').value;
     document.getElementById('valor').value = document.getElementById('editValor').value;
     document.getElementById('km').value = document.getElementById('editKm').value;
@@ -127,10 +130,10 @@ function salvarEdicao() {
 }
 
 function excluirItem() {
-    if(confirm("Tem certeza que deseja excluir este lançamento?")) {
+    if(confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTE LANÇAMENTO?")) {
         abastecimentos.splice(indiceExcluindo, 1);
         localStorage.setItem('abastecimentos', JSON.stringify(abastecimentos));
-        alert("Lançamento excluído!");
+        alert("LANÇAMENTO EXCLUÍDO!");
         fecharModal();
         mostrar();
     } else {
@@ -149,12 +152,12 @@ function gerarPDF() {
     let placasParaRelatorio = [];
     if(tipo === 'geral') placasParaRelatorio = veiculos.map(v => v.placa);
     else placasParaRelatorio = [...document.querySelectorAll('#listaVeiculosCheck input:checked')].map(cb => cb.value);
-    if(placasParaRelatorio.length === 0) return alert('Selecione pelo menos 1 veículo');
+    if(placasParaRelatorio.length === 0) return alert('SELECIONE PELO MENOS 1 VEÍCULO');
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text("RELATORIO DE GESTAO DE COMBUSTIVEL", 15, 15); // TITULO MAIUSCULO
+    doc.text("RELATORIO DE GESTAO DE COMBUSTIVEL", 15, 15);
     let y = 25;
     placasParaRelatorio.forEach(placa => {
         const veiculo = veiculos.find(v => v.placa === placa);
@@ -172,7 +175,7 @@ function gerarPDF() {
         });
         doc.autoTable({
             startY: y + 2,
-            head: [['DATA', 'MOTORISTA', 'KM', 'KM RODADO', 'LITROS', 'VALOR', 'KM/L']], // HEADER MAIUSCULO
+            head: [['DATA', 'MOTORISTA', 'KM', 'KM RODADO', 'LITROS', 'VALOR', 'KM/L']],
             body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [37, 99, 235] },
