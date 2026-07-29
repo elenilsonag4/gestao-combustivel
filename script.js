@@ -1,6 +1,7 @@
 let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
 let abastecimentos = JSON.parse(localStorage.getItem('abastecimentos')) || [];
-let indiceEditando = null; // Guarda qual item estamos editando
+let indiceEditando = null;
+let indiceExcluindo = null; // NOVO
 const SENHA = "frot@AG4";
 
 function atualizarSelects() {
@@ -41,11 +42,11 @@ function salvar() {
     };
     if(!novo.placa ||!novo.data ||!novo.litros) return alert('Preencha os campos obrigatórios');
 
-    if(indiceEditando!== null) { // Se estiver editando
+    if(indiceEditando!== null) {
         abastecimentos[indiceEditando] = novo;
         indiceEditando = null;
         alert('Abastecimento Editado!');
-    } else { // Se for novo
+    } else {
         abastecimentos.push(novo);
         alert('Abastecimento Salvo!');
     }
@@ -59,28 +60,34 @@ function salvar() {
 function mostrar() {
     let ultimos = abastecimentos.slice(-5).reverse();
     document.getElementById('lista').innerHTML = ultimos.map((a, i) => {
-        let indiceReal = abastecimentos.length - 1 - i; // Pega o índice correto no array original
+        let indiceReal = abastecimentos.length - 1 - i;
         return `<div class="item-lista">
             <p><b>${a.data}</b> - ${a.placa} - ${a.motorista || 'Sem motorista'} - ${a.litros}L - R$${a.valor.toFixed(2)}</p>
-            <button class="btn-editar" onclick="pedirSenha(${indiceReal})">Editar</button>
+            <div class="botoes-lista">
+                <button class="btn-editar" onclick="pedirSenha(${indiceReal}, 'editar')">Editar</button>
+                <button class="btn-excluir" onclick="pedirSenha(${indiceReal}, 'excluir')">Excluir</button> <!-- BOTÃO NOVO -->
+            </div>
         </div>`
     }).join('');
 }
 
 // FUNÇÕES DO MODAL
-function pedirSenha(indice) {
-    indiceEditando = indice;
-    document.getElementById('tituloModal').innerText = "Digite a senha para editar";
+function pedirSenha(indice, acao) {
+    if(acao === 'editar') indiceEditando = indice;
+    if(acao === 'excluir') indiceExcluindo = indice;
+
+    document.getElementById('tituloModal').innerText = "Digite a senha para continuar";
     document.getElementById('corpoModal').innerHTML = `
         <input type="password" id="senhaInput" placeholder="Senha">
-        <button onclick="validarSenha()">Confirmar</button>
+        <button onclick="validarSenha('${acao}')">Confirmar</button>
     `;
     document.getElementById('modalEdicao').style.display = "block";
 }
 
-function validarSenha() {
+function validarSenha(acao) {
     if(document.getElementById('senhaInput').value === SENHA) {
-        abrirFormularioEdicao();
+        if(acao === 'editar') abrirFormularioEdicao();
+        if(acao === 'excluir') excluirItem();
     } else {
         alert('Senha incorreta!');
     }
@@ -106,15 +113,28 @@ function salvarEdicao() {
     document.getElementById('valor').value = document.getElementById('editValor').value;
     document.getElementById('km').value = document.getElementById('editKm').value;
     document.getElementById('selectVeiculo').value = abastecimentos[indiceEditando].placa;
-    salvar(); // Reusa a função salvar
+    salvar();
+}
+
+function excluirItem() { // FUNÇÃO NOVA
+    if(confirm("Tem certeza que deseja excluir este lançamento?")) {
+        abastecimentos.splice(indiceExcluindo, 1);
+        localStorage.setItem('abastecimentos', JSON.stringify(abastecimentos));
+        alert("Lançamento excluído!");
+        fecharModal();
+        mostrar();
+    } else {
+        fecharModal();
+    }
 }
 
 function fecharModal() {
     document.getElementById('modalEdicao').style.display = "none";
     indiceEditando = null;
+    indiceExcluindo = null;
 }
 
-function gerarPDF() { /*...mesma função de antes... */
+function gerarPDF() {
     const tipo = document.querySelector('input[name="tipoRel"]:checked').value;
     let placasParaRelatorio = [];
     if(tipo === 'geral') placasParaRelatorio = veiculos.map(v => v.placa);
@@ -135,12 +155,19 @@ function gerarPDF() { /*...mesma função de antes... */
         y += 5;
         let kmAnterior = 0;
         const tableData = dadosFiltrados.map((d, i) => {
-            let kmRodado = i > 0? d.km - kmAnterior : 0;
+            let kmRodado = i > 0? d.km - kmAnterior : 0; // CALCULO KM PERCORRIDO
             let kml = kmRodado > 0 && d.litros > 0? (kmRodado / d.litros).toFixed(2) : '-';
             kmAnterior = d.km;
-            return [d.data, d.motorista || '-', d.km, d.litros, `R$ ${d.valor.toFixed(2)}`, kml];
+            return [d.data, d.motorista || '-', d.km, kmRodado, d.litros, `R$ ${d.valor.toFixed(2)}`, kml]; // COLUNA NOVA
         });
-        doc.autoTable({ startY: y + 2, head: [['Data', 'Motorista', 'KM', 'Litros', 'Valor', 'KM/L']], body: tableData, theme: 'grid', headStyles: { fillColor: [37, 99, 235] } });
+        doc.autoTable({
+            startY: y + 2,
+            head: [['Data', 'Motorista', 'KM', 'KM Rodado', 'Litros', 'Valor', 'KM/L']], // HEADER NOVO
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [37, 99, 235] },
+            styles: { fontSize: 8 } // Diminui fonte pra caber
+        });
         y = doc.lastAutoTable.finalY + 15;
     });
     window.open(doc.output('bloburl'), '_blank');
