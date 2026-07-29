@@ -96,3 +96,10 @@ button:hover {
 .botoes-lista { display: flex; gap: 8px; }
 .btn-excluir { width: auto; padding: 8px 12px; background: #ef4444; font-size: 14px; }
 .btn-excluir:hover { background: #dc2626; }
+
+#placaNova, #nomeVeiculo, #motorista, #editMotorista {
+    text-transform: uppercase;
+}
+.botoes-lista { display: flex; gap: 8px; }
+.btn-excluir { width: auto; padding: 8px 12px; background: #ef4444; font-size: 14px; }
+.btn-excluir:hover { background: #dc2626; }

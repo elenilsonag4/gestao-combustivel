@@ -4,20 +4,18 @@ let indiceEditando = null;
 let indiceExcluindo = null;
 const SENHA = "frot@AG4";
 
-// 1. FORÇA ORDEM ALFABÉTICA AO CARREGAR
-veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
-
-// 2. FORÇA MAIUSCULO NOS CAMPOS
-document.addEventListener('input', function(e) {
-    if(e.target.id === 'placaNova' || e.target.id === 'nomeVeiculo' || e.target.id === 'motorista' || e.target.id === 'editMotorista') {
-        e.target.value = e.target.value.toUpperCase();
-    }
+// FORÇA MAIUSCULO AO DIGITAR
+['placaNova','nomeVeiculo','motorista'].forEach(id => {
+    let el = document.getElementById(id);
+    if(el) el.addEventListener('keyup', () => el.value = el.value.toUpperCase());
 });
 
 function atualizarSelects() {
-    if(veiculos.length === 0) return;
+    // SEMPRE ORDENA ANTES DE MOSTRAR
+    veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
 
-    let options = veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
+    let options = '<option value="">SELECIONE O VEICULO</option>';
+    options += veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
     document.getElementById('selectVeiculo').innerHTML = options;
 
     let checks = veiculos.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
@@ -31,15 +29,15 @@ function mudaTipoRel() {
 }
 
 function cadastrarVeiculo() {
-    let placa = document.getElementById('placaNova').value.toUpperCase();
-    let nome = document.getElementById('nomeVeiculo').value.toUpperCase();
+    let placa = document.getElementById('placaNova').value.toUpperCase().trim();
+    let nome = document.getElementById('nomeVeiculo').value.toUpperCase().trim();
     if(!placa ||!nome) return alert('PREENCHA PLACA E NOME');
     if(veiculos.find(v => v.placa === placa)) return alert('PLACA JÁ CADASTRADA');
 
     veiculos.push({placa, nome});
-    veiculos.sort((a, b) => a.nome.localeCompare(b.nome)); // REORDENA
-
+    veiculos.sort((a, b) => a.nome.localeCompare(b.nome)); // ORDENA E SALVA
     localStorage.setItem('veiculos', JSON.stringify(veiculos));
+
     alert('VEÍCULO CADASTRADO!');
     document.getElementById('placaNova').value = '';
     document.getElementById('nomeVeiculo').value = '';
@@ -50,7 +48,7 @@ function salvar() {
     let novo = {
         placa: document.getElementById('selectVeiculo').value,
         data: document.getElementById('data').value,
-        motorista: document.getElementById('motorista').value.toUpperCase(),
+        motorista: document.getElementById('motorista').value.toUpperCase().trim(),
         litros: parseFloat(document.getElementById('litros').value),
         valor: parseFloat(document.getElementById('valor').value),
         km: parseInt(document.getElementById('km').value)
@@ -95,6 +93,11 @@ function pedirSenha(indice, acao) {
         <button onclick="validarSenha('${acao}')">Confirmar</button>
     `;
     document.getElementById('modalEdicao').style.display = "block";
+    // FORÇA MAIUSCULO NO EDITAR TAMBEM
+    setTimeout(() => {
+        let el = document.getElementById('editMotorista');
+        if(el) el.addEventListener('keyup', () => el.value = el.value.toUpperCase());
+    }, 100);
 }
 
 function validarSenha(acao) {
@@ -121,7 +124,7 @@ function abrirFormularioEdicao() {
 
 function salvarEdicao() {
     document.getElementById('data').value = document.getElementById('editData').value;
-    document.getElementById('motorista').value = document.getElementById('editMotorista').value.toUpperCase();
+    document.getElementById('motorista').value = document.getElementById('editMotorista').value.toUpperCase().trim();
     document.getElementById('litros').value = document.getElementById('editLitros').value;
     document.getElementById('valor').value = document.getElementById('editValor').value;
     document.getElementById('km').value = document.getElementById('editKm').value;
@@ -186,5 +189,7 @@ function gerarPDF() {
     window.open(doc.output('bloburl'), '_blank');
 }
 
-mudaTipoRel();
-atualizarSelects();
+document.addEventListener('DOMContentLoaded', () => {
+    atualizarSelects();
+    mudaTipoRel();
+});
