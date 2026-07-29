@@ -1,14 +1,26 @@
 let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
 let abastecimentos = JSON.parse(localStorage.getItem('abastecimentos')) || [];
 let indiceEditando = null;
-let indiceExcluindo = null; // NOVO
+let indiceExcluindo = null;
 const SENHA = "frot@AG4";
+
+// FORÇA MAIUSCULO NOS CAMPOS
+document.addEventListener('input', function(e) {
+    if(e.target.id === 'placaNova' || e.target.id === 'nomeVeiculo' || e.target.id === 'motorista' || e.target.id === 'editMotorista') {
+        e.target.value = e.target.value.toUpperCase();
+    }
+});
 
 function atualizarSelects() {
     if(veiculos.length === 0) return;
-    let options = veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
+
+    // ORDENA ALFABETICAMENTE PELO NOME
+    let veiculosOrdenados = [...veiculos].sort((a, b) => a.nome.localeCompare(b.nome));
+
+    let options = veiculosOrdenados.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
     document.getElementById('selectVeiculo').innerHTML = options;
-    let checks = veiculos.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
+
+    let checks = veiculosOrdenados.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
     document.getElementById('listaVeiculosCheck').innerHTML = checks;
     mostrar();
 }
@@ -20,7 +32,7 @@ function mudaTipoRel() {
 
 function cadastrarVeiculo() {
     let placa = document.getElementById('placaNova').value.toUpperCase();
-    let nome = document.getElementById('nomeVeiculo').value;
+    let nome = document.getElementById('nomeVeiculo').value.toUpperCase(); // GARANTE MAIUSCULO
     if(!placa ||!nome) return alert('Preencha placa e nome');
     if(veiculos.find(v => v.placa === placa)) return alert('Placa já cadastrada');
     veiculos.push({placa, nome});
@@ -35,7 +47,7 @@ function salvar() {
     let novo = {
         placa: document.getElementById('selectVeiculo').value,
         data: document.getElementById('data').value,
-        motorista: document.getElementById('motorista').value,
+        motorista: document.getElementById('motorista').value.toUpperCase(), // GARANTE MAIUSCULO
         litros: parseFloat(document.getElementById('litros').value),
         valor: parseFloat(document.getElementById('valor').value),
         km: parseInt(document.getElementById('km').value)
@@ -62,20 +74,18 @@ function mostrar() {
     document.getElementById('lista').innerHTML = ultimos.map((a, i) => {
         let indiceReal = abastecimentos.length - 1 - i;
         return `<div class="item-lista">
-            <p><b>${a.data}</b> - ${a.placa} - ${a.motorista || 'Sem motorista'} - ${a.litros}L - R$${a.valor.toFixed(2)}</p>
+            <p><b>${a.data}</b> - ${a.placa} - ${a.motorista || 'SEM MOTORISTA'} - ${a.litros}L - R$${a.valor.toFixed(2)}</p>
             <div class="botoes-lista">
                 <button class="btn-editar" onclick="pedirSenha(${indiceReal}, 'editar')">Editar</button>
-                <button class="btn-excluir" onclick="pedirSenha(${indiceReal}, 'excluir')">Excluir</button> <!-- BOTÃO NOVO -->
+                <button class="btn-excluir" onclick="pedirSenha(${indiceReal}, 'excluir')">Excluir</button>
             </div>
         </div>`
     }).join('');
 }
 
-// FUNÇÕES DO MODAL
 function pedirSenha(indice, acao) {
     if(acao === 'editar') indiceEditando = indice;
     if(acao === 'excluir') indiceExcluindo = indice;
-
     document.getElementById('tituloModal').innerText = "Digite a senha para continuar";
     document.getElementById('corpoModal').innerHTML = `
         <input type="password" id="senhaInput" placeholder="Senha">
@@ -108,7 +118,7 @@ function abrirFormularioEdicao() {
 
 function salvarEdicao() {
     document.getElementById('data').value = document.getElementById('editData').value;
-    document.getElementById('motorista').value = document.getElementById('editMotorista').value;
+    document.getElementById('motorista').value = document.getElementById('editMotorista').value.toUpperCase(); // GARANTE MAIUSCULO
     document.getElementById('litros').value = document.getElementById('editLitros').value;
     document.getElementById('valor').value = document.getElementById('editValor').value;
     document.getElementById('km').value = document.getElementById('editKm').value;
@@ -116,7 +126,7 @@ function salvarEdicao() {
     salvar();
 }
 
-function excluirItem() { // FUNÇÃO NOVA
+function excluirItem() {
     if(confirm("Tem certeza que deseja excluir este lançamento?")) {
         abastecimentos.splice(indiceExcluindo, 1);
         localStorage.setItem('abastecimentos', JSON.stringify(abastecimentos));
@@ -144,7 +154,7 @@ function gerarPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text("Relatório de Gestão de Combustível", 15, 15);
+    doc.text("RELATORIO DE GESTAO DE COMBUSTIVEL", 15, 15); // TITULO MAIUSCULO
     let y = 25;
     placasParaRelatorio.forEach(placa => {
         const veiculo = veiculos.find(v => v.placa === placa);
@@ -155,18 +165,18 @@ function gerarPDF() {
         y += 5;
         let kmAnterior = 0;
         const tableData = dadosFiltrados.map((d, i) => {
-            let kmRodado = i > 0? d.km - kmAnterior : 0; // CALCULO KM PERCORRIDO
+            let kmRodado = i > 0? d.km - kmAnterior : 0;
             let kml = kmRodado > 0 && d.litros > 0? (kmRodado / d.litros).toFixed(2) : '-';
             kmAnterior = d.km;
-            return [d.data, d.motorista || '-', d.km, kmRodado, d.litros, `R$ ${d.valor.toFixed(2)}`, kml]; // COLUNA NOVA
+            return [d.data, d.motorista || '-', d.km, kmRodado, d.litros, `R$ ${d.valor.toFixed(2)}`, kml];
         });
         doc.autoTable({
             startY: y + 2,
-            head: [['Data', 'Motorista', 'KM', 'KM Rodado', 'Litros', 'Valor', 'KM/L']], // HEADER NOVO
+            head: [['DATA', 'MOTORISTA', 'KM', 'KM RODADO', 'LITROS', 'VALOR', 'KM/L']], // HEADER MAIUSCULO
             body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [37, 99, 235] },
-            styles: { fontSize: 8 } // Diminui fonte pra caber
+            styles: { fontSize: 8 }
         });
         y = doc.lastAutoTable.finalY + 15;
     });
