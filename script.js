@@ -1,31 +1,44 @@
+const API_URL = "https://script.google.com/macros/s/AKfycbxypsRJ-7XIcTwdPb35ZP86luY1NAgvk2Pc8W09oQed65qeV-S4STX1pGWQ_G3nuIRY6Q/exec"; // <-- COLE O LINK DA IMPLANTAÇÃO AQUI
 let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
-let abastecimentos = JSON.parse(localStorage.getItem('abastecimentos')) || [];
-let indiceEditando = null;
-let indiceExcluindo = null;
+let abastecimentos = [];
 const SENHA = "frot@AG4";
 
-// FORÇA MAIUSCULO AO DIGITAR
+// FORÇA MAIUSCULO
 ['placaNova','nomeVeiculo','motorista'].forEach(id => {
     let el = document.getElementById(id);
     if(el) el.addEventListener('keyup', () => el.value = el.value.toUpperCase());
 });
 
-function atualizarSelects() {
-    // SEMPRE ORDENA ANTES DE MOSTRAR
-    veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
+// CARREGAR DADOS DA NUVEM QUANDO ABRIR
+document.addEventListener('DOMContentLoaded', () => {
+    carregarDados();
+    mudaTipoRel();
+});
 
+async function carregarDados() {
+    try {
+        let res = await fetch(API_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({action: "getAll"}),
+            headers: {'Content-Type': 'text/plain'}
+        });
+        abastecimentos = await res.json();
+        abastecimentos = abastecimentos.filter(a => a.DATA);
+    } catch(e) {
+        alert("ERRO AO CARREGAR DA NUVEM. VERIFIQUE O LINK DA API.");
+        abastecimentos = [];
+    }
+    atualizarSelects();
+}
+
+function atualizarSelects() {
+    veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
     let options = '<option value="">SELECIONE O VEICULO</option>';
     options += veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
     document.getElementById('selectVeiculo').innerHTML = options;
-
     let checks = veiculos.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
     document.getElementById('listaVeiculosCheck').innerHTML = checks;
     mostrar();
-}
-
-function mudaTipoRel() {
-    let tipo = document.querySelector('input[name="tipoRel"]:checked').value;
-    document.getElementById('listaVeiculosCheck').style.display = tipo === 'personalizado'? 'block' : 'none';
 }
 
 function cadastrarVeiculo() {
@@ -33,163 +46,132 @@ function cadastrarVeiculo() {
     let nome = document.getElementById('nomeVeiculo').value.toUpperCase().trim();
     if(!placa ||!nome) return alert('PREENCHA PLACA E NOME');
     if(veiculos.find(v => v.placa === placa)) return alert('PLACA JÁ CADASTRADA');
-
     veiculos.push({placa, nome});
-    veiculos.sort((a, b) => a.nome.localeCompare(b.nome)); // ORDENA E SALVA
+    veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
     localStorage.setItem('veiculos', JSON.stringify(veiculos));
-
     alert('VEÍCULO CADASTRADO!');
     document.getElementById('placaNova').value = '';
     document.getElementById('nomeVeiculo').value = '';
     atualizarSelects();
 }
 
-function salvar() {
+function abrirModal() { document.getElementById('modal').style.display = 'flex'; }
+function fecharModal() { document.getElementById('modal').style.display = 'none'; }
+
+async function salvar() {
+    let veiculoSelecionado = veiculos.find(v => v.placa === document.getElementById('selectVeiculo').value);
+    if(!veiculoSelecionado) return alert('SELECIONE UM VEICULO');
+    
     let novo = {
-        placa: document.getElementById('selectVeiculo').value,
+        action: "add",
+        placa: veiculoSelecionado.placa,
         data: document.getElementById('data').value,
+        nome: veiculoSelecionado.nome,
         motorista: document.getElementById('motorista').value.toUpperCase().trim(),
         litros: parseFloat(document.getElementById('litros').value),
         valor: parseFloat(document.getElementById('valor').value),
         km: parseInt(document.getElementById('km').value)
     };
-    if(!novo.placa ||!novo.data ||!novo.litros) return alert('PREENCHA OS CAMPOS OBRIGATÓRIOS');
+    if(!novo.data ||!novo.litros) return alert('PREENCHA DATA E LITROS');
 
-    if(indiceEditando!== null) {
-        abastecimentos[indiceEditando] = novo;
-        indiceEditando = null;
-        alert('ABASTECIMENTO EDITADO!');
-    } else {
-        abastecimentos.push(novo);
-        alert('ABASTECIMENTO SALVO!');
-    }
-
-    localStorage.setItem('abastecimentos', JSON.stringify(abastecimentos));
+    await fetch(API_URL, { 
+        method: 'POST', 
+        body: JSON.stringify(novo),
+        headers: {'Content-Type': 'text/plain'}
+    });
+    alert('ABASTECIMENTO SALVO NA NUVEM!');
     document.getElementById('motorista').value = '';
+    document.getElementById('litros').value = '';
+    document.getElementById('valor').value = '';
+    document.getElementById('km').value = '';
     fecharModal();
-    mostrar();
+    carregarDados();
 }
 
 function mostrar() {
-    let ultimos = abastecimentos.slice(-5).reverse();
-    document.getElementById('lista').innerHTML = ultimos.map((a, i) => {
-        let indiceReal = abastecimentos.length - 1 - i;
-        return `<div class="item-lista">
-            <p><b>${a.data}</b> - ${a.placa} - ${a.motorista || 'SEM MOTORISTA'} - ${a.litros}L - R$${a.valor.toFixed(2)}</p>
-            <div class="botoes-lista">
-                <button class="btn-editar" onclick="pedirSenha(${indiceReal}, 'editar')">Editar</button>
-                <button class="btn-excluir" onclick="pedirSenha(${indiceReal}, 'excluir')">Excluir</button>
-            </div>
-        </div>`
-    }).join('');
-}
-
-function pedirSenha(indice, acao) {
-    if(acao === 'editar') indiceEditando = indice;
-    if(acao === 'excluir') indiceExcluindo = indice;
-    document.getElementById('tituloModal').innerText = "DIGITE A SENHA PARA CONTINUAR";
-    document.getElementById('corpoModal').innerHTML = `
-        <input type="password" id="senhaInput" placeholder="Senha">
-        <button onclick="validarSenha('${acao}')">Confirmar</button>
-    `;
-    document.getElementById('modalEdicao').style.display = "block";
-    // FORÇA MAIUSCULO NO EDITAR TAMBEM
-    setTimeout(() => {
-        let el = document.getElementById('editMotorista');
-        if(el) el.addEventListener('keyup', () => el.value = el.value.toUpperCase());
-    }, 100);
-}
-
-function validarSenha(acao) {
-    if(document.getElementById('senhaInput').value === SENHA) {
-        if(acao === 'editar') abrirFormularioEdicao();
-        if(acao === 'excluir') excluirItem();
-    } else {
-        alert('SENHA INCORRETA!');
+    let tipo = document.getElementById('tipoRel').value;
+    let filtro = document.getElementById('filtroVeiculo').value;
+    let dataI = document.getElementById('dataInicial').value;
+    let dataF = document.getElementById('dataFinal').value;
+    
+    let dados = [...abastecimentos];
+    if(filtro) dados = dados.filter(d => d.PLACA === filtro);
+    if(dataI) dados = dados.filter(d => d.DATA >= dataI);
+    if(dataF) dados = dados.filter(d => d.DATA <= dataF);
+    
+    dados.sort((a,b) => new Date(b.DATA) - new Date(a.DATA));
+    
+    let html = '';
+    if(tipo === 'lista') {
+        html = `<table><tr><th>DATA</th><th>VEICULO</th><th>PLACA</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>AÇÃO</th></tr>`;
+        html += dados.map((d, i) => {
+            let indexOriginal = abastecimentos.indexOf(d);
+            return `<tr>
+                <td>${d.DATA.split('-').reverse().join('/')}</td>
+                <td>${d.NOME_VEICULO}</td>
+                <td>${d.PLACA}</td>
+                <td>${d.MOTORISTA}</td>
+                <td>${d.LITROS}</td>
+                <td>R$ ${parseFloat(d.VALOR).toFixed(2)}</td>
+                <td>${d.KM}</td>
+                <td><button onclick="pedirSenha(${indexOriginal})" style="padding:5px 10px; background:#c0392b">EXCLUIR</button></td>
+            </tr>`
+        }).join('');
+        html += '</table>';
     }
-}
-
-function abrirFormularioEdicao() {
-    let a = abastecimentos[indiceEditando];
-    document.getElementById('tituloModal').innerText = "EDITAR ABASTECIMENTO";
-    document.getElementById('corpoModal').innerHTML = `
-        <input type="date" id="editData" value="${a.data}">
-        <input type="text" id="editMotorista" value="${a.motorista || ''}" placeholder="MOTORISTA">
-        <input type="number" id="editLitros" value="${a.litros}" step="0.01" placeholder="LITROS">
-        <input type="number" id="editValor" value="${a.valor}" step="0.01" placeholder="VALOR">
-        <input type="number" id="editKm" value="${a.km}" placeholder="KM">
-        <button onclick="salvarEdicao()">SALVAR ALTERAÇÕES</button>
-    `;
-}
-
-function salvarEdicao() {
-    document.getElementById('data').value = document.getElementById('editData').value;
-    document.getElementById('motorista').value = document.getElementById('editMotorista').value.toUpperCase().trim();
-    document.getElementById('litros').value = document.getElementById('editLitros').value;
-    document.getElementById('valor').value = document.getElementById('editValor').value;
-    document.getElementById('km').value = document.getElementById('editKm').value;
-    document.getElementById('selectVeiculo').value = abastecimentos[indiceEditando].placa;
-    salvar();
-}
-
-function excluirItem() {
-    if(confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTE LANÇAMENTO?")) {
-        abastecimentos.splice(indiceExcluindo, 1);
-        localStorage.setItem('abastecimentos', JSON.stringify(abastecimentos));
-        alert("LANÇAMENTO EXCLUÍDO!");
-        fecharModal();
-        mostrar();
-    } else {
-        fecharModal();
+    if(tipo === 'consumo') {
+        let resumo = {};
+        dados.forEach(d => {
+            if(!resumo[d.PLACA]) resumo[d.PLACA] = {nome: d.NOME_VEICULO, litros: 0, valor: 0, kmInicial: 999999, kmFinal: 0};
+            resumo[d.PLACA].litros += parseFloat(d.LITROS);
+            resumo[d.PLACA].valor += parseFloat(d.VALOR);
+            if(d.KM < resumo[d.PLACA].kmInicial) resumo[d.PLACA].kmInicial = d.KM;
+            if(d.KM > resumo[d.PLACA].kmFinal) resumo[d.PLACA].kmFinal = d.KM;
+        });
+        html = `<table><tr><th>VEICULO</th><th>KM RODADOS</th><th>TOTAL LITROS</th><th>TOTAL R$</th><th>KM/L</th><th>R$/KM</th></tr>`;
+        for(let placa in resumo) {
+            let r = resumo[placa];
+            let kmRodados = r.kmFinal - r.kmInicial;
+            let kml = kmRodados / r.litros;
+            let rskm = r.valor / kmRodados;
+            html += `<tr><td>${r.nome} - ${placa}</td><td>${kmRodados}</td><td>${r.litros.toFixed(2)}</td><td>R$ ${r.valor.toFixed(2)}</td><td>${kml.toFixed(2)}</td><td>R$ ${rskm.toFixed(2)}</td></tr>`;
+        }
+        html += '</table>';
     }
+    document.getElementById('resultado').innerHTML = html;
 }
 
-function fecharModal() {
-    document.getElementById('modalEdicao').style.display = "none";
-    indiceEditando = null;
-    indiceExcluindo = null;
+function pedirSenha(index) {
+    let senha = prompt('DIGITE A SENHA PARA EXCLUIR:');
+    if(senha === SENHA) excluirItem(index);
+    else if(senha) alert('SENHA INCORRETA!');
+}
+
+async function excluirItem(index) {
+    if(!confirm('TEM CERTEZA QUE DESEJA EXCLUIR?')) return;
+    await fetch(API_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({action: "delete", row: index}),
+        headers: {'Content-Type': 'text/plain'}
+    });
+    alert('EXCLUÍDO!');
+    carregarDados();
 }
 
 function gerarPDF() {
-    const tipo = document.querySelector('input[name="tipoRel"]:checked').value;
-    let placasParaRelatorio = [];
-    if(tipo === 'geral') placasParaRelatorio = veiculos.map(v => v.placa);
-    else placasParaRelatorio = [...document.querySelectorAll('#listaVeiculosCheck input:checked')].map(cb => cb.value);
-    if(placasParaRelatorio.length === 0) return alert('SELECIONE PELO MENOS 1 VEÍCULO');
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("RELATORIO DE GESTAO DE COMBUSTIVEL", 15, 15);
-    let y = 25;
-    placasParaRelatorio.forEach(placa => {
-        const veiculo = veiculos.find(v => v.placa === placa);
-        const dadosFiltrados = abastecimentos.filter(a => a.placa === placa).sort((a,b) => new Date(a.data) - new Date(b.data));
-        if(dadosFiltrados.length === 0) return;
-        doc.setFontSize(14);
-        doc.text(`${veiculo.nome} - ${veiculo.placa}`, 15, y);
-        y += 5;
-        let kmAnterior = 0;
-        const tableData = dadosFiltrados.map((d, i) => {
-            let kmRodado = i > 0? d.km - kmAnterior : 0;
-            let kml = kmRodado > 0 && d.litros > 0? (kmRodado / d.litros).toFixed(2) : '-';
-            kmAnterior = d.km;
-            return [d.data, d.motorista || '-', d.km, kmRodado, d.litros, `R$ ${d.valor.toFixed(2)}`, kml];
-        });
-        doc.autoTable({
-            startY: y + 2,
-            head: [['DATA', 'MOTORISTA', 'KM', 'KM RODADO', 'LITROS', 'VALOR', 'KM/L']],
-            body: tableData,
-            theme: 'grid',
-            headStyles: { fillColor: [37, 99, 235] },
-            styles: { fontSize: 8 }
-        });
-        y = doc.lastAutoTable.finalY + 15;
-    });
-    window.open(doc.output('bloburl'), '_blank');
+    let conteudo = document.getElementById('resultado').innerHTML;
+    let janela = window.open('', '', 'width=800,height=600');
+    janela.document.write('<html><head><title>Relatorio Frota</title>');
+    janela.document.write('<style>body{font-family:Arial} table{width:100%; border-collapse:collapse} th,td{border:1px solid #000; padding:8px; text-align:left} th{background:#eee}</style>');
+    janela.document.write('</head><body>');
+    janela.document.write('<h2>RELATORIO DE ABASTECIMENTO</h2>');
+    janela.document.write(conteudo);
+    janela.document.write('</body></html>');
+    janela.document.close();
+    janela.print();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    atualizarSelects();
-    mudaTipoRel();
-});
+function mudaTipoRel() {
+    let tipo = document.getElementById('tipoRel').value;
+    document.getElementById('filtroVeiculo').style.display = tipo === 'consumo' ? 'none' : 'block';
+}
