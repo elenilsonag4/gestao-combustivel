@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbw7p7mlptvjm3PtwG4qcy-oWTlmSQ6XemlusvK0J0c2bVb_PtGKcfMMGEfacWJFuv2uNQ/exec"; // <-- COLE O LINK DA IMPLANTAÇÃO AQUI
+const API_URL = "https://script.google.com/macros/s/AKfycbzr8_dBRPBw73PCja-GkWAhvcIKHexbohMm5bMpNyAQ8OynAXvfGyAFCM8X4pNZTKGYQg/exec"; // <-- COLE O LINK DA IMPLANTAÇÃO AQUI
 let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
 let abastecimentos = [];
 const SENHA = "frot@AG4";
