@@ -90,7 +90,31 @@ function listarVeiculosCadastrados() {
     document.getElementById('listaVeiculosCadastrados').innerHTML = html;
 }
 
+const SENHA = "frot@AG4"; // MESMA SENHA DA EXCLUSÃO DE ABASTECIMENTO
+
+function excluirVeiculo(index) {
+    let senha = prompt('DIGITE A SENHA PARA EXCLUIR VEÍCULO:');
+    if(senha!== SENHA) {
+        if(senha) alert('SENHA INCORRETA!');
+        return;
+    }
+
+    if(!confirm('TEM CERTEZA? ISSO NÃO EXCLUI OS ABASTECIMENTOS DESSE VEÍCULO')) return;
+
+    veiculos.splice(index, 1);
+    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+    alert('VEÍCULO EXCLUÍDO!');
+    listarVeiculosCadastrados();
+    atualizarSelects();
+}
+
 function editarVeiculo(index) {
+    let senha = prompt('DIGITE A SENHA PARA EDITAR VEÍCULO:');
+    if(senha!== SENHA) {
+        if(senha) alert('SENHA INCORRETA!');
+        return;
+    }
+
     let v = veiculos[index];
     let novoNome = prompt('EDITAR NOME DO VEÍCULO:', v.nome);
     if(novoNome) {
@@ -102,22 +126,15 @@ function editarVeiculo(index) {
                     a.NOME_VEICULO = novoNome.toUpperCase();
                 }
             });
+
             veiculos[index] = {nome: novoNome.toUpperCase(), placa: novaPlaca.toUpperCase()};
             localStorage.setItem('veiculos', JSON.stringify(veiculos));
             alert('VEÍCULO ATUALIZADO!');
             listarVeiculosCadastrados();
             atualizarSelects();
+            mostrar();
         }
     }
-}
-
-function excluirVeiculo(index) {
-    if(!confirm('TEM CERTEZA? ISSO NÃO EXCLUI OS ABASTECIMENTOS DESSE VEÍCULO')) return;
-    veiculos.splice(index, 1);
-    localStorage.setItem('veiculos', JSON.stringify(veiculos));
-    alert('VEÍCULO EXCLUÍDO!');
-    listarVeiculosCadastrados();
-    atualizarSelects();
 }
 
 async function salvar() {
@@ -222,15 +239,31 @@ async function excluirItem(index) {
 
 function gerarPDF() {
     let conteudo = document.getElementById('resultado').innerHTML;
-    let janela = window.open('', '', 'width=800,height=600');
-    janela.document.write('<html><head><title>Relatorio Frota</title>');
-    janela.document.write('<style>body{font-family:Arial} table{width:100%; border-collapse:collapse} th,td{border:1px solid #000; padding:8px; text-align:left} th{background:#eee}</style>');
-    janela.document.write('</head><body>');
-    janela.document.write('<h2>RELATORIO DE ABASTECIMENTO</h2>');
-    janela.document.write(conteudo);
-    janela.document.write('</body></html>');
+    let dataAtual = new Date().toLocaleDateString('pt-br');
+
+    let htmlImpressao = `
+    <html>
+        <head>
+            <title>Relatorio Frota - ${dataAtual}</title>
+            <style>
+                body{font-family: 'Segoe UI', Arial}
+                h2{text-align:center; color:#2563eb}
+                table{width:100%; border-collapse:collapse; margin-top:15px}
+                th,td{border:1px solid #cbd5e1; padding:8px; text-align:left; font-size:12px}
+                th{background:#2563eb; color:#fff}
+            </style>
+        </head>
+        <body>
+            <h2>RELATORIO DE ABASTECIMENTO - ${dataAtual}</h2>
+            ${conteudo}
+            <script>window.print();</script>
+        </body>
+    </html>`;
+
+    let janela = window.open('', '_blank'); // _blank força nova aba
+    janela.document.open();
+    janela.document.write(htmlImpressao);
     janela.document.close();
-    janela.print();
 }
 
 function mudaTipoRel() {
