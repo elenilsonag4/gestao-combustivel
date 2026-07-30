@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbzr8_dBRPBw73PCja-GkWAhvcIKHexbohMm5bMpNyAQ8OynAXvfGyAFCM8X4pNZTKGYQg/exec"; // <-- COLE O LINK DA IMPLANTAÇÃO AQUI
+const API_URL = "https://script.google.com/macros/s/AKfycbzr8_dBRPBw73PCja-GkWAhvcIKHexbohMm5bMpNyAQ8OynAXvfGyAFCM8X4pNZTKGYQg/exec";
 let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
 let abastecimentos = [];
 const SENHA = "frot@AG4";
@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function carregarDados() {
     try {
-        let res = await fetch(API_URL, { 
-            method: 'POST', 
+        let res = await fetch(API_URL, {
+            method: 'POST',
             body: JSON.stringify({action: "getAll"}),
             headers: {'Content-Type': 'text/plain'}
         });
@@ -36,8 +36,13 @@ function atualizarSelects() {
     let options = '<option value="">SELECIONE O VEICULO</option>';
     options += veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
     document.getElementById('selectVeiculo').innerHTML = options;
+
+    let filtro = '<option value="">TODOS OS VEÍCULOS</option>';
+    filtro += veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
+    document.getElementById('filtroVeiculo').innerHTML = filtro;
+
     let checks = veiculos.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
-    document.getElementById('listaVeiculosCheck').innerHTML = checks;
+    if(document.getElementById('listaVeiculosCheck')) document.getElementById('listaVeiculosCheck').innerHTML = checks;
     mostrar();
 }
 
@@ -58,10 +63,67 @@ function cadastrarVeiculo() {
 function abrirModal() { document.getElementById('modal').style.display = 'flex'; }
 function fecharModal() { document.getElementById('modal').style.display = 'none'; }
 
+function abrirModalVeiculos() {
+    document.getElementById('modalVeiculos').style.display = 'flex';
+    listarVeiculosCadastrados();
+}
+function fecharModalVeiculos() {
+    document.getElementById('modalVeiculos').style.display = 'none';
+}
+
+function listarVeiculosCadastrados() {
+    let html = '';
+    if(veiculos.length === 0) {
+        html = '<p>NENHUM VEÍCULO CADASTRADO</p>';
+    } else {
+        veiculos.forEach((v, index) => {
+            html += `
+            <div class="item-veiculo">
+                <span><b>${v.nome}</b> - ${v.placa}</span>
+                <div>
+                    <button class="btn-editar" onclick="editarVeiculo(${index})">EDITAR</button>
+                    <button class="btn-excluir" onclick="excluirVeiculo(${index})">EXCLUIR</button>
+                </div>
+            </div>`;
+        });
+    }
+    document.getElementById('listaVeiculosCadastrados').innerHTML = html;
+}
+
+function editarVeiculo(index) {
+    let v = veiculos[index];
+    let novoNome = prompt('EDITAR NOME DO VEÍCULO:', v.nome);
+    if(novoNome) {
+        let novaPlaca = prompt('EDITAR PLACA DO VEÍCULO:', v.placa);
+        if(novaPlaca) {
+            abastecimentos.forEach(a => {
+                if(a.PLACA === v.placa) {
+                    a.PLACA = novaPlaca.toUpperCase();
+                    a.NOME_VEICULO = novoNome.toUpperCase();
+                }
+            });
+            veiculos[index] = {nome: novoNome.toUpperCase(), placa: novaPlaca.toUpperCase()};
+            localStorage.setItem('veiculos', JSON.stringify(veiculos));
+            alert('VEÍCULO ATUALIZADO!');
+            listarVeiculosCadastrados();
+            atualizarSelects();
+        }
+    }
+}
+
+function excluirVeiculo(index) {
+    if(!confirm('TEM CERTEZA? ISSO NÃO EXCLUI OS ABASTECIMENTOS DESSE VEÍCULO')) return;
+    veiculos.splice(index, 1);
+    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+    alert('VEÍCULO EXCLUÍDO!');
+    listarVeiculosCadastrados();
+    atualizarSelects();
+}
+
 async function salvar() {
     let veiculoSelecionado = veiculos.find(v => v.placa === document.getElementById('selectVeiculo').value);
     if(!veiculoSelecionado) return alert('SELECIONE UM VEICULO');
-    
+
     let novo = {
         action: "add",
         placa: veiculoSelecionado.placa,
@@ -74,8 +136,8 @@ async function salvar() {
     };
     if(!novo.data ||!novo.litros) return alert('PREENCHA DATA E LITROS');
 
-    await fetch(API_URL, { 
-        method: 'POST', 
+    await fetch(API_URL, {
+        method: 'POST',
         body: JSON.stringify(novo),
         headers: {'Content-Type': 'text/plain'}
     });
@@ -93,14 +155,14 @@ function mostrar() {
     let filtro = document.getElementById('filtroVeiculo').value;
     let dataI = document.getElementById('dataInicial').value;
     let dataF = document.getElementById('dataFinal').value;
-    
+
     let dados = [...abastecimentos];
     if(filtro) dados = dados.filter(d => d.PLACA === filtro);
     if(dataI) dados = dados.filter(d => d.DATA >= dataI);
     if(dataF) dados = dados.filter(d => d.DATA <= dataF);
-    
+
     dados.sort((a,b) => new Date(b.DATA) - new Date(a.DATA));
-    
+
     let html = '';
     if(tipo === 'lista') {
         html = `<table><tr><th>DATA</th><th>VEICULO</th><th>PLACA</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>AÇÃO</th></tr>`;
@@ -122,7 +184,7 @@ function mostrar() {
     if(tipo === 'consumo') {
         let resumo = {};
         dados.forEach(d => {
-            if(!resumo[d.PLACA]) resumo[d.PLACA] = {nome: d.NOME_VEICULO, litros: 0, valor: 0, kmInicial: 999999, kmFinal: 0};
+            if(!resumo[d.PLACA]) resumo[d.PLACA] = {nome: d.NOME_VEICULO, litros: 0, valor: 0, kmInicial: 999, kmFinal: 0};
             resumo[d.PLACA].litros += parseFloat(d.LITROS);
             resumo[d.PLACA].valor += parseFloat(d.VALOR);
             if(d.KM < resumo[d.PLACA].kmInicial) resumo[d.PLACA].kmInicial = d.KM;
@@ -132,8 +194,8 @@ function mostrar() {
         for(let placa in resumo) {
             let r = resumo[placa];
             let kmRodados = r.kmFinal - r.kmInicial;
-            let kml = kmRodados / r.litros;
-            let rskm = r.valor / kmRodados;
+            let kml = kmRodados > 0 && r.litros > 0? kmRodados / r.litros : 0;
+            let rskm = kmRodados > 0? r.valor / kmRodados : 0;
             html += `<tr><td>${r.nome} - ${placa}</td><td>${kmRodados}</td><td>${r.litros.toFixed(2)}</td><td>R$ ${r.valor.toFixed(2)}</td><td>${kml.toFixed(2)}</td><td>R$ ${rskm.toFixed(2)}</td></tr>`;
         }
         html += '</table>';
@@ -149,8 +211,8 @@ function pedirSenha(index) {
 
 async function excluirItem(index) {
     if(!confirm('TEM CERTEZA QUE DESEJA EXCLUIR?')) return;
-    await fetch(API_URL, { 
-        method: 'POST', 
+    await fetch(API_URL, {
+        method: 'POST',
         body: JSON.stringify({action: "delete", row: index}),
         headers: {'Content-Type': 'text/plain'}
     });
@@ -173,5 +235,5 @@ function gerarPDF() {
 
 function mudaTipoRel() {
     let tipo = document.getElementById('tipoRel').value;
-    document.getElementById('filtroVeiculo').style.display = tipo === 'consumo' ? 'none' : 'block';
+    document.getElementById('filtroVeiculo').style.display = tipo === 'consumo'? 'none' : 'block';
 }

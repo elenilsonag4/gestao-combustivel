@@ -5,6 +5,8 @@
     --card: #ffffff;
     --texto: #1e293b;
     --borda: #cbd5e1;
+    --vermelho: #ef4444;
+    --laranja: #f59e0b;
 }
 
 body { 
@@ -16,7 +18,7 @@ body {
 }
 
 .container { 
-    max-width: 650px; 
+    max-width: 900px; /* Aumentei pra caber a tabela */
     margin: auto; 
 }
 
@@ -77,29 +79,83 @@ button:hover {
     transform: translateY(-2px);
 }
 
-#lista p {
-    background: var(--fundo);
-    padding: 12px;
-    border-radius: 8px;
-    border-left: 4px solid var(--azul);
-    margin: 8px 0;
+/* TABELA */
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-top: 15px; 
     font-size: 14px;
 }
+th, td { 
+    border: 1px solid var(--borda); 
+    padding: 10px; 
+    text-align: left; 
+}
+th { 
+    background-color: var(--azul); 
+    color: white; 
+}
+tr:nth-child(even){background-color: var(--fundo)}
 
-.item-lista { display: flex; justify-content: space-between; align-items: center; background: var(--fundo); padding: 10px; border-radius: 8px; border-left: 4px solid var(--azul); margin: 8px 0; }
-.btn-editar { width: auto; padding: 8px 12px; background: #f59e0b; font-size: 14px; }
-.btn-editar:hover { background: #d97706; }
-.modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-.modal-conteudo { background-color: #fefefe; margin: 15% auto; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
-.fechar { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+/* MODAL */
+.modal { 
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+    background-color: rgba(0,0,0,0.5); 
+    justify-content: center; 
+    align-items: center;
+}
+.modal-content { 
+    background-color: var(--card); 
+    padding: 20px; 
+    border-radius: 16px; 
+    width: 90%; 
+    max-width: 500px; 
+    max-height: 80vh; 
+    overflow-y: auto;
+    border: 1px solid var(--borda);
+}
+.close { 
+    color: #aaa; 
+    float: right; 
+    font-size: 28px; 
+    font-weight: bold; 
+    cursor: pointer; 
+}
+.close:hover { color: var(--texto); }
 
-.botoes-lista { display: flex; gap: 8px; }
-.btn-excluir { width: auto; padding: 8px 12px; background: #ef4444; font-size: 14px; }
-.btn-excluir:hover { background: #dc2626; }
-
-#placaNova, #nomeVeiculo, #motorista, #editMotorista {
-    text-transform: uppercase;
+/* LISTA DE VEICULOS NO MODAL */
+.item-veiculo { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    background: var(--fundo); 
+    padding: 12px; 
+    border-radius: 8px; 
+    border-left: 4px solid var(--azul); 
+    margin: 8px 0; 
 }
 .botoes-lista { display: flex; gap: 8px; }
-.btn-excluir { width: auto; padding: 8px 12px; background: #ef4444; font-size: 14px; }
+.btn-editar { 
+    width: auto; 
+    padding: 8px 12px; 
+    background: var(--laranja); 
+    font-size: 14px; 
+}
+.btn-editar:hover { background: #d97706; }
+.btn-excluir { 
+    width: auto; 
+    padding: 8px 12px; 
+    background: var(--vermelho); 
+    font-size: 14px; 
+}
 .btn-excluir:hover { background: #dc2626; }
+
+#placaNova, #nomeVeiculo, #motorista {
+    text-transform: uppercase;
+}

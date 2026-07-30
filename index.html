@@ -1,58 +1,72 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#2563eb">
-<title>Gestão Combustível</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Combustível</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container">
-<h1>⛽ Gestão de Combustível</h1>
+    <div class="container">
+        <h1>CONTROLE DE ABASTECIMENTO</h1>
 
-<div class="card">
-<h2>1. Cadastrar Veículo</h2>
-<input type="text" id="placaNova" placeholder="Placa: ABC-1234" maxlength="8">
-<input type="text" id="nomeVeiculo" placeholder="Nome: Gol, Caminhão 1">
-<button onclick="cadastrarVeiculo()">Cadastrar Veículo</button>
-</div>
+        <div class="card">
+            <h2>CADASTRAR VEÍCULO</h2>
+            <input type="text" id="nomeVeiculo" placeholder="NOME DO VEÍCULO">
+            <input type="text" id="placaNova" placeholder="PLACA">
+            <button onclick="cadastrarVeiculo()">CADASTRAR</button>
+            <button onclick="abrirModalVeiculos()">VEÍCULOS CADASTRADOS</button>
+        </div>
 
-<div class="card">
-<h2>2. Registrar Abastecimento</h2>
-<select id="selectVeiculo"><option>Cadastre um veículo primeiro</option></select>
-<input type="date" id="data">
-<input type="text" id="motorista" placeholder="Nome do Motorista">
-<input type="number" id="litros" placeholder="Litros" step="0.01">
-<input type="number" id="valor" placeholder="Valor Total R$" step="0.01">
-<input type="number" id="km" placeholder="KM Atual">
-<button onclick="salvar()">Salvar Abastecimento</button>
-</div>
+        <div class="card">
+            <h2>NOVO ABASTECIMENTO</h2>
+            <button onclick="abrirModal()">+ ADICIONAR ABASTECIMENTO</button>
+        </div>
 
-<div class="card">
-<h2>3. Gerar Relatório</h2>
-<label><input type="radio" name="tipoRel" value="geral" checked onchange="mudaTipoRel()"> Relatório Geral - Todos</label>
-<label><input type="radio" name="tipoRel" value="personalizado" onchange="mudaTipoRel()"> Relatório Personalizado</label>
-<div id="listaVeiculosCheck"></div>
-<button onclick="gerarPDF()">Gerar PDF</button>
-</div>
+        <div class="card">
+            <h2>RELATÓRIOS</h2>
+            <select id="tipoRel" onchange="mudaTipoRel()">
+                <option value="lista">LISTA DETALHADA</option>
+                <option value="consumo">CONSUMO POR VEÍCULO</option>
+            </select>
+            <select id="filtroVeiculo">
+                <option value="">TODOS OS VEÍCULOS</option>
+            </select>
+            <input type="date" id="dataInicial">
+            <input type="date" id="dataFinal">
+            <button onclick="mostrar()">FILTRAR</button>
+            <button onclick="gerarPDF()">GERAR PDF</button>
+        </div>
 
-<h2>Últimos Lançamentos</h2>
-<div id="lista"></div>
+        <div class="card">
+            <div id="resultado"></div>
+        </div>
+    </div>
 
-</div>
+    <!-- MODAL ABASTECIMENTO -->
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="fecharModal()">&times;</span>
+        <h2>NOVO ABASTECIMENTO</h2>
+        <select id="selectVeiculo"></select>
+        <input type="date" id="data">
+        <input type="text" id="motorista" placeholder="NOME DO MOTORISTA">
+        <input type="number" id="litros" placeholder="LITROS" step="0.01">
+        <input type="number" id="valor" placeholder="VALOR TOTAL R$" step="0.01">
+        <input type="number" id="km" placeholder="KM ATUAL">
+        <button onclick="salvar()">SALVAR</button>
+      </div>
+    </div>
 
-<!-- MODAL DE SENHA E EDIÇÃO -->
-<div id="modalEdicao" class="modal">
-  <div class="modal-conteudo">
-    <span class="fechar" onclick="fecharModal()">&times;</span>
-    <h2 id="tituloModal">Confirmar Edição</h2>
-    <div id="corpoModal"></div>
-  </div>
-</div>
+    <!-- MODAL VEICULOS -->
+    <div id="modalVeiculos" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="fecharModalVeiculos()">&times;</span>
+        <h2>VEÍCULOS CADASTRADOS</h2>
+        <div id="listaVeiculosCadastrados"></div>
+      </div>
+    </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
