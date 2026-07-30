@@ -1,17 +1,15 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbzr8_dBRPBw73PCja-GkWAhvcIKHexbohMm5bMpNyAQ8OynAXvfGyAFCM8X4pNZTKGYQg/exec";
-const SENHA = "frot@AG4"; // SENHA PARA EDITAR/EXCLUIR
+const SENHA = "frot@AG4";
 
 let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
 let abastecimentos = [];
 
 // FORÇA MAIUSCULO
-['placaNova','nomeVeiculo','motorista'].forEach(id => {
-    let el = document.getElementById(id);
-    if(el) el.addEventListener('keyup', () => el.value = el.value.toUpperCase());
-});
-
-// CARREGAR DADOS DA NUVEM QUANDO ABRIR
 document.addEventListener('DOMContentLoaded', () => {
+    ['placaNova','nomeVeiculo','motorista'].forEach(id => {
+        let el = document.getElementById(id);
+        if(el) el.addEventListener('keyup', () => el.value = el.value.toUpperCase());
+    });
     carregarDados();
     mudaTipoRel();
 });
@@ -26,21 +24,28 @@ async function carregarDados() {
         abastecimentos = await res.json();
         abastecimentos = abastecimentos.filter(a => a.DATA);
     } catch(e) {
-        alert("ERRO AO CARREGAR DA NUVEM. VERIFIQUE O LINK DA API.");
+        console.log("Erro ao carregar:", e);
         abastecimentos = [];
     }
-    atualizarSelects();
+    atualizarSelects(); // <--- ESSENCIAL
+}
+
+function salvarVeiculos() {
+    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+    atualizarSelects(); // <--- ESSENCIAL: ATUALIZA A TELA NA HORA
 }
 
 function atualizarSelects() {
     veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
+
     let options = '<option value="">SELECIONE O VEICULO</option>';
     options += veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
-    document.getElementById('selectVeiculo').innerHTML = options;
+    if(document.getElementById('selectVeiculo')) document.getElementById('selectVeiculo').innerHTML = options;
 
     let filtro = '<option value="">TODOS OS VEÍCULOS</option>';
     filtro += veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
-    document.getElementById('filtroVeiculo').innerHTML = filtro;
+    if(document.getElementById('filtroVeiculo')) document.getElementById('filtroVeiculo').innerHTML = filtro;
+
     mostrar();
 }
 
@@ -49,13 +54,12 @@ function cadastrarVeiculo() {
     let nome = document.getElementById('nomeVeiculo').value.toUpperCase().trim();
     if(!placa ||!nome) return alert('PREENCHA PLACA E NOME');
     if(veiculos.find(v => v.placa === placa)) return alert('PLACA JÁ CADASTRADA');
+
     veiculos.push({placa, nome});
-    veiculos.sort((a, b) => a.nome.localeCompare(b.nome));
-    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+    salvarVeiculos(); // <--- AGORA SALVA E ATUALIZA
     alert('VEÍCULO CADASTRADO!');
     document.getElementById('placaNova').value = '';
     document.getElementById('nomeVeiculo').value = '';
-    atualizarSelects();
 }
 
 function abrirModal() { document.getElementById('modal').style.display = 'flex'; }
@@ -90,10 +94,7 @@ function listarVeiculosCadastrados() {
 
 function editarVeiculo(index) {
     let senha = prompt('DIGITE A SENHA PARA EDITAR VEÍCULO:');
-    if(senha!== SENHA) {
-        if(senha) alert('SENHA INCORRETA!');
-        return;
-    }
+    if(senha!== SENHA) { if(senha) alert('SENHA INCORRETA!'); return; }
 
     let v = veiculos[index];
     let novoNome = prompt('EDITAR NOME DO VEÍCULO:', v.nome);
@@ -107,27 +108,22 @@ function editarVeiculo(index) {
                 }
             });
             veiculos[index] = {nome: novoNome.toUpperCase(), placa: novaPlaca.toUpperCase()};
-            localStorage.setItem('veiculos', JSON.stringify(veiculos));
+            salvarVeiculos();
             alert('VEÍCULO ATUALIZADO!');
             listarVeiculosCadastrados();
-            atualizarSelects();
         }
     }
 }
 
 function excluirVeiculo(index) {
     let senha = prompt('DIGITE A SENHA PARA EXCLUIR VEÍCULO:');
-    if(senha!== SENHA) {
-        if(senha) alert('SENHA INCORRETA!');
-        return;
-    }
+    if(senha!== SENHA) { if(senha) alert('SENHA INCORRETA!'); return; }
     if(!confirm('TEM CERTEZA? ISSO NÃO EXCLUI OS ABASTECIMENTOS DESSE VEÍCULO')) return;
 
     veiculos.splice(index, 1);
-    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+    salvarVeiculos();
     alert('VEÍCULO EXCLUÍDO!');
     listarVeiculosCadastrados();
-    atualizarSelects();
 }
 
 async function salvar() {
@@ -146,11 +142,7 @@ async function salvar() {
     };
     if(!novo.data ||!novo.litros) return alert('PREENCHA DATA E LITROS');
 
-    await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify(novo),
-        headers: {'Content-Type': 'text/plain'}
-    });
+    await fetch(API_URL, { method: 'POST', body: JSON.stringify(novo), headers: {'Content-Type': 'text/plain'} });
     alert('ABASTECIMENTO SALVO NA NUVEM!');
     document.getElementById('motorista').value = '';
     document.getElementById('litros').value = '';
@@ -170,7 +162,6 @@ function mostrar() {
     if(filtro) dados = dados.filter(d => d.PLACA === filtro);
     if(dataI) dados = dados.filter(d => d.DATA >= dataI);
     if(dataF) dados = dados.filter(d => d.DATA <= dataF);
-
     dados.sort((a,b) => new Date(b.DATA) - new Date(a.DATA));
 
     let html = '';
@@ -178,16 +169,7 @@ function mostrar() {
         html = `<table><tr><th>DATA</th><th>VEICULO</th><th>PLACA</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>AÇÃO</th></tr>`;
         html += dados.map((d, i) => {
             let indexOriginal = abastecimentos.indexOf(d);
-            return `<tr>
-                <td>${d.DATA.split('-').reverse().join('/')}</td>
-                <td>${d.NOME_VEICULO}</td>
-                <td>${d.PLACA}</td>
-                <td>${d.MOTORISTA}</td>
-                <td>${d.LITROS}</td>
-                <td>R$ ${parseFloat(d.VALOR).toFixed(2)}</td>
-                <td>${d.KM}</td>
-                <td><button onclick="pedirSenha(${indexOriginal})" class="btn-excluir">EXCLUIR</button></td>
-            </tr>`
+            return `<tr><td>${d.DATA.split('-').reverse().join('/')}</td><td>${d.NOME_VEICULO}</td><td>${d.PLACA}</td><td>${d.MOTORISTA}</td><td>${d.LITROS}</td><td>R$ ${parseFloat(d.VALOR).toFixed(2)}</td><td>${d.KM}</td><td><button onclick="pedirSenha(${indexOriginal})" class="btn-excluir">EXCLUIR</button></td></tr>`
         }).join('');
         html += '</table>';
     }
@@ -221,11 +203,7 @@ function pedirSenha(index) {
 
 async function excluirItem(index) {
     if(!confirm('TEM CERTEZA QUE DESEJA EXCLUIR?')) return;
-    await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({action: "delete", row: index}),
-        headers: {'Content-Type': 'text/plain'}
-    });
+    await fetch(API_URL, { method: 'POST', body: JSON.stringify({action: "delete", row: index}), headers: {'Content-Type': 'text/plain'} });
     alert('EXCLUÍDO!');
     carregarDados();
 }
@@ -233,27 +211,8 @@ async function excluirItem(index) {
 function gerarPDF() {
     let conteudo = document.getElementById('resultado').innerHTML;
     if(conteudo.trim() === '') return alert('GERAR RELATÓRIO PRIMEIRO');
-
     let dataAtual = new Date().toLocaleDateString('pt-br');
-    let htmlImpressao = `
-    <html>
-        <head>
-            <title>Relatorio Frota - ${dataAtual}</title>
-            <style>
-                body{font-family: 'Segoe UI', Arial; padding:20px}
-                h2{text-align:center; color:#2563eb}
-                table{width:100%; border-collapse:collapse; margin-top:15px}
-                th,td{border:1px solid #cbd5e1; padding:8px; text-align:left; font-size:12px}
-                th{background:#2563eb; color:#fff}
-            </style>
-        </head>
-        <body>
-            <h2>RELATORIO DE ABASTECIMENTO - ${dataAtual}</h2>
-            ${conteudo}
-            <script>window.onload = function(){ window.print(); }</script>
-        </body>
-    </html>`;
-
+    let htmlImpressao = `<html><head><title>Relatorio Frota - ${dataAtual}</title><style>body{font-family: 'Segoe UI', Arial; padding:20px} h2{text-align:center; color:#2563eb} table{width:100%; border-collapse:collapse; margin-top:15px} th,td{border:1px solid #cbd5e1; padding:8px; text-align:left; font-size:12px} th{background:#2563eb; color:#fff}</style></head><body><h2>RELATORIO DE ABASTECIMENTO - ${dataAtual}</h2>${conteudo}<script>window.onload = function(){ window.print(); }</script></body></html>`;
     let janela = window.open('', '_blank');
     janela.document.write(htmlImpressao);
     janela.document.close();
