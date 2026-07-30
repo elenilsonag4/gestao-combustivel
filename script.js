@@ -1,7 +1,8 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbzr8_dBRPBw73PCja-GkWAhvcIKHexbohMm5bMpNyAQ8OynAXvfGyAFCM8X4pNZTKGYQg/exec";
+const SENHA = "frot@AG4"; // SENHA PARA EDITAR/EXCLUIR
+
 let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
 let abastecimentos = [];
-const SENHA = "frot@AG4";
 
 // FORÇA MAIUSCULO
 ['placaNova','nomeVeiculo','motorista'].forEach(id => {
@@ -40,9 +41,6 @@ function atualizarSelects() {
     let filtro = '<option value="">TODOS OS VEÍCULOS</option>';
     filtro += veiculos.map(v => `<option value="${v.placa}">${v.nome} - ${v.placa}</option>`).join('');
     document.getElementById('filtroVeiculo').innerHTML = filtro;
-
-    let checks = veiculos.map(v => `<label class="check-veiculo"><input type="checkbox" value="${v.placa}"> ${v.nome} - ${v.placa}</label>`).join('');
-    if(document.getElementById('listaVeiculosCheck')) document.getElementById('listaVeiculosCheck').innerHTML = checks;
     mostrar();
 }
 
@@ -80,7 +78,7 @@ function listarVeiculosCadastrados() {
             html += `
             <div class="item-veiculo">
                 <span><b>${v.nome}</b> - ${v.placa}</span>
-                <div>
+                <div class="botoes-lista">
                     <button class="btn-editar" onclick="editarVeiculo(${index})">EDITAR</button>
                     <button class="btn-excluir" onclick="excluirVeiculo(${index})">EXCLUIR</button>
                 </div>
@@ -88,24 +86,6 @@ function listarVeiculosCadastrados() {
         });
     }
     document.getElementById('listaVeiculosCadastrados').innerHTML = html;
-}
-
-const SENHA = "frot@AG4"; // MESMA SENHA DA EXCLUSÃO DE ABASTECIMENTO
-
-function excluirVeiculo(index) {
-    let senha = prompt('DIGITE A SENHA PARA EXCLUIR VEÍCULO:');
-    if(senha!== SENHA) {
-        if(senha) alert('SENHA INCORRETA!');
-        return;
-    }
-
-    if(!confirm('TEM CERTEZA? ISSO NÃO EXCLUI OS ABASTECIMENTOS DESSE VEÍCULO')) return;
-
-    veiculos.splice(index, 1);
-    localStorage.setItem('veiculos', JSON.stringify(veiculos));
-    alert('VEÍCULO EXCLUÍDO!');
-    listarVeiculosCadastrados();
-    atualizarSelects();
 }
 
 function editarVeiculo(index) {
@@ -126,15 +106,28 @@ function editarVeiculo(index) {
                     a.NOME_VEICULO = novoNome.toUpperCase();
                 }
             });
-
             veiculos[index] = {nome: novoNome.toUpperCase(), placa: novaPlaca.toUpperCase()};
             localStorage.setItem('veiculos', JSON.stringify(veiculos));
             alert('VEÍCULO ATUALIZADO!');
             listarVeiculosCadastrados();
             atualizarSelects();
-            mostrar();
         }
     }
+}
+
+function excluirVeiculo(index) {
+    let senha = prompt('DIGITE A SENHA PARA EXCLUIR VEÍCULO:');
+    if(senha!== SENHA) {
+        if(senha) alert('SENHA INCORRETA!');
+        return;
+    }
+    if(!confirm('TEM CERTEZA? ISSO NÃO EXCLUI OS ABASTECIMENTOS DESSE VEÍCULO')) return;
+
+    veiculos.splice(index, 1);
+    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+    alert('VEÍCULO EXCLUÍDO!');
+    listarVeiculosCadastrados();
+    atualizarSelects();
 }
 
 async function salvar() {
@@ -193,7 +186,7 @@ function mostrar() {
                 <td>${d.LITROS}</td>
                 <td>R$ ${parseFloat(d.VALOR).toFixed(2)}</td>
                 <td>${d.KM}</td>
-                <td><button onclick="pedirSenha(${indexOriginal})" style="padding:5px 10px; background:#c0392b">EXCLUIR</button></td>
+                <td><button onclick="pedirSenha(${indexOriginal})" class="btn-excluir">EXCLUIR</button></td>
             </tr>`
         }).join('');
         html += '</table>';
@@ -201,11 +194,11 @@ function mostrar() {
     if(tipo === 'consumo') {
         let resumo = {};
         dados.forEach(d => {
-            if(!resumo[d.PLACA]) resumo[d.PLACA] = {nome: d.NOME_VEICULO, litros: 0, valor: 0, kmInicial: 999, kmFinal: 0};
+            if(!resumo[d.PLACA]) resumo[d.PLACA] = {nome: d.NOME_VEICULO, litros: 0, valor: 0, kmInicial: 999999, kmFinal: 0};
             resumo[d.PLACA].litros += parseFloat(d.LITROS);
             resumo[d.PLACA].valor += parseFloat(d.VALOR);
-            if(d.KM < resumo[d.PLACA].kmInicial) resumo[d.PLACA].kmInicial = d.KM;
-            if(d.KM > resumo[d.PLACA].kmFinal) resumo[d.PLACA].kmFinal = d.KM;
+            if(parseInt(d.KM) < resumo[d.PLACA].kmInicial) resumo[d.PLACA].kmInicial = parseInt(d.KM);
+            if(parseInt(d.KM) > resumo[d.PLACA].kmFinal) resumo[d.PLACA].kmFinal = parseInt(d.KM);
         });
         html = `<table><tr><th>VEICULO</th><th>KM RODADOS</th><th>TOTAL LITROS</th><th>TOTAL R$</th><th>KM/L</th><th>R$/KM</th></tr>`;
         for(let placa in resumo) {
@@ -221,7 +214,7 @@ function mostrar() {
 }
 
 function pedirSenha(index) {
-    let senha = prompt('DIGITE A SENHA PARA EXCLUIR:');
+    let senha = prompt('DIGITE A SENHA PARA EXCLUIR ABASTECIMENTO:');
     if(senha === SENHA) excluirItem(index);
     else if(senha) alert('SENHA INCORRETA!');
 }
@@ -239,14 +232,15 @@ async function excluirItem(index) {
 
 function gerarPDF() {
     let conteudo = document.getElementById('resultado').innerHTML;
-    let dataAtual = new Date().toLocaleDateString('pt-br');
+    if(conteudo.trim() === '') return alert('GERAR RELATÓRIO PRIMEIRO');
 
+    let dataAtual = new Date().toLocaleDateString('pt-br');
     let htmlImpressao = `
     <html>
         <head>
             <title>Relatorio Frota - ${dataAtual}</title>
             <style>
-                body{font-family: 'Segoe UI', Arial}
+                body{font-family: 'Segoe UI', Arial; padding:20px}
                 h2{text-align:center; color:#2563eb}
                 table{width:100%; border-collapse:collapse; margin-top:15px}
                 th,td{border:1px solid #cbd5e1; padding:8px; text-align:left; font-size:12px}
@@ -256,12 +250,11 @@ function gerarPDF() {
         <body>
             <h2>RELATORIO DE ABASTECIMENTO - ${dataAtual}</h2>
             ${conteudo}
-            <script>window.print();</script>
+            <script>window.onload = function(){ window.print(); }</script>
         </body>
     </html>`;
 
-    let janela = window.open('', '_blank'); // _blank força nova aba
-    janela.document.open();
+    let janela = window.open('', '_blank');
     janela.document.write(htmlImpressao);
     janela.document.close();
 }
