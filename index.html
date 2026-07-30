@@ -1,72 +1,63 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Combustível</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SISTEMA FROTA</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>CONTROLE DE ABASTECIMENTO</h1>
+<div class="container">
+    <h1>CONTROLE DE ABASTECIMENTO</h1>
 
-        <div class="card">
-            <h2>CADASTRAR VEÍCULO</h2>
-            <input type="text" id="nomeVeiculo" placeholder="NOME DO VEÍCULO">
-            <input type="text" id="placaNova" placeholder="PLACA">
-            <button onclick="cadastrarVeiculo()">CADASTRAR</button>
-            <button onclick="abrirModalVeiculos()">VEÍCULOS CADASTRADOS</button>
-        </div>
+    <div class="card">
+        <h2>NOVO ABASTECIMENTO</h2>
+        <form id="formAbastecimento">
+            <label>DATA</label>
+            <input type="date" id="data" required>
+            <label>PLACA</label>
+            <input type="text" id="placa" placeholder="AAA-1234" required>
+            <label>NOME VEICULO</label>
+            <input type="text" id="nome" placeholder="HILUX SRX" required>
+            <label>MOTORISTA</label>
+            <input type="text" id="motorista" required>
+            <label>LITROS</label>
+            <input type="number" step="0.01" id="litros" required>
+            <label>VALOR TOTAL R$</label>
+            <input type="number" step="0.01" id="valor" required>
+            <label>KM ATUAL</label>
+            <input type="number" id="km" required>
+            <button type="submit">SALVAR ABASTECIMENTO</button>
+        </form>
+    </div>
 
-        <div class="card">
-            <h2>NOVO ABASTECIMENTO</h2>
-            <button onclick="abrirModal()">+ ADICIONAR ABASTECIMENTO</button>
-        </div>
-
-        <div class="card">
-            <h2>RELATÓRIOS</h2>
-            <select id="tipoRel" onchange="mudaTipoRel()">
-                <option value="lista">LISTA DETALHADA</option>
-                <option value="consumo">CONSUMO POR VEÍCULO</option>
-            </select>
-            <select id="filtroVeiculo">
-                <option value="">TODOS OS VEÍCULOS</option>
-            </select>
+    <div class="card">
+        <h2>RELATÓRIOS</h2>
+        <label>TIPO</label>
+        <select id="tipoRel">
+            <option value="lista">LISTA COMPLETA</option>
+            <option value="consumo">CONSUMO POR VEICULO</option>
+        </select>
+        <label>FILTRAR POR PLACA</label>
+        <select id="filtroVeiculo"><option value="">TODOS</option></select>
+        <label>PERIODO</label>
+        <div class="periodo">
             <input type="date" id="dataInicial">
             <input type="date" id="dataFinal">
-            <button onclick="mostrar()">FILTRAR</button>
-            <button onclick="gerarPDF()">GERAR PDF</button>
         </div>
-
-        <div class="card">
-            <div id="resultado"></div>
-        </div>
+        <button onclick="mostrar()">GERAR RELATORIO</button>
+        <button onclick="gerarPDF()" class="btn-pdf">GERAR PDF</button>
+    </div>
+    
+    <div id="senhaBox" class="card senha-card" style="display:none;">
+        <h2>CONFIRMAR EXCLUSÃO</h2>
+        <input type="password" id="senhaInput" placeholder="DIGITE A SENHA: 1234">
+        <button onclick="confirmarExclusao()">CONFIRMAR</button>
+        <button onclick="cancelarExclusao()" class="btn-cancelar">CANCELAR</button>
     </div>
 
-    <!-- MODAL ABASTECIMENTO -->
-    <div id="modal" class="modal">
-      <div class="modal-content">
-        <span class="close" onclick="fecharModal()">&times;</span>
-        <h2>NOVO ABASTECIMENTO</h2>
-        <select id="selectVeiculo"></select>
-        <input type="date" id="data">
-        <input type="text" id="motorista" placeholder="NOME DO MOTORISTA">
-        <input type="number" id="litros" placeholder="LITROS" step="0.01">
-        <input type="number" id="valor" placeholder="VALOR TOTAL R$" step="0.01">
-        <input type="number" id="km" placeholder="KM ATUAL">
-        <button onclick="salvar()">SALVAR</button>
-      </div>
-    </div>
-
-    <!-- MODAL VEICULOS -->
-    <div id="modalVeiculos" class="modal">
-      <div class="modal-content">
-        <span class="close" onclick="fecharModalVeiculos()">&times;</span>
-        <h2>VEÍCULOS CADASTRADOS</h2>
-        <div id="listaVeiculosCadastrados"></div>
-      </div>
-    </div>
-
-    <script src="./script.js?v=1"></script>
+    <div id="resultado"></div>
+</div>
+<script src="script.js"></script>
 </body>
 </html>
