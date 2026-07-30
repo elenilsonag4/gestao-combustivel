@@ -1,6 +1,8 @@
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #1e293b; }
 .container { max-width: 900px; margin: auto; }
-h1 { text-align: center; color: #2563eb; margin-bottom: 30px; }
+h1 { text-align: center; color: #2563eb; margin-bottom: 20px; }
+.menu { display: flex; gap: 10px; margin-bottom: 20px; }
+.menu button { flex: 1; }
 .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
 label { font-weight: bold; display: block; margin-top: 10px; margin-bottom: 5px; }
 input, select, button { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
