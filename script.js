@@ -1,5 +1,3 @@
-function include(filename) { return HtmlService.createHtmlOutputFromFile(filename).getContent(); }
-
 document.addEventListener('DOMContentLoaded', carregarDados);
 
 function carregarDados() {
@@ -10,23 +8,35 @@ function carregarDados() {
 function preencherSelects(veiculos) {
   const sel1 = document.getElementById('selectVeiculo');
   const sel2 = document.getElementById('selectVeiculoManutencao');
-  sel1.innerHTML = '<option>Selecione</option>'; sel2.innerHTML = '<option>Selecione</option>';
+  sel1.innerHTML = '<option value="">Selecione</option>';
+  sel2.innerHTML = '<option value="">Selecione</option>';
   veiculos.forEach(v => {
-    sel1.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
-    sel2.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+    const option = new Option(`${v.nome} - ${v.placa}`, v.placa);
+    sel1.add(option);
+    sel2.add(option.cloneNode(true));
   });
 }
 
 function cadastrarVeiculo() {
-  const nome = document.getElementById('nomeVeiculo').value;
-  const placa = document.getElementById('placaVeiculo').value;
-  google.script.run.withSuccessHandler(() => { alert('Veículo cadastrado!'); carregarDados(); }).cadastrarVeiculo(nome, placa);
+  const nome = document.getElementById('nomeVeiculo').value.trim();
+  const placa = document.getElementById('placaVeiculo').value.trim();
+  if(!nome ||!placa) return alert('Preencha Nome e Placa');
+  google.script.run.withSuccessHandler(() => {
+    alert('Veículo cadastrado com sucesso!');
+    document.getElementById('nomeVeiculo').value='';
+    document.getElementById('placaVeiculo').value='';
+    carregarDados();
+  }).cadastrarVeiculo(nome, placa);
 }
 
 function editarVeiculo() {
-  const nome = document.getElementById('nomeVeiculo').value;
-  const placa = document.getElementById('placaVeiculo').value;
-  google.script.run.withSuccessHandler(() => { alert('Veículo atualizado!'); carregarDados(); }).editarVeiculo(nome, placa);
+  const nome = document.getElementById('nomeVeiculo').value.trim();
+  const placa = document.getElementById('placaVeiculo').value.trim();
+  if(!nome ||!placa) return alert('Preencha Nome e Placa do veículo a editar');
+  google.script.run.withSuccessHandler(() => {
+    alert('Veículo atualizado!');
+    carregarDados();
+  }).editarVeiculo(nome, placa);
 }
 
 function registrarAbastecimento() {
@@ -38,14 +48,28 @@ function registrarAbastecimento() {
     valor: document.getElementById('valorTotal').value,
     km: document.getElementById('kmAtual').value
   };
-  google.script.run.withSuccessHandler(() => { alert('Abastecimento registrado!'); carregarDados(); }).registrarAbastecimento(dados);
+  if(!dados.data ||!dados.placa) return alert('Preencha Data e Veículo');
+  google.script.run.withSuccessHandler(() => {
+    alert('Abastecimento registrado!');
+    document.querySelectorAll('#dataAbastecimento, #motorista, #litros, #valorTotal, #kmAtual').forEach(i => i.value='');
+    carregarDados();
+  }).registrarAbastecimento(dados);
 }
 
 function abrirModalManutencao() { document.getElementById('modalManutencao').style.display = 'block'; }
 function fecharModalManutencao() { document.getElementById('modalManutencao').style.display = 'none'; }
-function registrarManutencao() { /* função para salvar manutenção */ fecharModalManutencao(); }
+function registrarManutencao() { alert('Função de manutenção será implementada na planilha'); fecharModalManutencao(); }
 
-function preencherTabela(dados) { /* preenche a tabela do histórico */ }
+function preencherTabela(dados) {
+  const tbody = document.querySelector('#tabelaHistorico tbody');
+  tbody.innerHTML = '';
+  if(dados.length === 0){ tbody.innerHTML = '<tr><td colspan="9">Nenhum abastecimento registrado</td></tr>'; return; }
+  dados.forEach(l => {
+    const tr = tbody.insertRow();
+    l.forEach(cel => tr.insertCell().innerText = cel);
+    tr.insertCell().innerHTML = '<button>MAIS</button>';
+  });
+}
 
 function gerarPDF(tipo) {
   google.script.run.withSuccessHandler(url => { window.open(url, '_blank'); }).gerarPDF(tipo);
