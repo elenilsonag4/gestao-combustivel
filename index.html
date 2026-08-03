@@ -1,73 +1,108 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GESTÃO COMBUSTIVEL</title>
-<link rel="stylesheet" href="./style.css?v=1">
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <?!= include('style');?>
 </head>
 <body>
-<div class="container">
-    <h1>GESTÃO DE FROTA</h1>
+  <div class="container">
+    <header>
+      <img src="https://i.imgur.com/AG4FrotaLogo.png" alt="AG4 FROTA" class="logo"> <!-- troque pelo link da sua logo -->
+      <h1>GESTÃO COMBUSTÍVEL</h1>
+    </header>
 
-    <div class="menu-topo">
-        <button onclick="abrirModal()">NOVO ABASTECIMENTO</button>
-        <button onclick="abrirModalVeiculos()">GERENCIAR VEÍCULOS</button>
-    </div>
-
+    <!-- GERENCIAR VEÍCULOS -->
+    <div class="section-title">GERENCIAR VEÍCULOS</div>
     <div class="card">
-        <h2>RELATÓRIOS</h2>
-        <label>TIPO DE RELATÓRIO</label>
-        <select id="tipoRel" onchange="mudaTipoRel()">
-            <option value="lista">LISTA COMPLETA</option>
-            <option value="consumo">CONSUMO POR VEÍCULO</option>
-        </select>
-        <label id="labelFiltro">FILTRAR POR VEÍCULO</label>
-        <select id="filtroVeiculo"></select>
-        <label>PERÍODO</label>
-        <div class="periodo">
-            <input type="date" id="dataInicial">
-            <input type="date" id="dataFinal">
+      <h2>CADASTRO DE VEÍCULO</h2>
+      <label>NOME</label>
+      <input type="text" id="nomeVeiculo" placeholder="NOME DO VEÍCULO">
+      <label>PLACA</label>
+      <input type="text" id="placaVeiculo" placeholder="DIGITE A PLACA">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="cadastrarVeiculo()">CADASTRAR</button>
+        <button class="btn btn-primary" onclick="editarVeiculo()">EDITAR</button>
+      </div>
+    </div>
+
+    <!-- REGISTRAR ABASTECIMENTO -->
+    <div class="section-title">REGISTRAR ABASTECIMENTO</div>
+    <div class="card">
+      <h2>ABASTECIMENTO</h2>
+      <div class="grid-2">
+        <div>
+          <label>DATA</label>
+          <input type="date" id="dataAbastecimento">
         </div>
-        <button onclick="mostrar()">GERAR RELATÓRIO</button>
-        <button onclick="gerarPDF()" class="btn-pdf">GERAR PDF</button>
-    </div>
-
-    <div id="resultado"></div>
-</div>
-
-<!-- MODAL ABASTECIMENTO -->
-<div id="modal" class="modal">
-    <div class="modal-conteudo">
-        <span class="fechar" onclick="fecharModal()">&times;</span>
-        <h2>NOVO ABASTECIMENTO</h2>
-        <form onsubmit="event.preventDefault(); salvar();">
-            <label>DATA</label><input type="date" id="data" required>
-            <label>VEÍCULO</label><select id="selectVeiculo" required></select>
-            <label>MOTORISTA</label><input type="text" id="motorista" required>
-            <label>LITROS</label><input type="number" step="0.01" id="litros" required>
-            <label>VALOR TOTAL R$</label><input type="number" step="0.01" id="valor" required>
-            <label>KM ATUAL</label><input type="number" id="km" required>
-            <button type="submit">SALVAR</button>
-        </form>
-    </div>
-</div>
-
-<!-- MODAL VEÍCULOS -->
-<div id="modalVeiculos" class="modal">
-    <div class="modal-conteudo">
-        <span class="fechar" onclick="fecharModalVeiculos()">&times;</span>
-        <h2>CADASTRAR VEÍCULO</h2>
-        <div class="form-veiculo">
-            <label>PLACA</label><input type="text" id="placaNova" placeholder="AAA-1234">
-            <label>NOME VEÍCULO</label><input type="text" id="nomeVeiculo" placeholder="HILUX SRX">
-            <button onclick="cadastrarVeiculo()">ADICIONAR VEÍCULO</button>
+        <div>
+          <label>LISTA DE VEÍCULOS</label>
+          <select id="selectVeiculo"><option>Carregando...</option></select>
         </div>
-        <h3>VEÍCULOS CADASTRADOS</h3>
-        <div id="listaVeiculosCadastrados"></div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>MOTORISTA</label>
+          <input type="text" id="motorista">
+        </div>
+        <div>
+          <label>LITROS</label>
+          <input type="number" step="0.01" id="litros">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label>VALOR TOTAL R$</label>
+          <input type="number" step="0.01" id="valorTotal">
+        </div>
+        <div>
+          <label>KM ATUAL</label>
+          <input type="number" id="kmAtual">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="registrarAbastecimento()">REGISTRAR</button>
+        <button class="btn btn-primary" onclick="abrirModalManutencao()">MANUTENÇÃO</button>
+      </div>
     </div>
-</div>
 
-<script src="./script.js?v=1"></script>
+    <!-- HISTÓRICO -->
+    <div class="section-title">HISTÓRICO</div>
+    <div class="card">
+      <table id="tabelaHistorico">
+        <thead>
+          <tr>
+            <th>DATA</th><th>VEICULO</th><th>PLACA</th><th>MOTORISTA</th>
+            <th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th><th>AÇÃO</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="btn-group" style="margin-top:15px;">
+        <button class="btn btn-primary" onclick="gerarPDF('geral')">GERAL</button>
+        <button class="btn btn-primary" onclick="gerarPDF('seletiva')">SELETIVA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MANUTENÇÃO -->
+  <div id="modalManutencao" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="fecharModalManutencao()">&times;</span>
+      <h2>REGISTRAR MANUTENÇÃO</h2>
+      <label>VEÍCULO</label>
+      <select id="selectVeiculoManutencao"></select>
+      <label>TIPO</label>
+      <select id="tipoManutencao">
+        <option value="Troca de Óleo">Troca de Óleo</option>
+        <option value="Troca de Filtro">Troca de Filtro</option>
+      </select>
+      <label>KM DA TROCA</label>
+      <input type="number" id="kmManutencao">
+      <button class="btn btn-primary" onclick="registrarManutencao()">SALVAR</button>
+    </div>
+  </div>
+
+  <?!= include('script');?>
 </body>
 </html>
