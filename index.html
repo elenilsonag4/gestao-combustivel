@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AG4 FROTA - Gestão Combustível</title>
+  <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <!-- CSS será injetado pelo code.gs -->
 </head>
 <body>
   <div class="container">
+    
     <header>
       <img src="logo frota.png" alt="AG4 FROTA" class="logo">
       <h1>GESTÃO COMBUSTÍVEL</h1>
@@ -17,13 +18,17 @@
     <div class="section-title">GERENCIAR VEÍCULOS</div>
     <div class="card">
       <h2>CADASTRO DE VEÍCULO</h2>
-      <label>NOME</label>
-      <input type="text" id="nomeVeiculo" placeholder="NOME DO VEÍCULO">
-      <label>PLACA</label>
-      <input type="text" id="placaVeiculo" placeholder="DIGITE A PLACA">
+      <div class="form-group">
+        <label for="nomeVeiculo">NOME</label>
+        <input type="text" id="nomeVeiculo" placeholder="NOME DO VEÍCULO">
+      </div>
+      <div class="form-group">
+        <label for="placaVeiculo">PLACA</label>
+        <input type="text" id="placaVeiculo" placeholder="DIGITE A PLACA">
+      </div>
       <div class="btn-group">
-        <button class="btn btn-primary" onclick="cadastrarVeiculo()">CADASTRAR</button>
-        <button class="btn btn-primary" onclick="editarVeiculo()">EDITAR</button>
+        <button class="btn btn-primary">CADASTRAR</button>
+        <button class="btn btn-primary">EDITAR</button>
       </div>
     </div>
 
@@ -31,53 +36,73 @@
     <div class="card">
       <h2>ABASTECIMENTO</h2>
       <div class="grid-2">
-        <div><label>DATA</label><input type="date" id="dataAbastecimento"></div>
-        <div><label>LISTA DE VEÍCULOS</label><select id="selectVeiculo"><option>Carregando...</option></select></div>
+        <div class="form-group">
+          <label for="dataAbastecimento">DATA</label>
+          <input type="date" id="dataAbastecimento">
+        </div>
+        <div class="form-group">
+          <label for="selectVeiculo">LISTA DE VEÍCULOS</label>
+          <select id="selectVeiculo">
+            <option>Selecione um veículo</option>
+          </select>
+        </div>
       </div>
       <div class="grid-2">
-        <div><label>MOTORISTA</label><input type="text" id="motorista" placeholder="NOME DO MOTORISTA"></div>
-        <div><label>LITROS</label><input type="number" step="0.01" id="litros" placeholder="0.00"></div>
+        <div class="form-group">
+          <label for="motorista">MOTORISTA</label>
+          <input type="text" id="motorista" placeholder="NOME DO MOTORISTA">
+        </div>
+        <div class="form-group">
+          <label for="litros">LITROS</label>
+          <input type="number" step="0.01" id="litros" placeholder="0.00">
+        </div>
       </div>
       <div class="grid-2">
-        <div><label>VALOR TOTAL R$</label><input type="number" step="0.01" id="valorTotal" placeholder="0.00"></div>
-        <div><label>KM ATUAL</label><input type="number" id="kmAtual" placeholder="KM"></div>
+        <div class="form-group">
+          <label for="valorTotal">VALOR TOTAL R$</label>
+          <input type="number" step="0.01" id="valorTotal" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label for="kmAtual">KM ATUAL</label>
+          <input type="number" id="kmAtual" placeholder="KM">
+        </div>
       </div>
       <div class="btn-group">
-        <button class="btn btn-primary" onclick="registrarAbastecimento()">REGISTRAR</button>
-        <button class="btn btn-primary" onclick="abrirModalManutencao()">MANUTENÇÃO</button>
+        <button class="btn btn-primary">REGISTRAR</button>
+        <button class="btn btn-primary">MANUTENÇÃO</button>
       </div>
     </div>
 
     <div class="section-title">HISTÓRICO</div>
-    <div class="card">
-      <table id="tabelaHistorico">
-        <thead>
-          <tr><th>DATA</th><th>VEICULO</th><th>PLACA</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th><th>AÇÃO</th></tr>
-        </thead>
-        <tbody><tr><td colspan="9">Carregando...</td></tr></tbody>
-      </table>
-      <div class="btn-group" style="margin-top:15px;">
-        <button class="btn btn-primary" onclick="gerarPDF('geral')">GERAL</button>
-        <button class="btn btn-primary" onclick="gerarPDF('seletiva')">SELETIVA</button>
-      </div>
-    </div>
+<div class="card">
+  <div class="btn-group">
+    <button class="btn btn-primary">GERAL</button>
+    <button class="btn btn-primary">SELETIVA</button>
   </div>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>DATA</th>
+        <th>PLACA</th>
+        <th>VEICULO</th>
+        <th>MOTORISTA</th>
+        <th>LITROS</th>
+        <th>VALOR</th>
+        <th>KM</th>
+        <th>CONSUMO</th>
+        <th>AÇÃO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="9">Nenhum abastecimento registrado</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-  <div id="modalManutencao" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="fecharModalManutencao()">&times;</span>
-      <h2>REGISTRAR MANUTENÇÃO</h2>
-      <label>VEÍCULO</label><select id="selectVeiculoManutencao"></select>
-      <label>TIPO</label>
-      <select id="tipoManutencao">
-        <option value="Troca de Óleo">Troca de Óleo</option>
-        <option value="Troca de Filtro Óleo">Troca de Filtro Óleo</option>
-      </select>
-      <label>KM DA TROCA</label><input type="number" id="kmManutencao">
-      <button class="btn btn-primary" onclick="registrarManutencao()">SALVAR</button>
-    </div>
   </div>
-
-  <!-- JS será injetado pelo code.gs -->
+  <script src="script.js"></script>
 </body>
 </html>
