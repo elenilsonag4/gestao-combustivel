@@ -3,16 +3,18 @@
 // ==========================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrVFsj93t28549rI7BS69hkQZK1cSjwRBE7yTDBqPST2ljly9HsMX5ztGsfypWoVlE/exec";
 
-// Função para enviar os dados para a planilha em segundo plano
+// Função corrigida para enviar os dados para a planilha em segundo plano
 function enviarParaGoogleSheets(acao, payload) {
   fetch(APPS_SCRIPT_URL, {
     method: "POST",
     mode: "no-cors", // Permite envio sem erros de CORS
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "text/plain;charset=utf-8"
     },
     body: JSON.stringify({ acao: acao, dados: payload })
-  }).catch(err => console.error("Erro ao sincronizar com Google Sheets:", err));
+  })
+  .then(() => console.log(`[Google Sheets] Ação '${acao}' enviada com sucesso.`))
+  .catch(err => console.error("Erro ao sincronizar com Google Sheets:", err));
 }
 
 // ==========================================
