@@ -9,7 +9,7 @@
 </head>
 <body>
   <div class="container">
-    
+
     <header>
       <img src="logo frota.png" alt="AG4 FROTA" class="logo">
       <h1>GESTÃO COMBUSTÍVEL</h1>
@@ -27,8 +27,8 @@
         <input type="text" id="placaVeiculo" placeholder="DIGITE A PLACA">
       </div>
       <div class="btn-group">
-        <button class="btn btn-primary">CADASTRAR</button>
-        <button class="btn btn-primary">EDITAR</button>
+        <button class="btn btn-primary" onclick="cadastrarVeiculo()">CADASTRAR</button>
+        <button class="btn btn-primary" onclick="abrirModalEditar()">EDITAR</button>
       </div>
     </div>
 
@@ -43,7 +43,7 @@
         <div class="form-group">
           <label for="selectVeiculo">LISTA DE VEÍCULOS</label>
           <select id="selectVeiculo">
-            <option>Selecione um veículo</option>
+            <option value="">SELECIONE UM VEÍCULO</option>
           </select>
         </div>
       </div>
@@ -68,39 +68,129 @@
         </div>
       </div>
       <div class="btn-group">
-        <button class="btn btn-primary">REGISTRAR</button>
-        <button class="btn btn-primary">MANUTENÇÃO</button>
+        <button class="btn btn-primary" onclick="registrarAbastecimento()">REGISTRAR</button>
+        <button class="btn btn-primary" onclick="abrirModalManutencao()">MANUTENÇÃO</button>
       </div>
     </div>
 
+    <!-- SEÇÃO DE HISTÓRICO COM ABAS -->
     <div class="section-title">HISTÓRICO</div>
-<div class="card">
-  <div class="btn-group">
-    <button class="btn btn-primary">GERAL</button>
-    <button class="btn btn-primary">SELETIVA</button>
-  </div>
-  
-  <table>
-    <thead>
-      <tr>
-        <th>DATA</th>
-        <th>PLACA</th>
-        <th>VEICULO</th>
-        <th>MOTORISTA</th>
-        <th>LITROS</th>
-        <th>VALOR</th>
-        <th>KM</th>
-        <th>CONSUMO</th>
-        <th>AÇÃO</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td colspan="9">Nenhum abastecimento registrado</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+    <div class="card">
+      
+      <!-- Botões das Abas Clicáveis -->
+      <div class="tabs-container">
+        <button class="tab-btn active" id="btnTabAbastecimento" onclick="trocarAba('abastecimento')">
+          HISTÓRICO ABASTECIMENTO
+        </button>
+        <button class="tab-btn" id="btnTabManutencao" onclick="trocarAba('manutencao')">
+          HISTÓRICO MANUTENÇÃO
+        </button>
+      </div>
+
+      <!-- Botões de Relatório PDF -->
+      <div class="btn-group" style="margin-bottom: 15px;">
+        <button class="btn btn-primary" onclick="gerarPDFGeral()">GERAL</button>
+        <button class="btn btn-primary" onclick="abrirModalSeletiva()">SELETIVA</button>
+      </div>
+
+      <!-- Tabela Dinâmica Mantida na Proporção -->
+      <div class="table-responsive">
+        <table id="tabelaHistorico">
+          <thead>
+            <tr id="cabecalhoTabela">
+              <!-- O JS preenche as colunas dinamicamente com base na aba ativa -->
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="9">NENHUM REGISTRO ENCONTRADO</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- MODAL MANUTENCAO -->
+    <div id="modalManutencao" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="fecharModalManutencao()">&times;</span>
+        <h2>REGISTRAR MANUTENÇÃO</h2>
+        <div class="form-group">
+          <label for="dataManutencao">DATA</label>
+          <input type="date" id="dataManutencao">
+        </div>
+        <div class="form-group">
+          <label for="selectVeiculoManutencao">PLACA</label>
+          <select id="selectVeiculoManutencao" onchange="carregarNomeVeiculo()">
+            <option value="">SELECIONE UM VEÍCULO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="nomeVeiculoManutencao">NOME_VEICULO</label>
+          <input type="text" id="nomeVeiculoManutencao" placeholder="CARREGA AUTOMÁTICO" readonly>
+        </div>
+        <div class="form-group">
+          <label for="tipoManutencao">TIPO</label>
+          <input type="text" id="tipoManutencao" placeholder="EX: TROCA DE ÓLEO, PNEU">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="kmManutencao">KM</label>
+            <input type="number" id="kmManutencao" placeholder="KM ATUAL">
+          </div>
+          <div class="form-group">
+            <label for="proximaTrocaKm">PRÓXIMA TROCA</label>
+            <input type="number" id="proximaTrocaKm" placeholder="KM PRÓXIMA TROCA">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="registrarManutencao()">SALVAR</button>
+          <button class="btn btn-primary" onclick="fecharModalManutencao()">CANCELAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL EDITAR VEICULO -->
+    <div id="modalEditarVeiculo" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="fecharModalEditar()">&times;</span>
+        <h2>EDITAR VEÍCULO</h2>
+        <div class="form-group">
+          <label for="selectVeiculoEditar">SELECIONE O VEÍCULO</label>
+          <select id="selectVeiculoEditar" onchange="carregarDadosEdicao()">
+            <option value="">SELECIONE UM VEÍCULO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="nomeVeiculoEditar">NOME</label>
+          <input type="text" id="nomeVeiculoEditar" placeholder="NOVO NOME">
+        </div>
+        <div class="form-group">
+          <label for="placaVeiculoEditar">PLACA</label>
+          <input type="text" id="placaVeiculoEditar" placeholder="NOVA PLACA">
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="salvarEdicaoVeiculo()">SALVAR</button>
+          <button class="btn btn-primary" onclick="excluirVeiculo()">EXCLUIR</button>
+          <button class="btn btn-primary" onclick="fecharModalEditar()">CANCELAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL SELETIVA PDF -->
+    <div id="modalSeletiva" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="fecharModalSeletiva()">&times;</span>
+        <h2>SELECIONAR VEÍCULOS PARA O PDF</h2>
+        <div id="listaCheckboxesVeiculos" style="max-height: 300px; overflow-y: auto; margin: 15px 0;">
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="gerarPDFSeletiva()">GERAR PDF</button>
+          <button class="btn btn-primary" onclick="fecharModalSeletiva()">CANCELAR</button>
+        </div>
+      </div>
+    </div>
 
   </div>
   <script src="script.js"></script>
