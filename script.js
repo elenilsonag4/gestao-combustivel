@@ -16,8 +16,36 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function enviarParaGoogleSheets(acao, dados) {
-    const payload = JSON.stringify({ acao: acao, dados: dados });
-    await fetch(URL_SCRIPT, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload });
+
+    const payload = {
+        acao: acao,
+        dados: dados
+    };
+
+    console.log("=================================");
+    console.log("ENVIANDO PARA GOOGLE SHEETS");
+    console.log(payload);
+    console.log(JSON.stringify(payload));
+    console.log("=================================");
+
+    try {
+
+        const resposta = await fetch(URL_SCRIPT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        console.log("ENVIO CONCLUÍDO");
+        console.log("STATUS:", resposta.status);
+
+    } catch (erro) {
+
+        console.error("ERRO AO ENVIAR:", erro);
+
+    }
 }
 
 // CADASTRAR VEICULO
