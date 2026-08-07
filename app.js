@@ -6,7 +6,7 @@
 // Esta deve ser a URL da implantação "Aplicativo da Web" do Apps Script.
 // Se você criar outra implantação com outra URL, altere somente esta linha.
 const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbzr8_dBRPBw73PCja-GkWAhvcIKHexbohMm5bMpNyAQ8OynAXvfGyAFCM8X4pNZTKGYQg/exec";
+  "https://script.google.com/macros/s/AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec";
 
 const STORAGE_KEY = "ag4_frota";
 const SENHA_MESTRE = "frot@AG4";
