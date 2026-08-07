@@ -61,26 +61,31 @@ function escaparHTML(valor) {
 async function enviarParaGoogleSheets(acao, dados) {
   const payload = JSON.stringify({ acao, dados });
 
-  console.log("[AG4] Enviando:", acao, dados);
+  console.log("[AG4] Enviando para planilha:", acao, dados);
 
   try {
-    // text/plain evita preflight CORS. O Apps Script recebe e.postData.contents.
-    await fetch(APPS_SCRIPT_URL, {
+    const resposta = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: {
         "Content-Type": "text/plain;charset=utf-8"
       },
       body: payload
     });
 
-    console.log("[AG4] Solicitação enviada ao Apps Script:", acao);
-    return true;
+    const resultado = await resposta.json();
+
+    if (!resultado.ok) {
+      console.warn("[AG4] Aviso do servidor:", resultado.mensagem);
+    } else {
+      console.log("[AG4] Sucesso na planilha:", resultado.mensagem);
+    }
+
+    return resultado;
   } catch (erro) {
     console.error("[AG4] Erro de comunicação com Google Sheets:", erro);
     alert(
-      "O registro foi salvo no computador, mas não foi possível enviar para o Google Sheets.\n\n" +
-      "Verifique a implantação do Apps Script e a URL no app.js."
+      "O registro foi alterado no navegador, mas houve uma falha ao atualizar no Google Sheets.\n\n" +
+      "Verifique sua conexão ou se a implantação do Apps Script foi atualizada."
     );
     return false;
   }
