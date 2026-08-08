@@ -135,12 +135,17 @@ function preencherSelects(veiculos) {
   const select1 = document.getElementById("selectVeiculo");
   const select2 = document.getElementById("selectVeiculoManutencao");
 
+  // Ordena os veículos em ordem alfabética pelo nome
+  const veiculosOrdenados = [...veiculos].sort((a, b) => 
+    a.nome.localeCompare(b.nome, 'pt-BR')
+  );
+
   [select1, select2].forEach((select) => {
     if (!select) return;
 
     select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
 
-    veiculos.forEach((v) => {
+    veiculosOrdenados.forEach((v) => {
       select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
     });
   });
@@ -197,10 +202,16 @@ function fecharModalEditar() {
 
 function preencherSelectEditar() {
   const select = document.getElementById("selectVeiculoEditar");
+  if (!select) return;
 
   select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
 
-  listaVeiculosGlobal.forEach(v => {
+  // Ordena a lista global antes de renderizar no modal
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    a.nome.localeCompare(b.nome, 'pt-BR')
+  );
+
+  veiculosOrdenados.forEach(v => {
     select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
   });
 }
