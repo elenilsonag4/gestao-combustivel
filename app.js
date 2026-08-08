@@ -138,9 +138,9 @@ function preencherSelects(veiculos) {
   const select1 = document.getElementById("selectVeiculo");
   const select2 = document.getElementById("selectVeiculoManutencao");
 
-  // Ordena os veículos em ordem alfabética pelo nome
+  // Garantia de ordenação alfabética pelo nome do veículo
   const veiculosOrdenados = [...veiculos].sort((a, b) => 
-    a.nome.localeCompare(b.nome, 'pt-BR')
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
 
   [select1, select2].forEach((select) => {
@@ -174,6 +174,10 @@ function cadastrarVeiculo() {
   const novoVeiculo = { nome, placa };
 
   DB.veiculos.push(novoVeiculo);
+  
+  // Reordena o banco local após inserir
+  DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+
   salvarDB();
   carregarDados();
 
@@ -211,7 +215,7 @@ function preencherSelectEditar() {
 
   // Ordena a lista global antes de renderizar no modal
   const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
-    a.nome.localeCompare(b.nome, 'pt-BR')
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
 
   veiculosOrdenados.forEach(v => {
@@ -683,7 +687,11 @@ function abrirModalEditarAbastecimento(index) {
   const select = document.getElementById("editSelectVeiculo");
   select.innerHTML = "";
 
-  listaVeiculosGlobal.forEach(v => {
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+
+  veiculosOrdenados.forEach(v => {
     select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
   });
 
@@ -807,7 +815,7 @@ function criarModalEditarAbastecimento() {
 
 function gerarHTMLPDF(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
-    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]));
+    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
     return String(a[0]).localeCompare(String(b[0]));
   });
 
@@ -886,7 +894,7 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 
 function gerarHTMLPDFManutencao(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
-    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]));
+    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
     return String(a[0]).localeCompare(String(b[0]));
   });
 
@@ -999,7 +1007,11 @@ function abrirModalSeletiva() {
     return;
   }
 
-  listaVeiculosGlobal.forEach(v => {
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+
+  veiculosOrdenados.forEach(v => {
     const div = document.createElement("div");
     div.className = "checkbox-item";
 
