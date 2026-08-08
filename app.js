@@ -104,6 +104,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function carregarDados() {
+  // Ordena a lista principal diretamente pelo NOME do veículo
+  DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+
   listaVeiculosGlobal = DB.veiculos;
   recalcularConsumoHistorico();
   preencherSelects(DB.veiculos);
