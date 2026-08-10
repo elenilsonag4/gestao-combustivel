@@ -2,13 +2,11 @@
 // AG4 FROTA - APP.JS
 // ============================================================
 
-// IMPORTANTE:
-// Esta deve ser a URL da implantação "Aplicativo da Web" do Apps Script.
-// Se você criar outra implantação com outra URL, altere somente esta linha.
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec";
 
 const STORAGE_KEY = "ag4_frota";
+const USER_KEY = "ag4_usuario_logado";
 const SENHA_MESTRE = "frot@AG4";
 
 let DB = carregarDB();
@@ -55,35 +53,110 @@ function escaparHTML(valor) {
 }
 
 // ============================================================
-// GOOGLE SHEETS
+// GOOGLE SHEETS & AUTENTICAÇÃO
 // ============================================================
 
 async function enviarParaGoogleSheets(acao, dados) {
   const payload = JSON.stringify({ acao, dados });
-
-  console.log("[AG4] Enviando:", acao, dados);
-
   try {
-    // text/plain evita preflight CORS. O Apps Script recebe e.postData.contents.
     await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: payload
     });
-
-    console.log("[AG4] Solicitação enviada ao Apps Script:", acao);
     return true;
   } catch (erro) {
     console.error("[AG4] Erro de comunicação com Google Sheets:", erro);
-    alert(
-      "O registro foi salvo no computador, mas não foi possível enviar para o Google Sheets.\n\n" +
-      "Verifique a implantação do Apps Script e a URL no app.js."
-    );
+    alert("Erro ao conectar com o servidor. Verifique sua conexão.");
     return false;
   }
+}
+
+async function sincronizarComNuvem() {
+  mostrarLoading(true);
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ acao: "obterDados" })
+    });
+
+    const res = await response.json();
+    if (res.ok && res.DB) {
+      DB = res.DB;
+      salvarDB();
+      carregarDados();
+    }
+  } catch (erro) {
+    console.error("Erro na sincronização:", erro);
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+async function fazerLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value.trim();
+  const erroEl = document.getElementById("loginErro");
+
+  if (!email || !senha) {
+    erroEl.textContent = "PREENCHA E-MAIL E SENHA.";
+    erroEl.style.display = "block";
+    return;
+  }
+
+  erroEl.style.display = "none";
+  mostrarLoading(true);
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ acao: "fazerLogin", dados: { email, senha } })
+    });
+
+    const res = await response.json();
+
+    if (res.ok) {
+      localStorage.setItem(USER_KEY, JSON.stringify(res.usuario || { email }));
+      exibirApp(res.usuario);
+      sincronizarComNuvem();
+    } else {
+      erroEl.textContent = res.mensagem || "E-MAIL OU SENHA INCORRETOS.";
+      erroEl.style.display = "block";
+    }
+  } catch (erro) {
+    console.error("Erro no login:", erro);
+    erroEl.textContent = "ERRO AO CONECTAR COM O SERVIDOR.";
+    erroEl.style.display = "block";
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function fazerLogout() {
+  if (confirm("DESEJA REALMENTE SAIR DO SISTEMA?")) {
+    localStorage.removeItem(USER_KEY);
+    document.getElementById("telaLogin").style.display = "flex";
+    document.getElementById("appContainer").style.display = "none";
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginSenha").value = "";
+  }
+}
+
+function exibirApp(usuario) {
+  document.getElementById("telaLogin").style.display = "none";
+  document.getElementById("appContainer").style.display = "block";
+  if (usuario && usuario.nome) {
+    document.getElementById("nomeUsuarioLogado").textContent = `USUÁRIO: ${usuario.nome.toUpperCase()}`;
+  }
+}
+
+function mostrarLoading(exibir) {
+  const spinner = document.getElementById("loadingSpinner");
+  if (spinner) spinner.style.display = exibir ? "flex" : "none";
 }
 
 // ============================================================
@@ -95,18 +168,24 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("dataManutencao").value = dataHojeInput();
 
   document.addEventListener("input", (e) => {
-    if (e.target && e.target.type === "text") {
+    if (e.target && e.target.type === "text" && e.target.id !== "loginEmail") {
       e.target.value = e.target.value.toUpperCase();
     }
   });
 
-  carregarDados();
+  const usuarioSalvo = JSON.parse(localStorage.getItem(USER_KEY));
+  if (usuarioSalvo) {
+    exibirApp(usuarioSalvo);
+    carregarDados();
+    sincronizarComNuvem();
+  } else {
+    document.getElementById("telaLogin").style.display = "flex";
+    document.getElementById("appContainer").style.display = "none";
+  }
 });
 
 function carregarDados() {
-  // Ordena a lista principal diretamente pelo NOME do veículo
   DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
-
   listaVeiculosGlobal = DB.veiculos;
   recalcularConsumoHistorico();
   preencherSelects(DB.veiculos);
@@ -114,17 +193,13 @@ function carregarDados() {
 }
 
 // ============================================================
-// SENHA
+// SENHA MESTRE
 // ============================================================
 
 function confirmarSenha() {
   const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
-
   if (senhaDigitada === null) return false;
-
-  if (senhaDigitada === SENHA_MESTRE) {
-    return true;
-  }
+  if (senhaDigitada === SENHA_MESTRE) return true;
 
   alert("SENHA INCORRETA! AÇÃO NÃO PERMITIDA.");
   return false;
@@ -138,16 +213,13 @@ function preencherSelects(veiculos) {
   const select1 = document.getElementById("selectVeiculo");
   const select2 = document.getElementById("selectVeiculoManutencao");
 
-  // Garantia de ordenação alfabética pelo nome do veículo
   const veiculosOrdenados = [...veiculos].sort((a, b) => 
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
 
   [select1, select2].forEach((select) => {
     if (!select) return;
-
     select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
-
     veiculosOrdenados.forEach((v) => {
       select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
     });
@@ -172,10 +244,7 @@ function cadastrarVeiculo() {
   }
 
   const novoVeiculo = { nome, placa };
-
   DB.veiculos.push(novoVeiculo);
-  
-  // Reordena o banco local após inserir
   DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
 
   salvarDB();
@@ -185,13 +254,11 @@ function cadastrarVeiculo() {
 
   nomeEl.value = "";
   placaEl.value = "";
-
   alert("VEÍCULO CADASTRADO COM SUCESSO!");
 }
 
 function abrirModalEditar() {
   preencherSelectEditar();
-
   const modal = document.getElementById("modalEditarVeiculo");
   modal.style.display = "block";
   modal.setAttribute("aria-hidden", "false");
@@ -212,8 +279,6 @@ function preencherSelectEditar() {
   if (!select) return;
 
   select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
-
-  // Ordena a lista global antes de renderizar no modal
   const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
@@ -249,11 +314,7 @@ function salvarEdicaoVeiculo() {
   }
 
   const veiculo = DB.veiculos.find(v => v.placa === placaAntiga);
-
-  if (!veiculo) {
-    alert("VEÍCULO NÃO ENCONTRADO.");
-    return;
-  }
+  if (!veiculo) return;
 
   veiculo.nome = nomeNovo;
   veiculo.placa = placaNova;
@@ -276,19 +337,13 @@ function salvarEdicaoVeiculo() {
   salvarDB();
   carregarDados();
 
-  enviarParaGoogleSheets("editarVeiculo", {
-    placaAntiga,
-    nomeNovo,
-    placaNova
-  });
-
+  enviarParaGoogleSheets("editarVeiculo", { placaAntiga, nomeNovo, placaNova });
   fecharModalEditar();
   alert("VEÍCULO E HISTÓRICOS ATUALIZADOS COM SUCESSO!");
 }
 
 function excluirVeiculo() {
   const placa = document.getElementById("selectVeiculoEditar").value;
-
   if (!placa) {
     alert("SELECIONE UM VEÍCULO PARA EXCLUIR.");
     return;
@@ -308,13 +363,12 @@ function excluirVeiculo() {
   carregarDados();
 
   enviarParaGoogleSheets("excluirVeiculo", { placa });
-
   fecharModalEditar();
   alert("VEÍCULO EXCLUÍDO COM SUCESSO!");
 }
 
 // ============================================================
-// CONSUMO
+// CONSUMO E ABASTECIMENTO
 // ============================================================
 
 function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
@@ -338,7 +392,6 @@ function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
   const kmRodado = km - Number(anterior[6]);
 
   if (kmRodado <= 0) return "0.00";
-
   return (kmRodado / l).toFixed(2);
 }
 
@@ -349,20 +402,11 @@ function recalcularConsumoHistorico() {
   }
 
   DB.abastecimento.forEach((registro, index) => {
-    registro[7] = calcularConsumoRegistro(
-      registro[1],
-      registro[6],
-      registro[4],
-      index
-    );
+    registro[7] = calcularConsumoRegistro(registro[1], registro[6], registro[4], index);
   });
 
   salvarDB();
 }
-
-// ============================================================
-// ABASTECIMENTO
-// ============================================================
 
 function registrarAbastecimento() {
   const data = document.getElementById("dataAbastecimento").value;
@@ -375,48 +419,18 @@ function registrarAbastecimento() {
   const veiculo = DB.veiculos.find(v => v.placa === placa);
   const nome = veiculo?.nome || "";
 
-  if (!data || !placa) {
-    alert("PREENCHA DATA E VEÍCULO.");
+  if (!data || !placa || !motorista || litros <= 0 || valor < 0 || kmAtual <= 0) {
+    alert("PREENCHA TODOS OS CAMPOS CORRETAMENTE.");
     return;
   }
 
-  if (!motorista) {
-    alert("INFORME O MOTORISTA.");
-    return;
-  }
-
-  if (!Number.isFinite(litros) || litros <= 0) {
-    alert("INFORME UMA QUANTIDADE DE LITROS VÁLIDA.");
-    return;
-  }
-
-  if (!Number.isFinite(valor) || valor < 0) {
-    alert("INFORME UM VALOR TOTAL VÁLIDO.");
-    return;
-  }
-
-  if (!Number.isFinite(kmAtual) || kmAtual <= 0) {
-    alert("INFORME UM KM ATUAL VÁLIDO.");
-    return;
-  }
-
-  const registro = [
-    data,
-    placa,
-    nome,
-    motorista,
-    litros,
-    valor,
-    kmAtual,
-    "-"
-  ];
+  const registro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
 
   DB.abastecimento.push(registro);
   recalcularConsumoHistorico();
   salvarDB();
   carregarDados();
 
-  // Envia o mesmo formato da linha da planilha: A até H.
   enviarParaGoogleSheets("registrarAbastecimento", registro);
 
   document.getElementById("dataAbastecimento").value = dataHojeInput();
@@ -437,7 +451,6 @@ function abrirModalManutencao() {
   const modal = document.getElementById("modalManutencao");
   modal.style.display = "block";
   modal.setAttribute("aria-hidden", "false");
-
   document.getElementById("dataManutencao").value = dataHojeInput();
 }
 
@@ -456,7 +469,6 @@ function fecharModalManutencao() {
 function carregarNomeVeiculo() {
   const placa = document.getElementById("selectVeiculoManutencao").value;
   const veiculo = DB.veiculos.find(v => v.placa === placa);
-
   document.getElementById("nomeVeiculoManutencao").value = veiculo?.nome || "";
 }
 
@@ -480,24 +492,18 @@ function registrarManutencao() {
   carregarDados();
 
   enviarParaGoogleSheets("registrarManutencao", registro);
-
   fecharModalManutencao();
   alert("MANUTENÇÃO REGISTRADA COM SUCESSO!");
 }
 
 // ============================================================
-// ABAS / TABELAS
+// TABELAS E NAVEGAÇÃO
 // ============================================================
 
 function trocarAba(aba) {
   abaAtiva = aba;
-
-  document.getElementById("btnTabAbastecimento")
-    .classList.toggle("active", aba === "abastecimento");
-
-  document.getElementById("btnTabManutencao")
-    .classList.toggle("active", aba === "manutencao");
-
+  document.getElementById("btnTabAbastecimento").classList.toggle("active", aba === "abastecimento");
+  document.getElementById("btnTabManutencao").classList.toggle("active", aba === "manutencao");
   renderizarTabela();
 }
 
@@ -534,7 +540,6 @@ function preencherTabelaAbastecimento(dados) {
 
   dados.forEach((r, index) => {
     const tr = tbody.insertRow();
-
     tr.insertCell().textContent = formatarData(r[0]);
     tr.insertCell().textContent = r[1];
     tr.insertCell().textContent = r[2];
@@ -547,8 +552,7 @@ function preencherTabelaAbastecimento(dados) {
     const td = tr.insertCell();
     td.innerHTML = `
       <div class="dropdown">
-        <button type="button" class="btn btn-primary action-btn"
-          onclick="toggleDropdown(event, 'abast_${index}')">MAIS</button>
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'abast_${index}')">MAIS</button>
         <div class="dropdown-content" id="dropdownabast_${index}">
           <button type="button" onclick="abrirModalEditarAbastecimento(${index})">EDITAR</button>
           <button type="button" onclick="excluirAbastecimento(${index})">EXCLUIR</button>
@@ -581,7 +585,6 @@ function preencherTabelaManutencao(dados) {
 
   dados.forEach((r, index) => {
     const tr = tbody.insertRow();
-
     tr.insertCell().textContent = formatarData(r[0]);
     tr.insertCell().textContent = r[1];
     tr.insertCell().textContent = r[2];
@@ -592,8 +595,7 @@ function preencherTabelaManutencao(dados) {
     const td = tr.insertCell();
     td.innerHTML = `
       <div class="dropdown">
-        <button type="button" class="btn btn-primary action-btn"
-          onclick="toggleDropdown(event, 'manut_${index}')">MAIS</button>
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${index}')">MAIS</button>
         <div class="dropdown-content" id="dropdownmanut_${index}">
           <button type="button" onclick="excluirManutencao(${index})">EXCLUIR</button>
         </div>
@@ -605,38 +607,26 @@ function preencherTabelaManutencao(dados) {
 function formatarData(data) {
   if (!data) return "";
   const texto = String(data);
-
   if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
     const [ano, mes, dia] = texto.split("-");
     return `${dia}/${mes}/${ano}`;
   }
-
   return texto;
 }
 
-// ============================================================
-// MENU DE AÇÕES
-// ============================================================
-
 function toggleDropdown(event, idStr) {
   event.stopPropagation();
-
-  document.querySelectorAll(".dropdown-content").forEach(menu => {
-    menu.classList.remove("show");
-  });
-
+  document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
   const menu = document.getElementById("dropdown" + idStr);
   if (menu) menu.classList.toggle("show");
 }
 
 document.addEventListener("click", () => {
-  document.querySelectorAll(".dropdown-content").forEach(menu => {
-    menu.classList.remove("show");
-  });
+  document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
 });
 
 // ============================================================
-// EXCLUSÃO DE HISTÓRICO
+// EXCLUSÃO DE DADOS
 // ============================================================
 
 function excluirAbastecimento(index) {
@@ -652,7 +642,6 @@ function excluirAbastecimento(index) {
   carregarDados();
 
   enviarParaGoogleSheets("excluirAbastecimento", { item });
-
   alert("ABASTECIMENTO EXCLUÍDO COM SUCESSO!");
 }
 
@@ -668,7 +657,6 @@ function excluirManutencao(index) {
   carregarDados();
 
   enviarParaGoogleSheets("excluirManutencao", { item });
-
   alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
 }
 
@@ -714,11 +702,7 @@ function fecharModalEditarAbastecimento() {
 function salvarEdicaoAbastecimento() {
   const index = Number(document.getElementById("editAbastIndex").value);
   const antigo = DB.abastecimento[index];
-
-  if (!antigo) {
-    alert("REGISTRO NÃO ENCONTRADO.");
-    return;
-  }
+  if (!antigo) return;
 
   const data = document.getElementById("editDataAbastecimento").value;
   const placa = document.getElementById("editSelectVeiculo").value;
@@ -742,11 +726,7 @@ function salvarEdicaoAbastecimento() {
   salvarDB();
   carregarDados();
 
-  enviarParaGoogleSheets("editarAbastecimento", {
-    antigo,
-    novo: novoRegistro
-  });
-
+  enviarParaGoogleSheets("editarAbastecimento", { antigo, novo: novoRegistro });
   fecharModalEditarAbastecimento();
   alert("ABASTECIMENTO ATUALIZADO COM SUCESSO!");
 }
@@ -755,57 +735,44 @@ function criarModalEditarAbastecimento() {
   const html = `
     <div id="modalEditarAbastecimento" class="modal">
       <div class="modal-content">
-        <button type="button" class="close"
-          onclick="fecharModalEditarAbastecimento()" aria-label="Fechar">&times;</button>
-
+        <button type="button" class="close" onclick="fecharModalEditarAbastecimento()" aria-label="Fechar">&times;</button>
         <h2>EDITAR ABASTECIMENTO</h2>
-
         <input type="hidden" id="editAbastIndex">
-
         <div class="form-group">
           <label for="editDataAbastecimento">DATA</label>
           <input type="date" id="editDataAbastecimento">
         </div>
-
         <div class="form-group">
           <label for="editSelectVeiculo">VEÍCULO</label>
           <select id="editSelectVeiculo"></select>
         </div>
-
         <div class="grid-2">
           <div class="form-group">
             <label for="editMotorista">MOTORISTA</label>
             <input type="text" id="editMotorista">
           </div>
-
           <div class="form-group">
             <label for="editLitros">LITROS</label>
             <input type="number" step="0.01" min="0" id="editLitros">
           </div>
         </div>
-
         <div class="grid-2">
           <div class="form-group">
             <label for="editValorTotal">VALOR TOTAL R$</label>
             <input type="number" step="0.01" min="0" id="editValorTotal">
           </div>
-
           <div class="form-group">
             <label for="editKmAtual">KM ATUAL</label>
             <input type="number" min="0" id="editKmAtual">
           </div>
         </div>
-
         <div class="btn-group">
-          <button type="button" class="btn btn-primary"
-            onclick="salvarEdicaoAbastecimento()">SALVAR</button>
-          <button type="button" class="btn btn-secondary"
-            onclick="fecharModalEditarAbastecimento()">CANCELAR</button>
+          <button type="button" class="btn btn-primary" onclick="salvarEdicaoAbastecimento()">SALVAR</button>
+          <button type="button" class="btn btn-secondary" onclick="fecharModalEditarAbastecimento()">CANCELAR</button>
         </div>
       </div>
     </div>
   `;
-
   document.body.insertAdjacentHTML("beforeend", html);
 }
 
@@ -819,7 +786,6 @@ function gerarHTMLPDF(dados, titulo) {
     return String(a[0]).localeCompare(String(b[0]));
   });
 
-  const totalRegistros = registros.length;
   const totalLitros = registros.reduce((sum, r) => sum + (Number(r[4]) || 0), 0);
   const totalValor = registros.reduce((sum, r) => sum + (Number(r[5]) || 0), 0);
 
@@ -829,12 +795,8 @@ function gerarHTMLPDF(dados, titulo) {
   registros.forEach(r => {
     if (veiculoAtual !== r[2]) {
       veiculoAtual = r[2];
-      linhas += `
-        <tr class="cabecalho-veiculo">
-          <td colspan="8">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td>
-        </tr>`;
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
     }
-
     linhas += `
       <tr>
         <td>${escaparHTML(formatarData(r[0]))}</td>
@@ -876,15 +838,12 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
   <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
 </div>
 <div class="cards">
-  <div class="card"><span>Total Registros</span><strong>${totalRegistros}</strong></div>
+  <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
   <div class="card"><span>Total Combustível</span><strong>${totalLitros.toFixed(2)} L</strong></div>
   <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toFixed(2)}</strong></div>
 </div>
 <table>
-<thead><tr>
-<th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th>
-<th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th>
-</tr></thead>
+<thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
 <script>window.onload=()=>window.print();</script>
@@ -904,12 +863,8 @@ function gerarHTMLPDFManutencao(dados, titulo) {
   registros.forEach(r => {
     if (veiculoAtual !== r[2]) {
       veiculoAtual = r[2];
-      linhas += `
-        <tr class="cabecalho-veiculo">
-          <td colspan="6">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td>
-        </tr>`;
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="6">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
     }
-
     linhas += `
       <tr>
         <td>${escaparHTML(formatarData(r[0]))}</td>
@@ -952,10 +907,7 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
   <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
 </div>
 <table>
-<thead><tr>
-<th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th>
-<th>KM ATUAL</th><th>PRÓX. TROCA</th>
-</tr></thead>
+<thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM ATUAL</th><th>PRÓX. TROCA</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
 <script>window.onload=()=>window.print();</script>
@@ -965,12 +917,10 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 
 function abrirNovaAbaComPDF(html) {
   const aba = window.open("", "_blank");
-
   if (!aba) {
-    alert("O navegador bloqueou a nova janela. Permita pop-ups para gerar o PDF.");
+    alert("O navegador bloqueou a janela do PDF. Permita pop-ups.");
     return;
   }
-
   aba.document.open();
   aba.document.write(html);
   aba.document.close();
@@ -978,23 +928,11 @@ function abrirNovaAbaComPDF(html) {
 
 function gerarPDFGeral() {
   if (abaAtiva === "abastecimento") {
-    if (!DB.abastecimento.length) {
-      alert("NÃO HÁ DADOS DE ABASTECIMENTO PARA GERAR O PDF.");
-      return;
-    }
-
-    abrirNovaAbaComPDF(
-      gerarHTMLPDF(DB.abastecimento, "RELATÓRIO GERAL DE ABASTECIMENTO")
-    );
+    if (!DB.abastecimento.length) return alert("NÃO HÁ DADOS DE ABASTECIMENTO.");
+    abrirNovaAbaComPDF(gerarHTMLPDF(DB.abastecimento, "RELATÓRIO GERAL DE ABASTECIMENTO"));
   } else {
-    if (!DB.manutencao.length) {
-      alert("NÃO HÁ DADOS DE MANUTENÇÃO PARA GERAR O PDF.");
-      return;
-    }
-
-    abrirNovaAbaComPDF(
-      gerarHTMLPDFManutencao(DB.manutencao, "RELATÓRIO GERAL DE MANUTENÇÃO")
-    );
+    if (!DB.manutencao.length) return alert("NÃO HÁ DADOS DE MANUTENÇÃO.");
+    abrirNovaAbaComPDF(gerarHTMLPDFManutencao(DB.manutencao, "RELATÓRIO GERAL DE MANUTENÇÃO"));
   }
 }
 
@@ -1002,10 +940,7 @@ function abrirModalSeletiva() {
   const container = document.getElementById("listaCheckboxesVeiculos");
   container.innerHTML = "";
 
-  if (!listaVeiculosGlobal.length) {
-    alert("NÃO HÁ VEÍCULOS CADASTRADOS.");
-    return;
-  }
+  if (!listaVeiculosGlobal.length) return alert("NÃO HÁ VEÍCULOS CADASTRADOS.");
 
   const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
@@ -1014,14 +949,12 @@ function abrirModalSeletiva() {
   veiculosOrdenados.forEach(v => {
     const div = document.createElement("div");
     div.className = "checkbox-item";
-
     div.innerHTML = `
       <label>
         <input type="checkbox" value="${escaparHTML(v.placa)}">
         <span>${escaparHTML(v.nome)} - ${escaparHTML(v.placa)}</span>
       </label>
     `;
-
     container.appendChild(div);
   });
 
@@ -1041,10 +974,7 @@ function gerarPDFSeletiva() {
     document.querySelectorAll("#listaCheckboxesVeiculos input:checked")
   ).map(cb => cb.value);
 
-  if (!placas.length) {
-    alert("SELECIONE PELO MENOS 1 VEÍCULO.");
-    return;
-  }
+  if (!placas.length) return alert("SELECIONE PELO MENOS 1 VEÍCULO.");
 
   const nomes = listaVeiculosGlobal
     .filter(v => placas.includes(v.placa))
@@ -1053,38 +983,20 @@ function gerarPDFSeletiva() {
 
   if (abaAtiva === "abastecimento") {
     const dados = DB.abastecimento.filter(r => placas.includes(r[1]));
-
-    if (!dados.length) {
-      alert("NENHUM ABASTECIMENTO ENCONTRADO PARA OS VEÍCULOS SELECIONADOS.");
-      return;
-    }
-
-    abrirNovaAbaComPDF(
-      gerarHTMLPDF(dados, `RELATÓRIO SELETIVO ABASTECIMENTO: ${nomes}`)
-    );
+    if (!dados.length) return alert("NENHUM ABASTECIMENTO ENCONTRADO.");
+    abrirNovaAbaComPDF(gerarHTMLPDF(dados, `RELATÓRIO SELETIVO: ${nomes}`));
   } else {
     const dados = DB.manutencao.filter(r => placas.includes(r[1]));
-
-    if (!dados.length) {
-      alert("NENHUMA MANUTENÇÃO ENCONTRADA PARA OS VEÍCULOS SELECIONADOS.");
-      return;
-    }
-
-    abrirNovaAbaComPDF(
-      gerarHTMLPDFManutencao(dados, `RELATÓRIO SELETIVO MANUTENÇÃO: ${nomes}`)
-    );
+    if (!dados.length) return alert("NENHUMA MANUTENÇÃO ENCONTRADA.");
+    abrirNovaAbaComPDF(gerarHTMLPDFManutencao(dados, `RELATÓRIO SELETIVO: ${nomes}`));
   }
 
   fecharModalSeletiva();
 }
 
-// ============================================================
-// FECHAR MODAIS AO CLICAR FORA / ESC
-// ============================================================
-
 window.addEventListener("click", (event) => {
   document.querySelectorAll(".modal").forEach(modal => {
-    if (event.target === modal) {
+    if (event.target === modal && modal.id !== "telaLogin") {
       modal.style.display = "none";
       modal.setAttribute("aria-hidden", "true");
     }
@@ -1093,9 +1005,10 @@ window.addEventListener("click", (event) => {
 
 window.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-
   document.querySelectorAll(".modal").forEach(modal => {
-    modal.style.display = "none";
-    modal.setAttribute("aria-hidden", "true");
+    if (modal.id !== "telaLogin") {
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+    }
   });
 });

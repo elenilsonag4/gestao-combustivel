@@ -41,6 +41,22 @@ h1 {
   letter-spacing: 1px;
 }
 
+.user-bar {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #1565c0;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
 .section-title {
   background: #1565c0;
   color: white;
@@ -256,6 +272,74 @@ tbody tr:hover {
   box-shadow: 0 5px 15px rgba(0,0,0,.3);
 }
 
+.login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.login-card {
+  background: #ffffff;
+  padding: 35px 30px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+.login-logo {
+  height: 60px;
+  margin-bottom: 15px;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 10px;
+  border: 1px solid #ef9a9a;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 4px solid #1565c0;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .close {
   position: absolute;
   right: 15px;
@@ -350,9 +434,10 @@ input::placeholder {
 
 @media (max-width: 768px) {
   body { padding: 10px; }
-  header { min-height: 65px; }
-  .logo { left: 5px; height: 42px; }
-  h1 { font-size: 18px; padding-left: 55px; }
+  header { min-height: 65px; flex-direction: column; text-align: center; }
+  .logo { position: static; margin-bottom: 10px; }
+  .user-bar { position: static; margin-top: 10px; justify-content: center; }
+  h1 { font-size: 18px; padding-left: 0; }
   .grid-2 { grid-template-columns: 1fr; }
   .btn-group { flex-direction: column; }
   .tabs-container { flex-direction: column; gap: 3px; }
