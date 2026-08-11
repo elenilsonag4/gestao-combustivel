@@ -7,7 +7,6 @@ const APPS_SCRIPT_URL =
 
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
-const THEME_KEY = "ag4_tema_escuro";
 const SENHA_MESTRE = "frot@AG4";
 
 let DB = carregarDB();
@@ -64,34 +63,6 @@ function escaparHTML(valor) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-// ============================================================
-// CONTROLE DE TEMA (CLARO / ESCURO)
-// ============================================================
-
-function alternarTema() {
-  const isDark = document.body.classList.toggle("dark-mode");
-  localStorage.setItem(THEME_KEY, isDark ? "true" : "false");
-  atualizarIconeTema(isDark);
-}
-
-function carregarTema() {
-  const darkSalvo = localStorage.getItem(THEME_KEY) === "true";
-  if (darkSalvo) {
-    document.body.classList.add("dark-mode");
-  } else {
-    document.body.classList.remove("dark-mode");
-  }
-  atualizarIconeTema(darkSalvo);
-}
-
-function atualizarIconeTema(isDark) {
-  const btn = document.getElementById("btnToggleTema");
-  if (btn) {
-    btn.textContent = isDark ? "☀️" : "🌙";
-    btn.title = isDark ? "Mudar para Tema Claro" : "Mudar para Tema Escuro";
-  }
 }
 
 // ============================================================
@@ -206,7 +177,6 @@ function mostrarLoading(exibir) {
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  carregarTema();
   document.getElementById("dataAbastecimento").value = dataHojeInput();
 
   document.addEventListener("input", (e) => {
