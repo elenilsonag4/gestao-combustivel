@@ -143,21 +143,15 @@
     </div>
   </div>
 
-   <!-- MODAL MANUTENÇÃO -->
+  <!-- MODAL MANUTENÇÃO -->
   <div id="modalManutencao" class="modal" aria-hidden="true">
     <div class="modal-content">
       <button type="button" class="close" onclick="fecharModalManutencao()" aria-label="Fechar">&times;</button>
       <h2>REGISTRAR MANUTENÇÃO</h2>
 
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="dataManutencao">DATA</label>
-          <input type="date" id="dataManutencao">
-        </div>
-        <div class="form-group">
-          <label for="horaManutencao">HORÁRIO</label>
-          <input type="time" id="horaManutencao">
-        </div>
+      <div class="form-group">
+        <label for="dataManutencao">DATA</label>
+        <input type="date" id="dataManutencao">
       </div>
 
       <div class="form-group">
@@ -177,7 +171,18 @@
         <input type="text" id="tipoManutencao" placeholder="EX: TROCA DE ÓLEO, PNEU">
       </div>
 
-      <!-- OPÇÃO OPCIONAL DE ALARME POR HORAS/DATA -->
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="kmManutencao">KM</label>
+          <input type="number" id="kmManutencao" min="0" placeholder="KM ATUAL">
+        </div>
+        <div class="form-group">
+          <label for="proximaTrocaKm">PRÓXIMA TROCA</label>
+          <input type="number" id="proximaTrocaKm" min="0" placeholder="KM PRÓXIMA TROCA">
+        </div>
+      </div>
+
+      <!-- OPÇÃO OPCIONAL DE ALARME CORRIGIDA -->
       <div class="form-group" style="margin-top: 15px;">
         <label class="checkbox-alarme-label">
           <input type="checkbox" id="chkAtivarAlarme" onchange="toggleCamposAlarme()">
@@ -185,20 +190,14 @@
         </label>
       </div>
 
-      <div id="containerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
-        <div class="grid-2">
-          <div class="form-group">
-            <label for="dataAlarme">DATA DO ALARME</label>
-            <input type="date" id="dataAlarme">
-          </div>
-          <div class="form-group">
-            <label for="horasAlarme">DURAÇÃO (EM HORAS)</label>
-            <input type="number" id="horasAlarme" min="1" placeholder="EX: 24, 48, 100">
-          </div>
+      <div id="containerAlarme" class="grid-2" style="display: none; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
+        <div class="form-group">
+          <label for="dataAlarme">DATA DO ALARME</label>
+          <input type="date" id="dataAlarme">
         </div>
-        <div class="form-group" style="margin-bottom: 0;">
+        <div class="form-group">
           <label for="obsAlarme">OBSERVAÇÃO / LEMBRETE</label>
-          <input type="text" id="obsAlarme" placeholder="EX: CHECAR NIVEL DO ÓLEO">
+          <input type="text" id="obsAlarme" placeholder="EX: CHECAR CORREIA DENTADA">
         </div>
       </div>
 
