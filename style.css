@@ -116,7 +116,7 @@ select {
   box-sizing: border-box;
 }
 
-/* Regra específica para corrigir o tamanho dos checkboxes */
+/* Tamanho de checkboxes */
 input[type="checkbox"] {
   width: auto !important;
   margin: 0;
@@ -154,7 +154,7 @@ input[readonly] {
   width: 100%;
 }
 
-/* GRUPO DE BOTÕES IGUAIS E EXPANDIDOS */
+/* BOTÕES PROPORCIONAIS */
 .btn-group {
   display: flex !important;
   gap: 10px !important;
@@ -477,7 +477,7 @@ input::placeholder {
 }
 
 /* ============================================================
-   APENAS CORES DO MODO ESCURO (SEM AFETAR POSICIONAMENTO)
+   ESTILOS EXCLUSIVOS DO MODO ESCURO (SEM AFETAR POSICIONAMENTO)
    ============================================================ */
 
 body.dark-theme {
