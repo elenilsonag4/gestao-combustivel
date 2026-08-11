@@ -7,16 +7,16 @@ const APPS_SCRIPT_URL =
 
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
+const THEME_KEY = "ag4_tema_escuro";
 const SENHA_MESTRE = "frot@AG4";
 
 let DB = carregarDB();
 let listaVeiculosGlobal = [];
 let abaAtiva = "abastecimento";
 
-// Controle de Ordenação Dinâmica das Tabelas
 let colunaOrdenacao = {
-  abastecimento: { indice: 0, asc: false }, // Padrão: Data (Decrescente)
-  manutencao: { indice: 0, asc: false }     // Padrão: Data (Decrescente)
+  abastecimento: { indice: 0, asc: false },
+  manutencao: { indice: 0, asc: false }
 };
 
 function carregarDB() {
@@ -63,6 +63,36 @@ function escaparHTML(valor) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+// ============================================================
+// LÓGICA DE ALTERNÂNCIA DE TEMA (MODO ESCURO / CLARO)
+// ============================================================
+
+function toggleTheme() {
+  const isDark = document.body.classList.toggle("dark-theme");
+  localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+  atualizarIconeTema(isDark);
+}
+
+function aplicarTemaSalvo() {
+  const temaSalvo = localStorage.getItem(THEME_KEY);
+  const prefereEscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  if (temaSalvo === "dark" || (!temaSalvo && prefereEscuro)) {
+    document.body.classList.add("dark-theme");
+    atualizarIconeTema(true);
+  } else {
+    document.body.classList.remove("dark-theme");
+    atualizarIconeTema(false);
+  }
+}
+
+function atualizarIconeTema(isDark) {
+  const btn = document.getElementById("btnThemeToggle");
+  if (btn) {
+    btn.textContent = isDark ? "☀️" : "🌙";
+  }
 }
 
 // ============================================================
@@ -177,6 +207,8 @@ function mostrarLoading(exibir) {
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  aplicarTemaSalvo();
+
   document.getElementById("dataAbastecimento").value = dataHojeInput();
 
   document.addEventListener("input", (e) => {
@@ -885,7 +917,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// PDF
+// RELATÓRIOS PDF
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
