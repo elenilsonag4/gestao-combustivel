@@ -3,7 +3,8 @@
 // ============================================================
 
 // URL da sua Web App do Google Apps Script
-const WEB_APP_URL = "SUA_URL_DO_GOOGLE_APPS_SCRIPT_AQUI";
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec";
 
 // Banco de Dados Local / Cache
 let DB = {
