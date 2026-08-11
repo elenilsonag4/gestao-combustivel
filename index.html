@@ -8,13 +8,26 @@
 </head>
 <body>
 
+  <!-- CABEÇALHO PRINCIPAL -->
   <header class="header">
     <h1>AG4 FROTA - GESTÃO DE VEÍCULOS</h1>
-    <button class="btn btn-primary" onclick="abrirModalManutencao()">+ REGISTRAR MANUTENÇÃO</button>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="abrirModalManutencao()">+ REGISTRAR MANUTENÇÃO</button>
+    </div>
   </header>
 
+  <!-- MENU DE NAVEGAÇÃO ENTRE MÓDULOS -->
+  <nav class="nav-tabs">
+    <button class="tab-btn active" onclick="mudarAba('manutencao')">🛠️ MANUTENÇÕES</button>
+    <button class="tab-btn" onclick="mudarAba('veiculos')">🚗 VEÍCULOS</button>
+    <button class="tab-btn" onclick="mudarAba('motoristas')">👨‍✈️ MOTORISTAS</button>
+    <button class="tab-btn" onclick="mudarAba('abastecimento')">⛽ ABASTECIMENTOS</button>
+  </nav>
+
   <main class="container">
-    <section class="card">
+    
+    <!-- ABA: HISTÓRICO DE MANUTENÇÕES -->
+    <section id="aba-manutencao" class="card aba-conteudo">
       <h2>HISTÓRICO DE MANUTENÇÕES</h2>
       <div class="table-responsive">
         <table id="tabelaHistorico">
@@ -31,12 +44,87 @@
             </tr>
           </thead>
           <tbody>
-            <!-- Dados carregados via JS -->
+            <!-- Dados carregados dinamicamente via JS -->
           </tbody>
         </table>
       </div>
     </section>
+
+    <!-- ABA: VEÍCULOS -->
+    <section id="aba-veiculos" class="card aba-conteudo" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>CADASTRO DE VEÍCULOS</h2>
+        <button class="btn btn-primary" onclick="abrirModalVeiculo()">+ NOVO VEÍCULO</button>
+      </div>
+      <div class="table-responsive">
+        <table id="tabelaVeiculos">
+          <thead>
+            <tr>
+              <th>PLACA</th>
+              <th>MODELO/NOME</th>
+              <th>KM ATUAL</th>
+              <th>AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Carregado via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ABA: MOTORISTAS -->
+    <section id="aba-motoristas" class="card aba-conteudo" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>CADASTRO DE MOTORISTAS</h2>
+        <button class="btn btn-primary" onclick="abrirModalMotorista()">+ NOVO MOTORISTA</button>
+      </div>
+      <div class="table-responsive">
+        <table id="tabelaMotoristas">
+          <thead>
+            <tr>
+              <th>NOME</th>
+              <th>CNH</th>
+              <th>AÇÕES</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Carregado via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ABA: ABASTECIMENTOS -->
+    <section id="aba-abastecimento" class="card aba-conteudo" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>HISTÓRICO DE ABASTECIMENTOS</h2>
+        <button class="btn btn-primary" onclick="abrirModalAbastecimento()">+ NOVO ABASTECIMENTO</button>
+      </div>
+      <div class="table-responsive">
+        <table id="tabelaAbastecimento">
+          <thead>
+            <tr>
+              <th>DATA</th>
+              <th>PLACA</th>
+              <th>MOTORISTA</th>
+              <th>LITROS</th>
+              <th>VALOR TOTAL</th>
+              <th>KM</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Carregado via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
   </main>
+
+  <!-- ============================================================ -->
+  <!-- MODAIS DO SISTEMA                                            -->
+  <!-- ============================================================ -->
 
   <!-- MODAL MANUTENÇÃO -->
   <div id="modalManutencao" class="modal" aria-hidden="true">
@@ -86,7 +174,6 @@
       </div>
 
       <div id="containerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
-        
         <div class="form-group">
           <label for="dataAlarme">DATA DO ALARME</label>
           <input type="date" id="dataAlarme">
@@ -96,7 +183,6 @@
           <label for="horasAlarme">DISPARAR APÓS (EM HORAS)</label>
           <input type="number" id="horasAlarme" min="1" placeholder="EX: 2 (AVISAR 2H APÓS O REGISTRO)">
         </div>
-
       </div>
 
       <div class="btn-group">
