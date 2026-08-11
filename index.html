@@ -3,128 +3,145 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AG4 FROTA</title>
+  <title>AG4 FROTA - Gestão Combustível</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- CABEÇALHO PRINCIPAL -->
-  <header class="header">
-    <h1>AG4 FROTA - GESTÃO DE VEÍCULOS</h1>
-    <div class="header-actions">
-      <button class="btn btn-primary" onclick="abrirModalManutencao()">+ REGISTRAR MANUTENÇÃO</button>
+  <!-- SPINNER DE CARREGAMENTO -->
+  <div id="loadingSpinner" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+    <div style="color: white; margin-top: 10px; font-weight: bold;">CONECTANDO AO SERVIDOR...</div>
+  </div>
+
+  <!-- TELA DE LOGIN -->
+  <div id="telaLogin" class="login-overlay">
+    <div class="login-card">
+      <img src="logo frota.png" alt="AG4 FROTA" class="login-logo" onerror="this.style.display='none'">
+      <h2>ACESSO AO SISTEMA</h2>
+      <p style="font-size: 13px; color: #666; margin-bottom: 20px;">DIGITE SEU E-MAIL E SENHA PARA CONTINUAR</p>
+      
+      <form onsubmit="fazerLogin(event)">
+        <div class="form-group" style="text-align: left;">
+          <label for="loginEmail">E-MAIL DE ACESSO</label>
+          <input type="email" id="loginEmail" required placeholder="seuemail@ag4.com">
+        </div>
+        
+        <div class="form-group" style="text-align: left;">
+          <label for="loginSenha">SENHA</label>
+          <input type="password" id="loginSenha" required placeholder="******">
+        </div>
+
+        <div id="loginErro" class="error-message" style="display: none;"></div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">ENTRAR</button>
+      </form>
     </div>
-  </header>
+  </div>
 
-  <!-- MENU DE NAVEGAÇÃO ENTRE MÓDULOS -->
-  <nav class="nav-tabs">
-    <button class="tab-btn active" onclick="mudarAba('manutencao')">🛠️ MANUTENÇÕES</button>
-    <button class="tab-btn" onclick="mudarAba('veiculos')">🚗 VEÍCULOS</button>
-    <button class="tab-btn" onclick="mudarAba('motoristas')">👨‍✈️ MOTORISTAS</button>
-    <button class="tab-btn" onclick="mudarAba('abastecimento')">⛽ ABASTECIMENTOS</button>
-  </nav>
+  <!-- CONTEÚDO PRINCIPAL DO APP -->
+  <div class="container" id="appContainer" style="display: none;">
+    <header>
+      <img src="logo frota.png" alt="AG4 FROTA" class="logo">
+      <h1>GESTÃO COMBUSTÍVEL</h1>
+      <div class="user-bar">
+        <span id="nomeUsuarioLogado"></span>
+        <button type="button" class="btn btn-primary btn-sm" onclick="sincronizarComNuvem()">🔄 </button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="fazerLogout()">SAIR</button>
+      </div>
+    </header>
 
-  <main class="container">
-    
-    <!-- ABA: HISTÓRICO DE MANUTENÇÕES -->
-    <section id="aba-manutencao" class="card aba-conteudo">
-      <h2>HISTÓRICO DE MANUTENÇÕES</h2>
+    <div class="section-title">GERENCIAR VEÍCULOS</div>
+    <div class="card">
+      <h2>CADASTRO DE VEÍCULO</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="nomeVeiculo">NOME</label>
+          <input type="text" id="nomeVeiculo" placeholder="NOME DO VEÍCULO">
+        </div>
+        <div class="form-group">
+          <label for="placaVeiculo">PLACA</label>
+          <input type="text" id="placaVeiculo" placeholder="DIGITE A PLACA" maxlength="8">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="cadastrarVeiculo()">CADASTRAR</button>
+        <button type="button" class="btn btn-primary" onclick="abrirModalEditar()">EDITAR</button>
+      </div>
+    </div>
+
+    <div class="section-title">REGISTRAR ABASTECIMENTO</div>
+    <div class="card">
+      <h2>ABASTECIMENTO</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="dataAbastecimento">DATA</label>
+          <input type="date" id="dataAbastecimento">
+        </div>
+        <div class="form-group">
+          <label for="selectVeiculo">LISTA DE VEÍCULOS</label>
+          <select id="selectVeiculo">
+            <option value="">SELECIONE UM VEÍCULO</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="motorista">MOTORISTA</label>
+          <input type="text" id="motorista" placeholder="NOME DO MOTORISTA">
+        </div>
+        <div class="form-group">
+          <label for="litros">LITROS</label>
+          <input type="number" step="0.01" min="0" id="litros" placeholder="0.00">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="valorTotal">VALOR TOTAL R$</label>
+          <input type="number" step="0.01" min="0" id="valorTotal" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label for="kmAtual">KM ATUAL</label>
+          <input type="number" step="1" min="0" id="kmAtual" placeholder="KM">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="registrarAbastecimento()">REGISTRAR</button>
+        <button type="button" class="btn btn-primary" onclick="abrirModalManutencao()">MANUTENÇÃO</button>
+      </div>
+    </div>
+
+    <div class="section-title">HISTÓRICO</div>
+    <div class="card">
+      <div class="tabs-container">
+        <button type="button" class="tab-btn active" id="btnTabAbastecimento" onclick="trocarAba('abastecimento')">
+          HISTÓRICO ABASTECIMENTO
+        </button>
+        <button type="button" class="tab-btn" id="btnTabManutencao" onclick="trocarAba('manutencao')">
+          HISTÓRICO MANUTENÇÃO
+        </button>
+      </div>
+
+      <div class="btn-group report-buttons">
+        <button type="button" class="btn btn-primary" onclick="gerarPDFGeral()">GERAL</button>
+        <button type="button" class="btn btn-primary" onclick="abrirModalSeletiva()">SELETIVA</button>
+      </div>
+
       <div class="table-responsive">
         <table id="tabelaHistorico">
           <thead>
-            <tr id="cabecalhoTabela">
-              <th>DATA</th>
-              <th>PLACA</th>
-              <th>VEÍCULO</th>
-              <th>TIPO SERVIÇO</th>
-              <th>KM ATUAL</th>
-              <th>PRÓX. TROCA</th>
-              <th>ALARME</th>
-              <th>AÇÕES</th>
-            </tr>
+            <tr id="cabecalhoTabela"></tr>
           </thead>
           <tbody>
-            <!-- Dados carregados dinamicamente via JS -->
+            <tr><td colspan="9">NENHUM REGISTRO ENCONTRADO</td></tr>
           </tbody>
         </table>
       </div>
-    </section>
-
-    <!-- ABA: VEÍCULOS -->
-    <section id="aba-veiculos" class="card aba-conteudo" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2>CADASTRO DE VEÍCULOS</h2>
-        <button class="btn btn-primary" onclick="abrirModalVeiculo()">+ NOVO VEÍCULO</button>
-      </div>
-      <div class="table-responsive">
-        <table id="tabelaVeiculos">
-          <thead>
-            <tr>
-              <th>PLACA</th>
-              <th>MODELO/NOME</th>
-              <th>KM ATUAL</th>
-              <th>AÇÕES</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Carregado via JS -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ABA: MOTORISTAS -->
-    <section id="aba-motoristas" class="card aba-conteudo" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2>CADASTRO DE MOTORISTAS</h2>
-        <button class="btn btn-primary" onclick="abrirModalMotorista()">+ NOVO MOTORISTA</button>
-      </div>
-      <div class="table-responsive">
-        <table id="tabelaMotoristas">
-          <thead>
-            <tr>
-              <th>NOME</th>
-              <th>CNH</th>
-              <th>AÇÕES</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Carregado via JS -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ABA: ABASTECIMENTOS -->
-    <section id="aba-abastecimento" class="card aba-conteudo" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2>HISTÓRICO DE ABASTECIMENTOS</h2>
-        <button class="btn btn-primary" onclick="abrirModalAbastecimento()">+ NOVO ABASTECIMENTO</button>
-      </div>
-      <div class="table-responsive">
-        <table id="tabelaAbastecimento">
-          <thead>
-            <tr>
-              <th>DATA</th>
-              <th>PLACA</th>
-              <th>MOTORISTA</th>
-              <th>LITROS</th>
-              <th>VALOR TOTAL</th>
-              <th>KM</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Carregado via JS -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ============================================================ -->
-  <!-- MODAIS DO SISTEMA                                            -->
-  <!-- ============================================================ -->
+    </div>
+  </div>
 
   <!-- MODAL MANUTENÇÃO -->
   <div id="modalManutencao" class="modal" aria-hidden="true">
@@ -133,7 +150,7 @@
       <h2>REGISTRAR MANUTENÇÃO</h2>
 
       <div class="form-group">
-        <label for="dataManutencao">DATA DA MANUTENÇÃO</label>
+        <label for="dataManutencao">DATA</label>
         <input type="date" id="dataManutencao">
       </div>
 
@@ -156,7 +173,7 @@
 
       <div class="grid-2">
         <div class="form-group">
-          <label for="kmManutencao">KM ATUAL</label>
+          <label for="kmManutencao">KM</label>
           <input type="number" id="kmManutencao" min="0" placeholder="KM ATUAL">
         </div>
         <div class="form-group">
@@ -165,29 +182,72 @@
         </div>
       </div>
 
-      <!-- OPÇÃO DE ALARME / LEMBRETE -->
+      <!-- OPÇÃO OPCIONAL DE ALARME CORRIGIDA -->
       <div class="form-group" style="margin-top: 15px;">
-        <label class="checkbox-alarme-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <label class="checkbox-alarme-label">
           <input type="checkbox" id="chkAtivarAlarme" onchange="toggleCamposAlarme()">
           ⏰ DEFINIR ALARME / LEMBRETE
         </label>
       </div>
 
-      <div id="containerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
+      <div id="containerAlarme" class="grid-2" style="display: none; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
         <div class="form-group">
           <label for="dataAlarme">DATA DO ALARME</label>
           <input type="date" id="dataAlarme">
         </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="horasAlarme">DISPARAR APÓS (EM HORAS)</label>
-          <input type="number" id="horasAlarme" min="1" placeholder="EX: 2 (AVISAR 2H APÓS O REGISTRO)">
+        <div class="form-group">
+          <label for="obsAlarme">OBSERVAÇÃO / LEMBRETE</label>
+          <input type="text" id="obsAlarme" placeholder="EX: CHECAR CORREIA DENTADA">
         </div>
       </div>
 
       <div class="btn-group">
         <button type="button" class="btn btn-primary" onclick="registrarManutencao()">SALVAR</button>
-        <button type="button" class="btn btn-secondary" onclick="fecharModalManutencao()">CANCELAR</button>
+        <button type="button" class="btn btn-primary" onclick="fecharModalManutencao()">CANCELAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR VEÍCULO -->
+  <div id="modalEditarVeiculo" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <button type="button" class="close" onclick="fecharModalEditar()" aria-label="Fechar">&times;</button>
+      <h2>EDITAR VEÍCULO</h2>
+
+      <div class="form-group">
+        <label for="selectVeiculoEditar">SELECIONE O VEÍCULO</label>
+        <select id="selectVeiculoEditar" onchange="carregarDadosEdicao()">
+          <option value="">SELECIONE UM VEÍCULO</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="nomeVeiculoEditar">NOME</label>
+        <input type="text" id="nomeVeiculoEditar" placeholder="NOVO NOME">
+      </div>
+
+      <div class="form-group">
+        <label for="placaVeiculoEditar">PLACA</label>
+        <input type="text" id="placaVeiculoEditar" placeholder="NOVA PLACA" maxlength="8">
+      </div>
+
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="salvarEdicaoVeiculo()">SALVAR</button>
+        <button type="button" class="btn btn-danger" onclick="excluirVeiculo()">EXCLUIR</button>
+        <button type="button" class="btn btn-secondary" onclick="fecharModalEditar()">CANCELAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SELETIVA PDF -->
+  <div id="modalSeletiva" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <button type="button" class="close" onclick="fecharModalSeletiva()" aria-label="Fechar">&times;</button>
+      <h2>SELECIONAR VEÍCULOS PARA O PDF</h2>
+      <div id="listaCheckboxesVeiculos" class="checkbox-list"></div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="gerarPDFSeletiva()">GERAR PDF</button>
+        <button type="button" class="btn btn-secondary" onclick="fecharModalSeletiva()">CANCELAR</button>
       </div>
     </div>
   </div>
