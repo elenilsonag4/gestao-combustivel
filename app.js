@@ -444,14 +444,14 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL
+// MANUTENÇÃO COM ALARME DINÂMICO
 // ============================================================
 
 function toggleCamposAlarme() {
   const chk = document.getElementById("chkAtivarAlarme");
   const container = document.getElementById("containerAlarme");
   if (container) {
-    container.style.display = chk && chk.checked ? "grid" : "none";
+    container.style.display = chk && chk.checked ? "block" : "none";
   }
 }
 
@@ -480,8 +480,12 @@ function fecharModalManutencao() {
   
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
-  document.getElementById("dataAlarme").value = "";
-  document.getElementById("obsAlarme").value = "";
+  
+  const horaAlarme = document.getElementById("horaAlarme");
+  const kmAlarme = document.getElementById("kmAlarme");
+  if (horaAlarme) horaAlarme.value = "";
+  if (kmAlarme) kmAlarme.value = "";
+  
   toggleCamposAlarme();
 }
 
@@ -500,15 +504,16 @@ function registrarManutencao() {
   const proximaTroca = Number(document.getElementById("proximaTrocaKm").value) || "";
   
   const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
-  const dataAlarme = temAlarme ? document.getElementById("dataAlarme").value : "";
-  const obsAlarme = temAlarme ? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
+  const horaAlarmeVal = temAlarme ? document.getElementById("horaAlarme").value : "";
+  const kmAlarmeVal = temAlarme ? document.getElementById("kmAlarme").value : "";
 
   if (!data || !placa || !tipo) {
     alert("PREENCHA DATA, VEÍCULO E TIPO.");
     return;
   }
 
-  const registro = [data, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
+  // Formata os dados de alarme em conjunto para armazenamento
+  const registro = [data, placa, nome, tipo, km, proximaTroca, horaAlarmeVal, kmAlarmeVal];
 
   DB.manutencao.push(registro);
   salvarDB();
@@ -616,8 +621,12 @@ function preencherTabelaManutencao(dados) {
     tr.insertCell().textContent = r[4] ? `${r[4]} KM` : "-";
     tr.insertCell().textContent = r[5] ? `${r[5]} KM` : "-";
     
-    const infoAlarme = r[6] ? `⏰ ${formatarData(r[6])}${r[7] ? ' (' + r[7] + ')' : ''}` : "-";
-    tr.insertCell().textContent = infoAlarme;
+    // Tratamento dinâmico para renderizar alarmes por data/hora ou por KM
+    let infoAlarme = [];
+    if (r[6]) infoAlarme.push(`📅 ${formatarDataHora(r[6])}`);
+    if (r[7]) infoAlarme.push(`🚗 ${r[7]} KM`);
+    
+    tr.insertCell().textContent = infoAlarme.length ? infoAlarme.join(" | ") : "-";
 
     const td = tr.insertCell();
     td.innerHTML = `
@@ -639,6 +648,15 @@ function formatarData(data) {
     return `${dia}/${mes}/${ano}`;
   }
   return texto;
+}
+
+function formatarDataHora(dataHora) {
+  if (!dataHora) return "";
+  const partes = String(dataHora).split("T");
+  if (partes.length === 2) {
+    return `${formatarData(partes[0])} ${partes[1]}`;
+  }
+  return formatarData(dataHora);
 }
 
 function toggleDropdown(event, idStr) {
@@ -892,7 +910,12 @@ function gerarHTMLPDFManutencao(dados, titulo) {
       veiculoAtual = r[2];
       linhas += `<tr class="cabecalho-veiculo"><td colspan="7">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
     }
-    const infoAlarme = r[6] ? `${formatarData(r[6])}${r[7] ? ' (' + r[7] + ')' : ''}` : "-";
+    
+    let infoAlarme = [];
+    if (r[6]) infoAlarme.push(`📅 ${formatarDataHora(r[6])}`);
+    if (r[7]) infoAlarme.push(`🚗 ${r[7]} KM`);
+    const textoAlarme = infoAlarme.length ? infoAlarme.join(" | ") : "-";
+
     linhas += `
       <tr>
         <td>${escaparHTML(formatarData(r[0]))}</td>
@@ -901,7 +924,7 @@ function gerarHTMLPDFManutencao(dados, titulo) {
         <td>${escaparHTML(r[3] || "-")}</td>
         <td>${r[4] ? `${escaparHTML(r[4])} KM` : "-"}</td>
         <td>${r[5] ? `${escaparHTML(r[5])} KM` : "-"}</td>
-        <td>${escaparHTML(infoAlarme)}</td>
+        <td>${escaparHTML(textoAlarme)}</td>
       </tr>`;
   });
 
