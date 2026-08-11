@@ -7,7 +7,7 @@ const APPS_SCRIPT_URL =
 
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
-const THEME_KEY = "ag4_tema_preferido";
+const THEME_KEY = "ag4_tema_escuro";
 const SENHA_MESTRE = "frot@AG4";
 
 let DB = carregarDB();
@@ -19,44 +19,6 @@ let colunaOrdenacao = {
   abastecimento: { indice: 0, asc: false }, // Padrão: Data (Decrescente)
   manutencao: { indice: 0, asc: false }     // Padrão: Data (Decrescente)
 };
-
-// ============================================================
-// GERENCIAMENTO DE TEMA (CLARO / ESCURO)
-// ============================================================
-
-function aplicarTema(tema) {
-  document.documentElement.setAttribute("data-theme", tema);
-  
-  const iconEl = document.getElementById("themeIcon");
-  const textEl = document.getElementById("themeText");
-
-  if (iconEl && textEl) {
-    if (tema === "dark") {
-      iconEl.textContent = "☀️";
-      textEl.textContent = "MODO CLARO";
-    } else {
-      iconEl.textContent = "🌙";
-      textEl.textContent = "MODO ESCURO";
-    }
-  }
-
-  localStorage.setItem(THEME_KEY, tema);
-}
-
-function alternarTema() {
-  const temaAtual = document.documentElement.getAttribute("data-theme") || "light";
-  const novoTema = temaAtual === "dark" ? "light" : "dark";
-  aplicarTema(novoTema);
-}
-
-function carregarTemaSalvo() {
-  const temaSalvo = localStorage.getItem(THEME_KEY) || "light";
-  aplicarTema(temaSalvo);
-}
-
-// ============================================================
-// FUNÇÕES AUXILIARES DE BANCO E DATAS
-// ============================================================
 
 function carregarDB() {
   try {
@@ -102,6 +64,34 @@ function escaparHTML(valor) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+// ============================================================
+// CONTROLE DE TEMA (CLARO / ESCURO)
+// ============================================================
+
+function alternarTema() {
+  const isDark = document.body.classList.toggle("dark-mode");
+  localStorage.setItem(THEME_KEY, isDark ? "true" : "false");
+  atualizarIconeTema(isDark);
+}
+
+function carregarTema() {
+  const darkSalvo = localStorage.getItem(THEME_KEY) === "true";
+  if (darkSalvo) {
+    document.body.classList.add("dark-mode");
+  } else {
+    document.body.classList.remove("dark-mode");
+  }
+  atualizarIconeTema(darkSalvo);
+}
+
+function atualizarIconeTema(isDark) {
+  const btn = document.getElementById("btnToggleTema");
+  if (btn) {
+    btn.textContent = isDark ? "☀️" : "🌙";
+    btn.title = isDark ? "Mudar para Tema Claro" : "Mudar para Tema Escuro";
+  }
 }
 
 // ============================================================
@@ -216,10 +206,8 @@ function mostrarLoading(exibir) {
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  carregarTemaSalvo();
-  
-  const inputData = document.getElementById("dataAbastecimento");
-  if (inputData) inputData.value = dataHojeInput();
+  carregarTema();
+  document.getElementById("dataAbastecimento").value = dataHojeInput();
 
   document.addEventListener("input", (e) => {
     if (e.target && e.target.type === "text" && e.target.id !== "loginEmail") {
@@ -245,6 +233,10 @@ function carregarDados() {
   preencherSelects(DB.veiculos);
   renderizarTabela();
 }
+
+// ============================================================
+// SENHA MESTRE
+// ============================================================
 
 function confirmarSenha() {
   const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
@@ -494,7 +486,7 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL
+// MANUTENÇÃO COM ALARME OPCIONAL POR HORAS/DATA
 // ============================================================
 
 function toggleCamposAlarme() {
@@ -772,7 +764,7 @@ document.addEventListener("click", () => {
 });
 
 // ============================================================
-// EXCLUSÃO E EDICAO DE DADOS
+// EXCLUSÃO DE DADOS
 // ============================================================
 
 function excluirAbastecimento(index) {
@@ -805,6 +797,10 @@ function excluirManutencao(index) {
   enviarParaGoogleSheets("excluirManutencao", { item });
   alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
 }
+
+// ============================================================
+// EDITAR ABASTECIMENTO
+// ============================================================
 
 function abrirModalEditarAbastecimento(index) {
   const registro = DB.abastecimento[index];
@@ -919,7 +915,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// RELATÓRIOS PDF
+// PDF
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
