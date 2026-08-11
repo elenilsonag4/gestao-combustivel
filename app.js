@@ -496,7 +496,7 @@ function registrarManutencao() {
   const placa = document.getElementById("selectVeiculoManutencao").value;
   const nome = document.getElementById("nomeVeiculoManutencao").value;
   const tipo = document.getElementById("tipoManutencao").value.trim().toUpperCase();
-  const km = Number(document.getElementById("kmManutencao").value) || 0;
+  const km = Number(document.getElementById("kmManutencao").value) || "";
   const proximaTroca = Number(document.getElementById("proximaTrocaKm").value) || "";
   
   const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
