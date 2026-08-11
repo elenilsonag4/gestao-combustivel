@@ -7,6 +7,7 @@ const APPS_SCRIPT_URL =
 
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
+const THEME_KEY = "ag4_tema_preferido";
 const SENHA_MESTRE = "frot@AG4";
 
 let DB = carregarDB();
@@ -18,6 +19,44 @@ let colunaOrdenacao = {
   abastecimento: { indice: 0, asc: false }, // Padrão: Data (Decrescente)
   manutencao: { indice: 0, asc: false }     // Padrão: Data (Decrescente)
 };
+
+// ============================================================
+// GERENCIAMENTO DE TEMA (CLARO / ESCURO)
+// ============================================================
+
+function aplicarTema(tema) {
+  document.documentElement.setAttribute("data-theme", tema);
+  
+  const iconEl = document.getElementById("themeIcon");
+  const textEl = document.getElementById("themeText");
+
+  if (iconEl && textEl) {
+    if (tema === "dark") {
+      iconEl.textContent = "☀️";
+      textEl.textContent = "MODO CLARO";
+    } else {
+      iconEl.textContent = "🌙";
+      textEl.textContent = "MODO ESCURO";
+    }
+  }
+
+  localStorage.setItem(THEME_KEY, tema);
+}
+
+function alternarTema() {
+  const temaAtual = document.documentElement.getAttribute("data-theme") || "light";
+  const novoTema = temaAtual === "dark" ? "light" : "dark";
+  aplicarTema(novoTema);
+}
+
+function carregarTemaSalvo() {
+  const temaSalvo = localStorage.getItem(THEME_KEY) || "light";
+  aplicarTema(temaSalvo);
+}
+
+// ============================================================
+// FUNÇÕES AUXILIARES DE BANCO E DATAS
+// ============================================================
 
 function carregarDB() {
   try {
@@ -177,7 +216,10 @@ function mostrarLoading(exibir) {
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("dataAbastecimento").value = dataHojeInput();
+  carregarTemaSalvo();
+  
+  const inputData = document.getElementById("dataAbastecimento");
+  if (inputData) inputData.value = dataHojeInput();
 
   document.addEventListener("input", (e) => {
     if (e.target && e.target.type === "text" && e.target.id !== "loginEmail") {
@@ -203,10 +245,6 @@ function carregarDados() {
   preencherSelects(DB.veiculos);
   renderizarTabela();
 }
-
-// ============================================================
-// SENHA MESTRE
-// ============================================================
 
 function confirmarSenha() {
   const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
@@ -456,7 +494,7 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL POR HORAS/DATA
+// MANUTENÇÃO COM ALARME OPCIONAL
 // ============================================================
 
 function toggleCamposAlarme() {
@@ -734,7 +772,7 @@ document.addEventListener("click", () => {
 });
 
 // ============================================================
-// EXCLUSÃO DE DADOS
+// EXCLUSÃO E EDICAO DE DADOS
 // ============================================================
 
 function excluirAbastecimento(index) {
@@ -767,10 +805,6 @@ function excluirManutencao(index) {
   enviarParaGoogleSheets("excluirManutencao", { item });
   alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
 }
-
-// ============================================================
-// EDITAR ABASTECIMENTO
-// ============================================================
 
 function abrirModalEditarAbastecimento(index) {
   const registro = DB.abastecimento[index];
@@ -885,7 +919,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// PDF
+// RELATÓRIOS PDF
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
