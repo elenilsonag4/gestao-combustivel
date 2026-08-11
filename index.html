@@ -49,7 +49,6 @@
       <h1>GESTÃO COMBUSTÍVEL</h1>
       <div class="user-bar">
         <span id="nomeUsuarioLogado"></span>
-        <button type="button" class="btn btn-primary btn-sm" id="btnThemeToggle" onclick="toggleTheme()" title="Alternar Tema">🌙</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="sincronizarComNuvem()">🔄 </button>
         <button type="button" class="btn btn-primary btn-sm" onclick="fazerLogout()">SAIR</button>
       </div>
@@ -253,37 +252,6 @@
       </div>
     </div>
   </div>
-
-  <!-- GERENCIAMENTO DE TEMA (MODO ESCURO) -->
-  <script>
-    function toggleTheme() {
-      const isDark = document.body.classList.toggle("dark-theme");
-      localStorage.setItem("ag4_theme", isDark ? "dark" : "light");
-      atualizarIconeTema(isDark);
-    }
-
-    function aplicarTemaSalvo() {
-      const temaSalvo = localStorage.getItem("ag4_theme");
-      const prefereEscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      
-      if (temaSalvo === "dark" || (!temaSalvo && prefereEscuro)) {
-        document.body.classList.add("dark-theme");
-        atualizarIconeTema(true);
-      } else {
-        document.body.classList.remove("dark-theme");
-        atualizarIconeTema(false);
-      }
-    }
-
-    function atualizarIconeTema(isDark) {
-      const btn = document.getElementById("btnThemeToggle");
-      if (btn) {
-        btn.textContent = isDark ? "☀️" : "🌙";
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", aplicarTemaSalvo);
-  </script>
 
   <script src="app.js"></script>
 </body>

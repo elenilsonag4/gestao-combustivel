@@ -68,8 +68,6 @@ h1 {
   letter-spacing: 1px;
   font-size: 15px;
   text-transform: uppercase;
-  display: block;
-  width: 100%;
 }
 
 .card {
@@ -92,7 +90,6 @@ h2 {
 
 .form-group {
   margin-bottom: 15px;
-  width: 100%;
 }
 
 label {
@@ -113,7 +110,6 @@ select {
   font-size: 14px;
   font-family: 'Roboto', sans-serif;
   background: #fff;
-  box-sizing: border-box;
 }
 
 /* Regra específica para corrigir o tamanho dos checkboxes */
@@ -123,6 +119,7 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
+/* Estilo alinhado para a opção de ativar alarme */
 .checkbox-alarme-label {
   display: flex !important;
   align-items: center;
@@ -146,27 +143,20 @@ input[readonly] {
   cursor: not-allowed;
 }
 
-/* ESTRUTURA DE GRID CORRIGIDA (2 COLUNAS) */
 .grid-2 {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 15px !important;
-  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
 }
 
-/* GRUPO DE BOTÕES IGUAIS E EXPANDIDOS */
 .btn-group {
-  display: flex !important;
-  gap: 10px !important;
-  margin-top: 20px !important;
-  width: 100%;
-}
-
-.btn-group .btn {
-  flex: 1 !important;
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .btn {
+  flex: 1;
   padding: 12px;
   border: none;
   border-radius: 5px;
@@ -175,9 +165,6 @@ input[readonly] {
   font-size: 14px;
   transition: background-color .2s, transform .1s;
   text-transform: uppercase;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .btn:active {
@@ -470,127 +457,8 @@ input::placeholder {
   .logo { position: static; margin-bottom: 10px; }
   .user-bar { position: static; margin-top: 10px; justify-content: center; }
   h1 { font-size: 18px; padding-left: 0; }
-  .grid-2 { grid-template-columns: 1fr !important; }
+  .grid-2 { grid-template-columns: 1fr; }
   .btn-group { flex-direction: column; }
   .tabs-container { flex-direction: column; gap: 3px; }
   .tab-btn { border-radius: 5px; }
-}
-
-/* ============================================================
-   APENAS CORES DO MODO ESCURO (SEM AFETAR POSICIONAMENTO)
-   ============================================================ */
-
-body.dark-theme {
-  background: #121212 !important;
-  color: #e0e0e0 !important;
-}
-
-body.dark-theme header {
-  background: #121212 !important;
-  border-bottom-color: #333 !important;
-}
-
-body.dark-theme .card,
-body.dark-theme .modal-content,
-body.dark-theme .login-card {
-  background: #1e1e1e !important;
-  color: #e0e0e0 !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
-}
-
-body.dark-theme h1,
-body.dark-theme h2,
-body.dark-theme .user-bar,
-body.dark-theme .checkbox-alarme-label {
-  color: #64b5f6 !important;
-}
-
-body.dark-theme h2 {
-  border-bottom-color: #64b5f6 !important;
-}
-
-body.dark-theme .section-title {
-  background: #0d47a1 !important;
-  color: #ffffff !important;
-}
-
-body.dark-theme label {
-  color: #aaa !important;
-}
-
-body.dark-theme input,
-body.dark-theme select {
-  background: #2c2c2c !important;
-  color: #fff !important;
-  border-color: #444 !important;
-}
-
-body.dark-theme input[readonly] {
-  background: #3a3a3a !important;
-  color: #888 !important;
-}
-
-body.dark-theme input:focus,
-body.dark-theme select:focus {
-  border-color: #64b5f6 !important;
-}
-
-body.dark-theme th {
-  background: #0d47a1 !important;
-  color: #fff !important;
-}
-
-body.dark-theme td {
-  border-bottom-color: #333 !important;
-  color: #ddd !important;
-}
-
-body.dark-theme tbody tr:hover {
-  background: #252525 !important;
-}
-
-body.dark-theme .tab-btn {
-  background-color: #2c2c2c !important;
-  color: #aaa !important;
-}
-
-body.dark-theme .tab-btn.active {
-  background-color: #1565c0 !important;
-  color: #fff !important;
-  border-bottom-color: #64b5f6 !important;
-}
-
-body.dark-theme .dropdown-content {
-  background-color: #2c2c2c !important;
-  border-color: #444 !important;
-}
-
-body.dark-theme .dropdown-content button {
-  background-color: #2c2c2c !important;
-  color: #fff !important;
-}
-
-body.dark-theme .dropdown-content button:hover {
-  background-color: #3a3a3a !important;
-}
-
-body.dark-theme #containerAlarme {
-  background: #252525 !important;
-  border-color: #444 !important;
-}
-
-body.dark-theme .checkbox-list {
-  border-color: #444 !important;
-}
-
-body.dark-theme .checkbox-item:hover {
-  background: #2c2c2c !important;
-}
-
-body.dark-theme .close {
-  color: #aaa !important;
-}
-
-body.dark-theme .close:hover {
-  color: #fff !important;
 }
