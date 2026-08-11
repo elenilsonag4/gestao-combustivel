@@ -43,6 +43,13 @@ function dataHojeInput() {
   return `${ano}-${mes}-${dia}`;
 }
 
+function horaAgoraInput() {
+  const agora = new Date();
+  const horas = String(agora.getHours()).padStart(2, "0");
+  const minutos = String(agora.getMinutes()).padStart(2, "0");
+  return `${horas}:${minutos}`;
+}
+
 function escaparHTML(valor) {
   return String(valor ?? "")
     .replaceAll("&", "&amp;")
@@ -165,7 +172,6 @@ function mostrarLoading(exibir) {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("dataAbastecimento").value = dataHojeInput();
-  document.getElementById("dataManutencao").value = dataHojeInput();
 
   document.addEventListener("input", (e) => {
     if (e.target && e.target.type === "text" && e.target.id !== "loginEmail") {
@@ -444,14 +450,14 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL
+// MANUTENÇÃO COM ALARME OPCIONAL POR HORAS/DATA
 // ============================================================
 
 function toggleCamposAlarme() {
   const chk = document.getElementById("chkAtivarAlarme");
   const container = document.getElementById("containerAlarme");
   if (container) {
-    container.style.display = chk && chk.checked ? "grid" : "none";
+    container.style.display = chk && chk.checked ? "block" : "none";
   }
 }
 
@@ -461,6 +467,9 @@ function abrirModalManutencao() {
   modal.setAttribute("aria-hidden", "false");
   
   document.getElementById("dataManutencao").value = dataHojeInput();
+  if (document.getElementById("horaManutencao")) {
+    document.getElementById("horaManutencao").value = horaAgoraInput();
+  }
 
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
@@ -475,12 +484,16 @@ function fecharModalManutencao() {
   document.getElementById("selectVeiculoManutencao").value = "";
   document.getElementById("nomeVeiculoManutencao").value = "";
   document.getElementById("tipoManutencao").value = "";
-  document.getElementById("kmManutencao").value = "";
-  document.getElementById("proximaTrocaKm").value = "";
+  if (document.getElementById("horaManutencao")) {
+    document.getElementById("horaManutencao").value = "";
+  }
   
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
   document.getElementById("dataAlarme").value = "";
+  if (document.getElementById("horasAlarme")) {
+    document.getElementById("horasAlarme").value = "";
+  }
   document.getElementById("obsAlarme").value = "";
   toggleCamposAlarme();
 }
@@ -493,14 +506,14 @@ function carregarNomeVeiculo() {
 
 function registrarManutencao() {
   const data = document.getElementById("dataManutencao").value;
+  const hora = document.getElementById("horaManutencao")?.value || horaAgoraInput();
   const placa = document.getElementById("selectVeiculoManutencao").value;
   const nome = document.getElementById("nomeVeiculoManutencao").value;
   const tipo = document.getElementById("tipoManutencao").value.trim().toUpperCase();
-  const km = Number(document.getElementById("kmManutencao").value) || "";
-  const proximaTroca = Number(document.getElementById("proximaTrocaKm").value) || "";
   
   const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
   const dataAlarme = temAlarme ? document.getElementById("dataAlarme").value : "";
+  const horasAlarme = temAlarme ? (Number(document.getElementById("horasAlarme")?.value) || "") : "";
   const obsAlarme = temAlarme ? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
 
   if (!data || !placa || !tipo) {
@@ -508,7 +521,8 @@ function registrarManutencao() {
     return;
   }
 
-  const registro = [data, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
+  // Estrutura do registro: [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme]
+  const registro = [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme];
 
   DB.manutencao.push(registro);
   salvarDB();
@@ -590,13 +604,13 @@ function preencherTabelaManutencao(dados) {
   const tbody = document.querySelector("#tabelaHistorico tbody");
 
   thead.innerHTML = `
-    <th>DATA</th>
+    <th>DATA / HORA</th>
     <th>PLACA</th>
     <th>VEÍCULO</th>
     <th>TIPO SERVIÇO</th>
-    <th>KM ATUAL</th>
-    <th>PRÓX. TROCA</th>
-    <th>ALARME</th>
+    <th>DURAÇÃO ALARME</th>
+    <th>DATA ALARME</th>
+    <th>OBS ALARME</th>
     <th>AÇÕES</th>
   `;
 
@@ -609,15 +623,15 @@ function preencherTabelaManutencao(dados) {
 
   dados.forEach((r, index) => {
     const tr = tbody.insertRow();
-    tr.insertCell().textContent = formatarData(r[0]);
+    const dataHoraRegistro = `${formatarData(r[0])} ${r[4] ? r[4] : ''}`.trim();
+
+    tr.insertCell().textContent = dataHoraRegistro;
     tr.insertCell().textContent = r[1];
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
-    tr.insertCell().textContent = r[4] ? `${r[4]} KM` : "-";
-    tr.insertCell().textContent = r[5] ? `${r[5]} KM` : "-";
-    
-    const infoAlarme = r[6] ? `⏰ ${formatarData(r[6])}${r[7] ? ' (' + r[7] + ')' : ''}` : "-";
-    tr.insertCell().textContent = infoAlarme;
+    tr.insertCell().textContent = r[5] ? `${r[5]} HORAS` : "-";
+    tr.insertCell().textContent = r[6] ? formatarData(r[6]) : "-";
+    tr.insertCell().textContent = r[7] ? r[7] : "-";
 
     const td = tr.insertCell();
     td.innerHTML = `
@@ -892,16 +906,16 @@ function gerarHTMLPDFManutencao(dados, titulo) {
       veiculoAtual = r[2];
       linhas += `<tr class="cabecalho-veiculo"><td colspan="7">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
     }
-    const infoAlarme = r[6] ? `${formatarData(r[6])}${r[7] ? ' (' + r[7] + ')' : ''}` : "-";
+    const dataHora = `${formatarData(r[0])} ${r[4] || ''}`.trim();
     linhas += `
       <tr>
-        <td>${escaparHTML(formatarData(r[0]))}</td>
+        <td>${escaparHTML(dataHora)}</td>
         <td><strong>${escaparHTML(r[1])}</strong></td>
         <td>${escaparHTML(r[2])}</td>
         <td>${escaparHTML(r[3] || "-")}</td>
-        <td>${r[4] ? `${escaparHTML(r[4])} KM` : "-"}</td>
-        <td>${r[5] ? `${escaparHTML(r[5])} KM` : "-"}</td>
-        <td>${escaparHTML(infoAlarme)}</td>
+        <td>${r[5] ? `${escaparHTML(r[5])} HRS` : "-"}</td>
+        <td>${r[6] ? formatarData(r[6]) : "-"}</td>
+        <td>${escaparHTML(r[7] || "-")}</td>
       </tr>`;
   });
 
@@ -936,7 +950,7 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
   <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
 </div>
 <table>
-<thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM ATUAL</th><th>PRÓX. TROCA</th><th>ALARME</th></tr></thead>
+<thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>HORAS ALARME</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
 <script>window.onload=()=>window.print();</script>
