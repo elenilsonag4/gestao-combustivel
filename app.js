@@ -1,107 +1,462 @@
 // ============================================================
-// AG4 FROTA - APLICAÇÃO JS PRINCIPAL
+// AG4 FROTA - APP.JS
 // ============================================================
 
-// URL da sua Web App do Google Apps Script
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec";
 
-// Banco de Dados Local / Cache
-let DB = {
-  veiculos: [
-    { placa: "ABC1D23", nome: "FIAT STRADA" },
-    { placa: "XYZ9876", nome: "CHEVROLET S10" },
-    { placa: "KGM4567", nome: "VOLKSWAGEN DELIVERY" }
-  ],
-  manutencao: []
-};
+const STORAGE_KEY = "ag4_frota";
+const USER_KEY = "ag4_usuario_logado";
+const SENHA_MESTRE = "frot@AG4";
 
-// --- INICIALIZAÇÃO ---
-document.addEventListener("DOMContentLoaded", () => {
-  carregarDBLocal();
-  povoarSelectVeiculos();
-  carregarDados();
-});
+let DB = carregarDB();
+let listaVeiculosGlobal = [];
+let abaAtiva = "abastecimento";
 
-// --- HELPER FUNCTIONS ---
-function dataHojeInput() {
-  const hoje = new Date();
-  return hoje.toISOString().split("T")[0];
-}
+function carregarDB() {
+  try {
+    const salvo = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!salvo || typeof salvo !== "object") {
+      return { veiculos: [], abastecimento: [], manutencao: [] };
+    }
 
-function formatarData(dataStr) {
-  if (!dataStr) return "-";
-  const partes = dataStr.split("-");
-  if (partes.length === 3) {
-    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    return {
+      veiculos: Array.isArray(salvo.veiculos) ? salvo.veiculos : [],
+      abastecimento: Array.isArray(salvo.abastecimento) ? salvo.abastecimento : [],
+      manutencao: Array.isArray(salvo.manutencao) ? salvo.manutencao : []
+    };
+  } catch (erro) {
+    console.error("Erro ao carregar banco local:", erro);
+    return { veiculos: [], abastecimento: [], manutencao: [] };
   }
-  return dataStr;
 }
 
 function salvarDB() {
-  localStorage.setItem("AG4_FROTA_DB", JSON.stringify(DB));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
 }
 
-function carregarDBLocal() {
-  const localData = localStorage.getItem("AG4_FROTA_DB");
-  if (localData) {
-    try {
-      DB = JSON.parse(localData);
-    } catch (e) {
-      console.error("Erro ao carregar do localStorage", e);
-    }
+function dataHojeInput() {
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function escaparHTML(valor) {
+  return String(valor ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+// ============================================================
+// GOOGLE SHEETS & AUTENTICAÇÃO
+// ============================================================
+
+async function enviarParaGoogleSheets(acao, dados) {
+  const payload = JSON.stringify({ acao, dados });
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: payload
+    });
+    return true;
+  } catch (erro) {
+    console.error("[AG4] Erro de comunicação com Google Sheets:", erro);
+    alert("Erro ao conectar com o servidor. Verifique sua conexão.");
+    return false;
   }
 }
 
-function povoarSelectVeiculos() {
-  const select = document.getElementById("selectVeiculoManutencao");
-  if (!select) return;
-  
-  select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
-  DB.veiculos.forEach(v => {
-    const opt = document.createElement("option");
-    opt.value = v.placa;
-    opt.textContent = `${v.placa} - ${v.nome}`;
-    select.appendChild(opt);
-  });
+async function sincronizarComNuvem() {
+  mostrarLoading(true);
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ acao: "obterDados" })
+    });
+
+    const res = await response.json();
+    if (res.ok && res.DB) {
+      DB = res.DB;
+      salvarDB();
+      carregarDados();
+    }
+  } catch (erro) {
+    console.error("Erro na sincronização:", erro);
+  } finally {
+    mostrarLoading(false);
+  }
 }
 
-function carregarDados() {
-  preencherTabelaManutencao(DB.manutencao);
+async function fazerLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value.trim();
+  const erroEl = document.getElementById("loginErro");
+
+  if (!email || !senha) {
+    erroEl.textContent = "PREENCHA E-MAIL E SENHA.";
+    erroEl.style.display = "block";
+    return;
+  }
+
+  erroEl.style.display = "none";
+  mostrarLoading(true);
+
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ acao: "fazerLogin", dados: { email, senha } })
+    });
+
+    const res = await response.json();
+
+    if (res.ok) {
+      localStorage.setItem(USER_KEY, JSON.stringify(res.usuario || { email }));
+      exibirApp(res.usuario);
+      sincronizarComNuvem();
+    } else {
+      erroEl.textContent = res.mensagem || "E-MAIL OU SENHA INCORRETOS.";
+      erroEl.style.display = "block";
+    }
+  } catch (erro) {
+    console.error("Erro no login:", erro);
+    erroEl.textContent = "ERRO AO CONECTAR COM O SERVIDOR.";
+    erroEl.style.display = "block";
+  } finally {
+    mostrarLoading(false);
+  }
 }
 
-// --- CONTROLE DE DROPDOWN DA TABELA ---
-function toggleDropdown(event, id) {
-  event.stopPropagation();
-  const dropdowns = document.querySelectorAll(".dropdown-content");
-  dropdowns.forEach(d => {
-    if (d.id !== `dropdown${id}`) d.classList.remove("show");
-  });
-  const target = document.getElementById(`dropdown${id}`);
-  if (target) target.classList.toggle("show");
+function fazerLogout() {
+  if (confirm("DESEJA REALMENTE SAIR DO SISTEMA?")) {
+    localStorage.removeItem(USER_KEY);
+    document.getElementById("telaLogin").style.display = "flex";
+    document.getElementById("appContainer").style.display = "none";
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginSenha").value = "";
+  }
 }
 
-document.addEventListener("click", () => {
-  const dropdowns = document.querySelectorAll(".dropdown-content");
-  dropdowns.forEach(d => d.classList.remove("show"));
-});
+function exibirApp(usuario) {
+  document.getElementById("telaLogin").style.display = "none";
+  document.getElementById("appContainer").style.display = "block";
+  if (usuario && usuario.nome) {
+    document.getElementById("nomeUsuarioLogado").textContent = `USUÁRIO: ${usuario.nome.toUpperCase()}`;
+  }
+}
+
+function mostrarLoading(exibir) {
+  const spinner = document.getElementById("loadingSpinner");
+  if (spinner) spinner.style.display = exibir ? "flex" : "none";
+}
 
 // ============================================================
-// MÓDULO DE MANUTENÇÃO E ALARMES (DATA / HORAS)
+// INICIALIZAÇÃO
+// ============================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("dataAbastecimento").value = dataHojeInput();
+  document.getElementById("dataManutencao").value = dataHojeInput();
+
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.type === "text" && e.target.id !== "loginEmail") {
+      e.target.value = e.target.value.toUpperCase();
+    }
+  });
+
+  const usuarioSalvo = JSON.parse(localStorage.getItem(USER_KEY));
+  if (usuarioSalvo) {
+    exibirApp(usuarioSalvo);
+    carregarDados();
+    sincronizarComNuvem();
+  } else {
+    document.getElementById("telaLogin").style.display = "flex";
+    document.getElementById("appContainer").style.display = "none";
+  }
+});
+
+function carregarDados() {
+  DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+  listaVeiculosGlobal = DB.veiculos;
+  recalcularConsumoHistorico();
+  preencherSelects(DB.veiculos);
+  renderizarTabela();
+}
+
+// ============================================================
+// SENHA MESTRE
+// ============================================================
+
+function confirmarSenha() {
+  const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
+  if (senhaDigitada === null) return false;
+  if (senhaDigitada === SENHA_MESTRE) return true;
+
+  alert("SENHA INCORRETA! AÇÃO NÃO PERMITIDA.");
+  return false;
+}
+
+// ============================================================
+// VEÍCULOS
+// ============================================================
+
+function preencherSelects(veiculos) {
+  const select1 = document.getElementById("selectVeiculo");
+  const select2 = document.getElementById("selectVeiculoManutencao");
+
+  const veiculosOrdenados = [...veiculos].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+
+  [select1, select2].forEach((select) => {
+    if (!select) return;
+    select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
+    veiculosOrdenados.forEach((v) => {
+      select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+    });
+  });
+}
+
+function cadastrarVeiculo() {
+  const nomeEl = document.getElementById("nomeVeiculo");
+  const placaEl = document.getElementById("placaVeiculo");
+
+  const nome = nomeEl.value.trim().toUpperCase();
+  const placa = placaEl.value.trim().toUpperCase();
+
+  if (!nome || !placa) {
+    alert("PREENCHA NOME E PLACA.");
+    return;
+  }
+
+  if (DB.veiculos.some(v => v.placa === placa)) {
+    alert("PLACA JÁ CADASTRADA.");
+    return;
+  }
+
+  const novoVeiculo = { nome, placa };
+  DB.veiculos.push(novoVeiculo);
+  DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("cadastrarVeiculo", novoVeiculo);
+
+  nomeEl.value = "";
+  placaEl.value = "";
+  alert("VEÍCULO CADASTRADO COM SUCESSO!");
+}
+
+function abrirModalEditar() {
+  preencherSelectEditar();
+  const modal = document.getElementById("modalEditarVeiculo");
+  modal.style.display = "block";
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function fecharModalEditar() {
+  const modal = document.getElementById("modalEditarVeiculo");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+
+  document.getElementById("selectVeiculoEditar").value = "";
+  document.getElementById("nomeVeiculoEditar").value = "";
+  document.getElementById("placaVeiculoEditar").value = "";
+}
+
+function preencherSelectEditar() {
+  const select = document.getElementById("selectVeiculoEditar");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+
+  veiculosOrdenados.forEach(v => {
+    select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+  });
+}
+
+function carregarDadosEdicao() {
+  const placa = document.getElementById("selectVeiculoEditar").value;
+  const veiculo = DB.veiculos.find(v => v.placa === placa);
+
+  document.getElementById("nomeVeiculoEditar").value = veiculo?.nome || "";
+  document.getElementById("placaVeiculoEditar").value = veiculo?.placa || "";
+}
+
+function salvarEdicaoVeiculo() {
+  const placaAntiga = document.getElementById("selectVeiculoEditar").value;
+  const nomeNovo = document.getElementById("nomeVeiculoEditar").value.trim().toUpperCase();
+  const placaNova = document.getElementById("placaVeiculoEditar").value.trim().toUpperCase();
+
+  if (!placaAntiga || !nomeNovo || !placaNova) {
+    alert("PREENCHA TODOS OS CAMPOS.");
+    return;
+  }
+
+  if (!confirmarSenha()) return;
+
+  if (placaNova !== placaAntiga && DB.veiculos.some(v => v.placa === placaNova)) {
+    alert("A NOVA PLACA JÁ ESTÁ CADASTRADA.");
+    return;
+  }
+
+  const veiculo = DB.veiculos.find(v => v.placa === placaAntiga);
+  if (!veiculo) return;
+
+  veiculo.nome = nomeNovo;
+  veiculo.placa = placaNova;
+
+  DB.abastecimento.forEach(r => {
+    if (r[1] === placaAntiga) {
+      r[1] = placaNova;
+      r[2] = nomeNovo;
+    }
+  });
+
+  DB.manutencao.forEach(r => {
+    if (r[1] === placaAntiga) {
+      r[1] = placaNova;
+      r[2] = nomeNovo;
+    }
+  });
+
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("editarVeiculo", { placaAntiga, nomeNovo, placaNova });
+  fecharModalEditar();
+  alert("VEÍCULO E HISTÓRICOS ATUALIZADOS COM SUCESSO!");
+}
+
+function excluirVeiculo() {
+  const placa = document.getElementById("selectVeiculoEditar").value;
+  if (!placa) {
+    alert("SELECIONE UM VEÍCULO PARA EXCLUIR.");
+    return;
+  }
+
+  if (!confirm(`TEM CERTEZA QUE DESEJA EXCLUIR O VEÍCULO ${placa}?\n\nTODOS OS ABASTECIMENTOS E MANUTENÇÕES VINCULADOS TAMBÉM SERÃO EXCLUÍDOS.`)) {
+    return;
+  }
+
+  if (!confirmarSenha()) return;
+
+  DB.veiculos = DB.veiculos.filter(v => v.placa !== placa);
+  DB.abastecimento = DB.abastecimento.filter(r => r[1] !== placa);
+  DB.manutencao = DB.manutencao.filter(r => r[1] !== placa);
+
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("excluirVeiculo", { placa });
+  fecharModalEditar();
+  alert("VEÍCULO EXCLUÍDO COM SUCESSO!");
+}
+
+// ============================================================
+// CONSUMO E ABASTECIMENTO
+// ============================================================
+
+function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
+  const km = Number(kmAtual);
+  const l = Number(litros);
+
+  if (!placa || km <= 0 || l <= 0) return "-";
+
+  const anteriores = DB.abastecimento
+    .map((registro, index) => ({ registro, index }))
+    .filter(item =>
+      item.index !== indiceIgnorado &&
+      item.registro[1] === placa &&
+      Number(item.registro[6]) < km
+    )
+    .sort((a, b) => Number(a.registro[6]) - Number(b.registro[6]));
+
+  if (!anteriores.length) return "-";
+
+  const anterior = anteriores[anteriores.length - 1].registro;
+  const kmRodado = km - Number(anterior[6]);
+
+  if (kmRodado <= 0) return "0.00";
+  return (kmRodado / l).toFixed(2);
+}
+
+function recalcularConsumoHistorico() {
+  if (!Array.isArray(DB.abastecimento)) {
+    DB.abastecimento = [];
+    return;
+  }
+
+  DB.abastecimento.forEach((registro, index) => {
+    registro[7] = calcularConsumoRegistro(registro[1], registro[6], registro[4], index);
+  });
+
+  salvarDB();
+}
+
+function registrarAbastecimento() {
+  const data = document.getElementById("dataAbastecimento").value;
+  const placa = document.getElementById("selectVeiculo").value;
+  const motorista = document.getElementById("motorista").value.trim().toUpperCase();
+  const litros = Number(document.getElementById("litros").value);
+  const valor = Number(document.getElementById("valorTotal").value);
+  const kmAtual = Number(document.getElementById("kmAtual").value);
+
+  const veiculo = DB.veiculos.find(v => v.placa === placa);
+  const nome = veiculo?.nome || "";
+
+  if (!data || !placa || !motorista || litros <= 0 || valor < 0 || kmAtual <= 0) {
+    alert("PREENCHA TODOS OS CAMPOS CORRETAMENTE.");
+    return;
+  }
+
+  const registro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
+
+  DB.abastecimento.push(registro);
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("registrarAbastecimento", registro);
+
+  document.getElementById("dataAbastecimento").value = dataHojeInput();
+  document.getElementById("selectVeiculo").value = "";
+  document.getElementById("motorista").value = "";
+  document.getElementById("litros").value = "";
+  document.getElementById("valorTotal").value = "";
+  document.getElementById("kmAtual").value = "";
+
+  alert("ABASTECIMENTO REGISTRADO COM SUCESSO!");
+}
+
+// ============================================================
+// MANUTENÇÃO COM ALARME OPCIONAL
 // ============================================================
 
 function toggleCamposAlarme() {
   const chk = document.getElementById("chkAtivarAlarme");
   const container = document.getElementById("containerAlarme");
   if (container) {
-    container.style.display = chk && chk.checked ? "block" : "none";
+    container.style.display = chk && chk.checked ? "grid" : "none";
   }
 }
 
 function abrirModalManutencao() {
   const modal = document.getElementById("modalManutencao");
-  if (!modal) return;
-  
   modal.style.display = "block";
   modal.setAttribute("aria-hidden", "false");
   
@@ -114,10 +469,8 @@ function abrirModalManutencao() {
 
 function fecharModalManutencao() {
   const modal = document.getElementById("modalManutencao");
-  if (modal) {
-    modal.style.display = "none";
-    modal.setAttribute("aria-hidden", "true");
-  }
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
 
   document.getElementById("selectVeiculoManutencao").value = "";
   document.getElementById("nomeVeiculoManutencao").value = "";
@@ -127,16 +480,15 @@ function fecharModalManutencao() {
   
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
-  
   document.getElementById("dataAlarme").value = "";
-  document.getElementById("horasAlarme").value = "";
+  document.getElementById("obsAlarme").value = "";
   toggleCamposAlarme();
 }
 
 function carregarNomeVeiculo() {
   const placa = document.getElementById("selectVeiculoManutencao").value;
   const veiculo = DB.veiculos.find(v => v.placa === placa);
-  document.getElementById("nomeVeiculoManutencao").value = veiculo ? veiculo.nome : "";
+  document.getElementById("nomeVeiculoManutencao").value = veiculo?.nome || "";
 }
 
 function registrarManutencao() {
@@ -148,39 +500,15 @@ function registrarManutencao() {
   const proximaTroca = Number(document.getElementById("proximaTrocaKm").value) || "";
   
   const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
-  const dataAlarmeVal = document.getElementById("dataAlarme").value;
-  const horasAlarmeVal = Number(document.getElementById("horasAlarme").value);
+  const dataAlarme = temAlarme ? document.getElementById("dataAlarme").value : "";
+  const obsAlarme = temAlarme ? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
 
   if (!data || !placa || !tipo) {
-    alert("PREENCHA DATA, VEÍCULO E TIPO DE SERVIÇO.");
+    alert("PREENCHA DATA, VEÍCULO E TIPO.");
     return;
   }
 
-  // Lógica de formatação da mensagem do alarme
-  let textoAlarme = "";
-  
-  if (temAlarme) {
-    let partesAlarme = [];
-
-    if (dataAlarmeVal) {
-      partesAlarme.push(`DATA: ${formatarData(dataAlarmeVal)}`);
-    }
-
-    if (horasAlarmeVal > 0) {
-      const agora = new Date();
-      agora.setHours(agora.getHours() + horasAlarmeVal);
-      
-      const horaCalc = String(agora.getHours()).padStart(2, '0');
-      const minCalc = String(agora.getMinutes()).padStart(2, '0');
-      
-      partesAlarme.push(`APÓS ${horasAlarmeVal}H (${horaCalc}:${minCalc})`);
-    }
-
-    textoAlarme = partesAlarme.join(" | ") || "ALARME ATIVADO";
-  }
-
-  // Estrutura enviada e salva: [data, placa, nome, tipo, km, proximaTroca, dataAlarme, detalheAlarme]
-  const registro = [data, placa, nome, tipo, km, proximaTroca, dataAlarmeVal, textoAlarme];
+  const registro = [data, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
 
   DB.manutencao.push(registro);
   salvarDB();
@@ -191,34 +519,90 @@ function registrarManutencao() {
   alert("MANUTENÇÃO REGISTRADA COM SUCESSO!");
 }
 
-function excluirManutencao(index) {
-  if (confirm("DESEJA REALMENTE EXCLUIR ESTE REGISTRO?")) {
-    DB.manutencao.splice(index, 1);
-    salvarDB();
-    carregarDados();
+// ============================================================
+// TABELAS E NAVEGAÇÃO
+// ============================================================
+
+function trocarAba(aba) {
+  abaAtiva = aba;
+  document.getElementById("btnTabAbastecimento").classList.toggle("active", aba === "abastecimento");
+  document.getElementById("btnTabManutencao").classList.toggle("active", aba === "manutencao");
+  renderizarTabela();
+}
+
+function renderizarTabela() {
+  if (abaAtiva === "abastecimento") {
+    preencherTabelaAbastecimento(DB.abastecimento);
+  } else {
+    preencherTabelaManutencao(DB.manutencao);
   }
+}
+
+function preencherTabelaAbastecimento(dados) {
+  const thead = document.getElementById("cabecalhoTabela");
+  const tbody = document.querySelector("#tabelaHistorico tbody");
+
+  thead.innerHTML = `
+    <th>DATA</th>
+    <th>PLACA</th>
+    <th>VEÍCULO</th>
+    <th>MOTORISTA</th>
+    <th>LITROS</th>
+    <th>VALOR</th>
+    <th>KM</th>
+    <th>CONSUMO</th>
+    <th>AÇÕES</th>
+  `;
+
+  tbody.innerHTML = "";
+
+  if (!dados.length) {
+    tbody.innerHTML = '<tr><td colspan="9">NENHUM ABASTECIMENTO REGISTRADO</td></tr>';
+    return;
+  }
+
+  dados.forEach((r, index) => {
+    const tr = tbody.insertRow();
+    tr.insertCell().textContent = formatarData(r[0]);
+    tr.insertCell().textContent = r[1];
+    tr.insertCell().textContent = r[2];
+    tr.insertCell().textContent = r[3];
+    tr.insertCell().textContent = `${Number(r[4]).toFixed(2)} L`;
+    tr.insertCell().textContent = `R$ ${Number(r[5]).toFixed(2)}`;
+    tr.insertCell().textContent = `${r[6]} KM`;
+    tr.insertCell().textContent = r[7] !== "-" ? `${r[7]} KM/L` : "-";
+
+    const td = tr.insertCell();
+    td.innerHTML = `
+      <div class="dropdown">
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'abast_${index}')">MAIS</button>
+        <div class="dropdown-content" id="dropdownabast_${index}">
+          <button type="button" onclick="abrirModalEditarAbastecimento(${index})">EDITAR</button>
+          <button type="button" onclick="excluirAbastecimento(${index})">EXCLUIR</button>
+        </div>
+      </div>
+    `;
+  });
 }
 
 function preencherTabelaManutencao(dados) {
   const thead = document.getElementById("cabecalhoTabela");
   const tbody = document.querySelector("#tabelaHistorico tbody");
 
-  if (thead) {
-    thead.innerHTML = `
-      <th>DATA</th>
-      <th>PLACA</th>
-      <th>VEÍCULO</th>
-      <th>TIPO SERVIÇO</th>
-      <th>KM ATUAL</th>
-      <th>PRÓX. TROCA</th>
-      <th>ALARME</th>
-      <th>AÇÕES</th>
-    `;
-  }
+  thead.innerHTML = `
+    <th>DATA</th>
+    <th>PLACA</th>
+    <th>VEÍCULO</th>
+    <th>TIPO SERVIÇO</th>
+    <th>KM ATUAL</th>
+    <th>PRÓX. TROCA</th>
+    <th>ALARME</th>
+    <th>AÇÕES</th>
+  `;
 
   tbody.innerHTML = "";
 
-  if (!dados || !dados.length) {
+  if (!dados.length) {
     tbody.innerHTML = '<tr><td colspan="8">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
     return;
   }
@@ -226,14 +610,13 @@ function preencherTabelaManutencao(dados) {
   dados.forEach((r, index) => {
     const tr = tbody.insertRow();
     tr.insertCell().textContent = formatarData(r[0]);
-    tr.insertCell().textContent = r[1] || "-";
-    tr.insertCell().textContent = r[2] || "-";
-    tr.insertCell().textContent = r[3] || "-";
+    tr.insertCell().textContent = r[1];
+    tr.insertCell().textContent = r[2];
+    tr.insertCell().textContent = r[3];
     tr.insertCell().textContent = r[4] ? `${r[4]} KM` : "-";
     tr.insertCell().textContent = r[5] ? `${r[5]} KM` : "-";
     
-    // Formatação da coluna de Alarme na tabela
-    const infoAlarme = r[7] ? `⏰ ${r[7]}` : (r[6] ? `⏰ ${formatarData(r[6])}` : "-");
+    const infoAlarme = r[6] ? `⏰ ${formatarData(r[6])}${r[7] ? ' (' + r[7] + ')' : ''}` : "-";
     tr.insertCell().textContent = infoAlarme;
 
     const td = tr.insertCell();
@@ -248,18 +631,413 @@ function preencherTabelaManutencao(dados) {
   });
 }
 
-// Integracao assincrona para nao travar a tela
-function enviarParaGoogleSheets(acao, payload) {
-  if (!WEB_APP_URL || WEB_APP_URL.includes("SUA_URL_DO_GOOGLE_APPS_SCRIPT")) {
+function formatarData(data) {
+  if (!data) return "";
+  const texto = String(data);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+    const [ano, mes, dia] = texto.split("-");
+    return `${dia}/${mes}/${ano}`;
+  }
+  return texto;
+}
+
+function toggleDropdown(event, idStr) {
+  event.stopPropagation();
+  document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
+  const menu = document.getElementById("dropdown" + idStr);
+  if (menu) menu.classList.toggle("show");
+}
+
+document.addEventListener("click", () => {
+  document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
+});
+
+// ============================================================
+// EXCLUSÃO DE DADOS
+// ============================================================
+
+function excluirAbastecimento(index) {
+  const item = DB.abastecimento[index];
+  if (!item) return;
+
+  if (!confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTE ABASTECIMENTO?")) return;
+  if (!confirmarSenha()) return;
+
+  DB.abastecimento.splice(index, 1);
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("excluirAbastecimento", { item });
+  alert("ABASTECIMENTO EXCLUÍDO COM SUCESSO!");
+}
+
+function excluirManutencao(index) {
+  const item = DB.manutencao[index];
+  if (!item) return;
+
+  if (!confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTA MANUTENÇÃO?")) return;
+  if (!confirmarSenha()) return;
+
+  DB.manutencao.splice(index, 1);
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("excluirManutencao", { item });
+  alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
+}
+
+// ============================================================
+// EDITAR ABASTECIMENTO
+// ============================================================
+
+function abrirModalEditarAbastecimento(index) {
+  const registro = DB.abastecimento[index];
+  if (!registro) return;
+
+  if (!document.getElementById("modalEditarAbastecimento")) {
+    criarModalEditarAbastecimento();
+  }
+
+  const select = document.getElementById("editSelectVeiculo");
+  select.innerHTML = "";
+
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+
+  veiculosOrdenados.forEach(v => {
+    select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+  });
+
+  document.getElementById("editAbastIndex").value = index;
+  document.getElementById("editDataAbastecimento").value = registro[0];
+  document.getElementById("editSelectVeiculo").value = registro[1];
+  document.getElementById("editMotorista").value = registro[3];
+  document.getElementById("editLitros").value = registro[4];
+  document.getElementById("editValorTotal").value = registro[5];
+  document.getElementById("editKmAtual").value = registro[6];
+
+  document.getElementById("modalEditarAbastecimento").style.display = "block";
+}
+
+function fecharModalEditarAbastecimento() {
+  const modal = document.getElementById("modalEditarAbastecimento");
+  if (modal) modal.style.display = "none";
+}
+
+function salvarEdicaoAbastecimento() {
+  const index = Number(document.getElementById("editAbastIndex").value);
+  const antigo = DB.abastecimento[index];
+  if (!antigo) return;
+
+  const data = document.getElementById("editDataAbastecimento").value;
+  const placa = document.getElementById("editSelectVeiculo").value;
+  const nome = document.getElementById("editSelectVeiculo").selectedOptions[0]?.text.split(" - ")[0] || "";
+  const motorista = document.getElementById("editMotorista").value.trim().toUpperCase();
+  const litros = Number(document.getElementById("editLitros").value);
+  const valor = Number(document.getElementById("editValorTotal").value);
+  const kmAtual = Number(document.getElementById("editKmAtual").value);
+
+  if (!data || !placa || !motorista || litros <= 0 || kmAtual <= 0) {
+    alert("PREENCHA CORRETAMENTE DATA, VEÍCULO, MOTORISTA, LITROS E KM.");
     return;
   }
 
-  fetch(WEB_APP_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ acao: acao, dados: payload })
-  }).catch(err => console.error("Erro ao integrar com Google Sheets:", err));
+  if (!confirmarSenha()) return;
+
+  const novoRegistro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
+
+  DB.abastecimento[index] = novoRegistro;
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("editarAbastecimento", { antigo, novo: novoRegistro });
+  fecharModalEditarAbastecimento();
+  alert("ABASTECIMENTO ATUALIZADO COM SUCESSO!");
 }
+
+function criarModalEditarAbastecimento() {
+  const html = `
+    <div id="modalEditarAbastecimento" class="modal">
+      <div class="modal-content">
+        <button type="button" class="close" onclick="fecharModalEditarAbastecimento()" aria-label="Fechar">&times;</button>
+        <h2>EDITAR ABASTECIMENTO</h2>
+        <input type="hidden" id="editAbastIndex">
+        <div class="form-group">
+          <label for="editDataAbastecimento">DATA</label>
+          <input type="date" id="editDataAbastecimento">
+        </div>
+        <div class="form-group">
+          <label for="editSelectVeiculo">VEÍCULO</label>
+          <select id="editSelectVeiculo"></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editMotorista">MOTORISTA</label>
+            <input type="text" id="editMotorista">
+          </div>
+          <div class="form-group">
+            <label for="editLitros">LITROS</label>
+            <input type="number" step="0.01" min="0" id="editLitros">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editValorTotal">VALOR TOTAL R$</label>
+            <input type="number" step="0.01" min="0" id="editValorTotal">
+          </div>
+          <div class="form-group">
+            <label for="editKmAtual">KM ATUAL</label>
+            <input type="number" min="0" id="editKmAtual">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button type="button" class="btn btn-primary" onclick="salvarEdicaoAbastecimento()">SALVAR</button>
+          <button type="button" class="btn btn-secondary" onclick="fecharModalEditarAbastecimento()">CANCELAR</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", html);
+}
+
+// ============================================================
+// PDF
+// ============================================================
+
+function gerarHTMLPDF(dados, titulo) {
+  const registros = [...dados].sort((a, b) => {
+    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
+    return String(a[0]).localeCompare(String(b[0]));
+  });
+
+  const totalLitros = registros.reduce((sum, r) => sum + (Number(r[4]) || 0), 0);
+  const totalValor = registros.reduce((sum, r) => sum + (Number(r[5]) || 0), 0);
+
+  let linhas = "";
+  let veiculoAtual = "";
+
+  registros.forEach(r => {
+    if (veiculoAtual !== r[2]) {
+      veiculoAtual = r[2];
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
+    }
+    linhas += `
+      <tr>
+        <td>${escaparHTML(formatarData(r[0]))}</td>
+        <td><strong>${escaparHTML(r[1])}</strong></td>
+        <td>${escaparHTML(r[2])}</td>
+        <td>${escaparHTML(r[3] || "-")}</td>
+        <td>${Number(r[4]).toFixed(2)} L</td>
+        <td>R$ ${Number(r[5]).toFixed(2)}</td>
+        <td>${escaparHTML(r[6])} KM</td>
+        <td>${r[7] !== "-" ? `${escaparHTML(r[7])} KM/L` : "-"}</td>
+      </tr>`;
+  });
+
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>${escaparHTML(titulo)}</title>
+<style>
+body{font-family:Arial,sans-serif;margin:30px;color:#2c3e50}
+h1{color:#1565c0;font-size:20px}
+.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px}
+.cards{display:flex;gap:15px;margin-bottom:25px}
+.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px}
+.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
+.card strong{font-size:16px;color:#1565c0}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:#1565c0;color:#fff;padding:9px}
+td{padding:8px;border-bottom:1px solid #eee;text-align:center}
+.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
+@media print{@page{margin:1.5cm}body{margin:0}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
+  <div>${escaparHTML(titulo)}</div>
+  <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
+</div>
+<div class="cards">
+  <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
+  <div class="card"><span>Total Combustível</span><strong>${totalLitros.toFixed(2)} L</strong></div>
+  <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toFixed(2)}</strong></div>
+</div>
+<table>
+<thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
+<tbody>${linhas}</tbody>
+</table>
+<script>window.onload=()=>window.print();</script>
+</body>
+</html>`;
+}
+
+function gerarHTMLPDFManutencao(dados, titulo) {
+  const registros = [...dados].sort((a, b) => {
+    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
+    return String(a[0]).localeCompare(String(b[0]));
+  });
+
+  let linhas = "";
+  let veiculoAtual = "";
+
+  registros.forEach(r => {
+    if (veiculoAtual !== r[2]) {
+      veiculoAtual = r[2];
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="7">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
+    }
+    const infoAlarme = r[6] ? `${formatarData(r[6])}${r[7] ? ' (' + r[7] + ')' : ''}` : "-";
+    linhas += `
+      <tr>
+        <td>${escaparHTML(formatarData(r[0]))}</td>
+        <td><strong>${escaparHTML(r[1])}</strong></td>
+        <td>${escaparHTML(r[2])}</td>
+        <td>${escaparHTML(r[3] || "-")}</td>
+        <td>${r[4] ? `${escaparHTML(r[4])} KM` : "-"}</td>
+        <td>${r[5] ? `${escaparHTML(r[5])} KM` : "-"}</td>
+        <td>${escaparHTML(infoAlarme)}</td>
+      </tr>`;
+  });
+
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>${escaparHTML(titulo)}</title>
+<style>
+body{font-family:Arial,sans-serif;margin:30px;color:#2c3e50}
+h1{color:#1565c0;font-size:20px}
+.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px}
+.cards{display:flex;gap:15px;margin-bottom:25px}
+.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px}
+.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
+.card strong{font-size:16px;color:#1565c0}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:#1565c0;color:#fff;padding:9px}
+td{padding:8px;border-bottom:1px solid #eee;text-align:center}
+.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
+@media print{@page{margin:1.5cm}body{margin:0}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
+  <div>${escaparHTML(titulo)}</div>
+  <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
+</div>
+<div class="cards">
+  <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
+</div>
+<table>
+<thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM ATUAL</th><th>PRÓX. TROCA</th><th>ALARME</th></tr></thead>
+<tbody>${linhas}</tbody>
+</table>
+<script>window.onload=()=>window.print();</script>
+</body>
+</html>`;
+}
+
+function abrirNovaAbaComPDF(html) {
+  const aba = window.open("", "_blank");
+  if (!aba) {
+    alert("O navegador bloqueou a janela do PDF. Permita pop-ups.");
+    return;
+  }
+  aba.document.open();
+  aba.document.write(html);
+  aba.document.close();
+}
+
+function gerarPDFGeral() {
+  if (abaAtiva === "abastecimento") {
+    if (!DB.abastecimento.length) return alert("NÃO HÁ DADOS DE ABASTECIMENTO.");
+    abrirNovaAbaComPDF(gerarHTMLPDF(DB.abastecimento, "RELATÓRIO GERAL DE ABASTECIMENTO"));
+  } else {
+    if (!DB.manutencao.length) return alert("NÃO HÁ DADOS DE MANUTENÇÃO.");
+    abrirNovaAbaComPDF(gerarHTMLPDFManutencao(DB.manutencao, "RELATÓRIO GERAL DE MANUTENÇÃO"));
+  }
+}
+
+function abrirModalSeletiva() {
+  const container = document.getElementById("listaCheckboxesVeiculos");
+  container.innerHTML = "";
+
+  if (!listaVeiculosGlobal.length) return alert("NÃO HÁ VEÍCULOS CADASTRADOS.");
+
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+
+  veiculosOrdenados.forEach(v => {
+    const div = document.createElement("div");
+    div.className = "checkbox-item";
+    div.innerHTML = `
+      <label>
+        <input type="checkbox" value="${escaparHTML(v.placa)}">
+        <span>${escaparHTML(v.nome)} - ${escaparHTML(v.placa)}</span>
+      </label>
+    `;
+    container.appendChild(div);
+  });
+
+  const modal = document.getElementById("modalSeletiva");
+  modal.style.display = "block";
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function fecharModalSeletiva() {
+  const modal = document.getElementById("modalSeletiva");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function gerarPDFSeletiva() {
+  const placas = Array.from(
+    document.querySelectorAll("#listaCheckboxesVeiculos input:checked")
+  ).map(cb => cb.value);
+
+  if (!placas.length) return alert("SELECIONE PELO MENOS 1 VEÍCULO.");
+
+  const nomes = listaVeiculosGlobal
+    .filter(v => placas.includes(v.placa))
+    .map(v => v.nome)
+    .join(", ");
+
+  if (abaAtiva === "abastecimento") {
+    const dados = DB.abastecimento.filter(r => placas.includes(r[1]));
+    if (!dados.length) return alert("NENHUM ABASTECIMENTO ENCONTRADO.");
+    abrirNovaAbaComPDF(gerarHTMLPDF(dados, `RELATÓRIO SELETIVO: ${nomes}`));
+  } else {
+    const dados = DB.manutencao.filter(r => placas.includes(r[1]));
+    if (!dados.length) return alert("NENHUMA MANUTENÇÃO ENCONTRADA.");
+    abrirNovaAbaComPDF(gerarHTMLPDFManutencao(dados, `RELATÓRIO SELETIVO: ${nomes}`));
+  }
+
+  fecharModalSeletiva();
+}
+
+window.addEventListener("click", (event) => {
+  document.querySelectorAll(".modal").forEach(modal => {
+    if (event.target === modal && modal.id !== "telaLogin") {
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+    }
+  });
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  document.querySelectorAll(".modal").forEach(modal => {
+    if (modal.id !== "telaLogin") {
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+    }
+  });
+});
