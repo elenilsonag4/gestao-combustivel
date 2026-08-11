@@ -13,6 +13,12 @@ let DB = carregarDB();
 let listaVeiculosGlobal = [];
 let abaAtiva = "abastecimento";
 
+// Controle de Ordenação Dinâmica das Tabelas
+let colunaOrdenacao = {
+  abastecimento: { indice: 0, asc: false }, // Padrão: Data (Decrescente)
+  manutencao: { indice: 0, asc: false }     // Padrão: Data (Decrescente)
+};
+
 function carregarDB() {
   try {
     const salvo = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -521,7 +527,6 @@ function registrarManutencao() {
     return;
   }
 
-  // Estrutura do registro: [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme]
   const registro = [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme];
 
   DB.manutencao.push(registro);
@@ -534,8 +539,27 @@ function registrarManutencao() {
 }
 
 // ============================================================
-// TABELAS E NAVEGAÇÃO
+// SISTEMA DE ORDENAÇÃO E EXIBIÇÃO DE TABELAS
 // ============================================================
+
+function ordenarTabela(indiceColuna) {
+  const config = colunaOrdenacao[abaAtiva];
+  
+  if (config.indice === indiceColuna) {
+    config.asc = !config.asc;
+  } else {
+    config.indice = indiceColuna;
+    config.asc = true;
+  }
+
+  renderizarTabela();
+}
+
+function obterIndicadorOrdem(aba, indice) {
+  const config = colunaOrdenacao[aba];
+  if (config.indice !== indice) return "";
+  return config.asc ? " ▲" : " ▼";
+}
 
 function trocarAba(aba) {
   abaAtiva = aba;
@@ -555,16 +579,17 @@ function renderizarTabela() {
 function preencherTabelaAbastecimento(dados) {
   const thead = document.getElementById("cabecalhoTabela");
   const tbody = document.querySelector("#tabelaHistorico tbody");
+  const c = colunaOrdenacao.abastecimento;
 
   thead.innerHTML = `
-    <th>DATA</th>
-    <th>PLACA</th>
-    <th>VEÍCULO</th>
-    <th>MOTORISTA</th>
-    <th>LITROS</th>
-    <th>VALOR</th>
-    <th>KM</th>
-    <th>CONSUMO</th>
+    <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('abastecimento', 0)}</th>
+    <th onclick="ordenarTabela(1)" class="th-sortable">PLACA${obterIndicadorOrdem('abastecimento', 1)}</th>
+    <th onclick="ordenarTabela(2)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('abastecimento', 2)}</th>
+    <th onclick="ordenarTabela(3)" class="th-sortable">MOTORISTA${obterIndicadorOrdem('abastecimento', 3)}</th>
+    <th onclick="ordenarTabela(4)" class="th-sortable">LITROS${obterIndicadorOrdem('abastecimento', 4)}</th>
+    <th onclick="ordenarTabela(5)" class="th-sortable">VALOR${obterIndicadorOrdem('abastecimento', 5)}</th>
+    <th onclick="ordenarTabela(6)" class="th-sortable">KM${obterIndicadorOrdem('abastecimento', 6)}</th>
+    <th onclick="ordenarTabela(7)" class="th-sortable">CONSUMO${obterIndicadorOrdem('abastecimento', 7)}</th>
     <th>AÇÕES</th>
   `;
 
@@ -575,7 +600,29 @@ function preencherTabelaAbastecimento(dados) {
     return;
   }
 
-  dados.forEach((r, index) => {
+  let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
+
+  dadosOrdenados.sort((a, b) => {
+    let valA = a.item[c.indice];
+    let valB = b.item[c.indice];
+
+    if ([4, 5, 6].includes(c.indice)) {
+      valA = Number(valA) || 0;
+      valB = Number(valB) || 0;
+    } else if (c.indice === 7) {
+      valA = valA === "-" ? -1 : Number(valA);
+      valB = valB === "-" ? -1 : Number(valB);
+    } else {
+      valA = String(valA || "").toLowerCase();
+      valB = String(valB || "").toLowerCase();
+    }
+
+    if (valA < valB) return c.asc ? -1 : 1;
+    if (valA > valB) return c.asc ? 1 : -1;
+    return 0;
+  });
+
+  dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
     tr.insertCell().textContent = formatarData(r[0]);
     tr.insertCell().textContent = r[1];
@@ -589,10 +636,10 @@ function preencherTabelaAbastecimento(dados) {
     const td = tr.insertCell();
     td.innerHTML = `
       <div class="dropdown">
-        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'abast_${index}')">MAIS</button>
-        <div class="dropdown-content" id="dropdownabast_${index}">
-          <button type="button" onclick="abrirModalEditarAbastecimento(${index})">EDITAR</button>
-          <button type="button" onclick="excluirAbastecimento(${index})">EXCLUIR</button>
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'abast_${indexOriginal}')">MAIS</button>
+        <div class="dropdown-content" id="dropdownabast_${indexOriginal}">
+          <button type="button" onclick="abrirModalEditarAbastecimento(${indexOriginal})">EDITAR</button>
+          <button type="button" onclick="excluirAbastecimento(${indexOriginal})">EXCLUIR</button>
         </div>
       </div>
     `;
@@ -602,15 +649,16 @@ function preencherTabelaAbastecimento(dados) {
 function preencherTabelaManutencao(dados) {
   const thead = document.getElementById("cabecalhoTabela");
   const tbody = document.querySelector("#tabelaHistorico tbody");
+  const c = colunaOrdenacao.manutencao;
 
   thead.innerHTML = `
-    <th>DATA / HORA</th>
-    <th>PLACA</th>
-    <th>VEÍCULO</th>
-    <th>TIPO SERVIÇO</th>
-    <th>DURAÇÃO ALARME</th>
-    <th>DATA ALARME</th>
-    <th>OBS ALARME</th>
+    <th onclick="ordenarTabela(0)" class="th-sortable">DATA / HORA${obterIndicadorOrdem('manutencao', 0)}</th>
+    <th onclick="ordenarTabela(1)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 1)}</th>
+    <th onclick="ordenarTabela(2)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 2)}</th>
+    <th onclick="ordenarTabela(3)" class="th-sortable">TIPO SERVIÇO${obterIndicadorOrdem('manutencao', 3)}</th>
+    <th onclick="ordenarTabela(5)" class="th-sortable">DURAÇÃO ALARME${obterIndicadorOrdem('manutencao', 5)}</th>
+    <th onclick="ordenarTabela(6)" class="th-sortable">DATA ALARME${obterIndicadorOrdem('manutencao', 6)}</th>
+    <th onclick="ordenarTabela(7)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
     <th>AÇÕES</th>
   `;
 
@@ -621,7 +669,26 @@ function preencherTabelaManutencao(dados) {
     return;
   }
 
-  dados.forEach((r, index) => {
+  let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
+
+  dadosOrdenados.sort((a, b) => {
+    let valA = a.item[c.indice];
+    let valB = b.item[c.indice];
+
+    if (c.indice === 5) {
+      valA = Number(valA) || 0;
+      valB = Number(valB) || 0;
+    } else {
+      valA = String(valA || "").toLowerCase();
+      valB = String(valB || "").toLowerCase();
+    }
+
+    if (valA < valB) return c.asc ? -1 : 1;
+    if (valA > valB) return c.asc ? 1 : -1;
+    return 0;
+  });
+
+  dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
     const dataHoraRegistro = `${formatarData(r[0])} ${r[4] ? r[4] : ''}`.trim();
 
@@ -636,9 +703,9 @@ function preencherTabelaManutencao(dados) {
     const td = tr.insertCell();
     td.innerHTML = `
       <div class="dropdown">
-        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${index}')">MAIS</button>
-        <div class="dropdown-content" id="dropdownmanut_${index}">
-          <button type="button" onclick="excluirManutencao(${index})">EXCLUIR</button>
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${indexOriginal}')">MAIS</button>
+        <div class="dropdown-content" id="dropdownmanut_${indexOriginal}">
+          <button type="button" onclick="excluirManutencao(${indexOriginal})">EXCLUIR</button>
         </div>
       </div>
     `;
