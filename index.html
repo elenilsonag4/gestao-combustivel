@@ -183,21 +183,24 @@
       </div>
 
       <!-- OPÇÃO OPCIONAL DE ALARME CORRIGIDA -->
-      <div class="form-group" style="margin-top: 15px;">
+      <div class="alarm-toggle-container" style="margin-top: 15px; margin-bottom: 10px;">
         <label class="checkbox-alarme-label">
           <input type="checkbox" id="chkAtivarAlarme" onchange="toggleCamposAlarme()">
           ⏰ DEFINIR ALARME / LEMBRETE
         </label>
       </div>
 
-      <div id="containerAlarme" class="grid-2" style="display: none; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
-        <div class="form-group">
-          <label for="dataAlarme">DATA DO ALARME</label>
-          <input type="date" id="dataAlarme">
-        </div>
-        <div class="form-group">
-          <label for="obsAlarme">OBSERVAÇÃO / LEMBRETE</label>
-          <input type="text" id="obsAlarme" placeholder="EX: CHECAR CORREIA DENTADA">
+      <!-- PAINEL DINÂMICO PARA DATA/HORA OU KILOMETRAGEM -->
+      <div id="containerAlarme" class="alarm-fields">
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="horaAlarme">POR DATA / HORA</label>
+            <input type="datetime-local" id="horaAlarme">
+          </div>
+          <div class="form-group">
+            <label for="kmAlarme">POR QUILOMETRAGEM</label>
+            <input type="number" id="kmAlarme" min="0" placeholder="EX: AVISAR COM 500 KM">
+          </div>
         </div>
       </div>
 
