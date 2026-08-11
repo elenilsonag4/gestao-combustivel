@@ -508,7 +508,6 @@ function registrarManutencao() {
     return;
   }
 
-  // registro: [data, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme]
   const registro = [data, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
 
   DB.manutencao.push(registro);
@@ -617,7 +616,6 @@ function preencherTabelaManutencao(dados) {
     tr.insertCell().textContent = r[4] ? `${r[4]} KM` : "-";
     tr.insertCell().textContent = r[5] ? `${r[5]} KM` : "-";
     
-    // Alarme / Lembrete
     const infoAlarme = r[6] ? `⏰ ${formatarData(r[6])}${r[7] ? ' (' + r[7] + ')' : ''}` : "-";
     tr.insertCell().textContent = infoAlarme;
 
