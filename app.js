@@ -737,6 +737,7 @@ function preencherTabelaManutencao(dados) {
       <div class="dropdown">
         <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${indexOriginal}')">MAIS</button>
         <div class="dropdown-content" id="dropdownmanut_${indexOriginal}">
+          <button type="button" onclick="abrirModalEditarManutencao(${indexOriginal})">EDITAR</button>
           <button type="button" onclick="excluirManutencao(${indexOriginal})">EXCLUIR</button>
         </div>
       </div>
