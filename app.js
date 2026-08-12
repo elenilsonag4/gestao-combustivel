@@ -737,6 +737,7 @@ function preencherTabelaManutencao(dados) {
       <div class="dropdown">
         <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${indexOriginal}')">MAIS</button>
         <div class="dropdown-content" id="dropdownmanut_${indexOriginal}">
+          <button type="button" onclick="abrirModalEditarManutencao(${indexOriginal})">EDITAR</button>
           <button type="button" onclick="excluirManutencao(${indexOriginal})">EXCLUIR</button>
         </div>
       </div>
@@ -909,6 +910,154 @@ function criarModalEditarAbastecimento() {
         <div class="btn-group">
           <button type="button" class="btn btn-primary" onclick="salvarEdicaoAbastecimento()">SALVAR</button>
           <button type="button" class="btn btn-secondary" onclick="fecharModalEditarAbastecimento()">CANCELAR</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", html);
+}
+
+// ============================================================
+// EDITAR MANUTENÇÃO
+// ============================================================
+
+function abrirModalEditarManutencao(index) {
+  const registro = DB.manutencao[index];
+  if (!registro) return;
+
+  if (!document.getElementById("modalEditarManutencao")) {
+    criarModalEditarManutencao();
+  }
+
+  const select = document.getElementById("editSelectVeiculoManutencao");
+  select.innerHTML = "";
+
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+
+  veiculosOrdenados.forEach(v => {
+    select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+  });
+
+  document.getElementById("editManutIndex").value = index;
+  document.getElementById("editDataManutencao").value = registro[0];
+  document.getElementById("editHoraManutencao").value = registro[4] || horaAgoraInput();
+  document.getElementById("editSelectVeiculoManutencao").value = registro[1];
+  document.getElementById("editTipoManutencao").value = registro[3] || "";
+
+  const temAlarme = Boolean(registro[5] || registro[6] || registro[7]);
+  const chk = document.getElementById("editChkAtivarAlarme");
+  if (chk) chk.checked = temAlarme;
+
+  document.getElementById("editHorasAlarme").value = registro[5] || "";
+  document.getElementById("editDataAlarme").value = registro[6] || "";
+  document.getElementById("editObsAlarme").value = registro[7] || "";
+
+  toggleCamposAlarmeEdicao();
+  document.getElementById("modalEditarManutencao").style.display = "block";
+}
+
+function toggleCamposAlarmeEdicao() {
+  const chk = document.getElementById("editChkAtivarAlarme");
+  const container = document.getElementById("editContainerAlarme");
+  if (container) {
+    container.style.display = chk && chk.checked ? "block" : "none";
+  }
+}
+
+function fecharModalEditarManutencao() {
+  const modal = document.getElementById("modalEditarManutencao");
+  if (modal) modal.style.display = "none";
+}
+
+function salvarEdicaoManutencao() {
+  const index = Number(document.getElementById("editManutIndex").value);
+  const antigo = DB.manutencao[index];
+  if (!antigo) return;
+
+  const data = document.getElementById("editDataManutencao").value;
+  const hora = document.getElementById("editHoraManutencao").value || horaAgoraInput();
+  const placa = document.getElementById("editSelectVeiculoManutencao").value;
+  
+  const veiculo = DB.veiculos.find(v => v.placa === placa);
+  const nome = veiculo?.nome || "";
+
+  const tipo = document.getElementById("editTipoManutencao").value.trim().toUpperCase();
+
+  const temAlarme = document.getElementById("editChkAtivarAlarme")?.checked || false;
+  const dataAlarme = temAlarme ? document.getElementById("editDataAlarme").value : "";
+  const horasAlarme = temAlarme ? (Number(document.getElementById("editHorasAlarme")?.value) || "") : "";
+  const obsAlarme = temAlarme ? document.getElementById("editObsAlarme").value.trim().toUpperCase() : "";
+
+  if (!data || !placa || !tipo) {
+    alert("PREENCHA CORRETAMENTE DATA, VEÍCULO E TIPO.");
+    return;
+  }
+
+  if (!confirmarSenha()) return;
+
+  const novoRegistro = [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme];
+
+  DB.manutencao[index] = novoRegistro;
+  salvarDB();
+  carregarDados();
+
+  enviarParaGoogleSheets("editarManutencao", { antigo, novo: novoRegistro });
+  fecharModalEditarManutencao();
+  alert("MANUTENÇÃO ATUALIZADA COM SUCESSO!");
+}
+
+function criarModalEditarManutencao() {
+  const html = `
+    <div id="modalEditarManutencao" class="modal">
+      <div class="modal-content">
+        <button type="button" class="close" onclick="fecharModalEditarManutencao()" aria-label="Fechar">&times;</button>
+        <h2>EDITAR MANUTENÇÃO</h2>
+        <input type="hidden" id="editManutIndex">
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editDataManutencao">DATA</label>
+            <input type="date" id="editDataManutencao">
+          </div>
+          <div class="form-group">
+            <label for="editHoraManutencao">HORÁRIO</label>
+            <input type="time" id="editHoraManutencao">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editSelectVeiculoManutencao">VEÍCULO</label>
+          <select id="editSelectVeiculoManutencao"></select>
+        </div>
+        <div class="form-group">
+          <label for="editTipoManutencao">TIPO</label>
+          <input type="text" id="editTipoManutencao" placeholder="EX: TROCA DE ÓLEO">
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label class="checkbox-alarme-label">
+            <input type="checkbox" id="editChkAtivarAlarme" onchange="toggleCamposAlarmeEdicao()">
+            ⏰ DEFINIR ALARME / LEMBRETE
+          </label>
+        </div>
+        <div id="editContainerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="editDataAlarme">DATA DO ALARME</label>
+              <input type="date" id="editDataAlarme">
+            </div>
+            <div class="form-group">
+              <label for="editHorasAlarme">DURAÇÃO (EM HORAS)</label>
+              <input type="number" id="editHorasAlarme" min="1">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="editObsAlarme">OBSERVAÇÃO / LEMBRETE</label>
+            <input type="text" id="editObsAlarme">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button type="button" class="btn btn-primary" onclick="salvarEdicaoManutencao()">SALVAR</button>
+          <button type="button" class="btn btn-secondary" onclick="fecharModalEditarManutencao()">CANCELAR</button>
         </div>
       </div>
     </div>
