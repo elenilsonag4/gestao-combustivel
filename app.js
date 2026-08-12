@@ -879,7 +879,7 @@ function preencherTabelaManutencao(dados) {
   const c = colunaOrdenacao.manutencao;
 
   thead.innerHTML = `
-    <th onclick="ordenarTabela(0)" class="th-sortable">DATA / HORA${obterIndicadorOrdem('manutencao', 0)}</th>
+    <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('manutencao', 0)}</th>
     <th onclick="ordenarTabela(2)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 2)}</th>
     <th onclick="ordenarTabela(3)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 3)}</th>
     <th onclick="ordenarTabela(4)" class="th-sortable">TIPO${obterIndicadorOrdem('manutencao', 4)}</th>
@@ -918,9 +918,9 @@ function preencherTabelaManutencao(dados) {
 
   dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
-    const dataHoraRegistro = `${formatarData(r[0])} ${r[1] ? r[1] : ''}`.trim();
 
-    tr.insertCell().textContent = dataHoraRegistro;
+    // EXIBE SOMENTE A DATA (r[0]) FORMATADA
+    tr.insertCell().textContent = formatarData(r[0]);
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
     tr.insertCell().textContent = r[4];
