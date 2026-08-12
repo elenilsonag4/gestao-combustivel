@@ -1,7 +1,7 @@
 // ============================================================
 // CONFIGURAÇÕES E ESTADO GLOBAL
 // ============================================================
-const GOOGLE_SCRIPT_URL = "SUA_URL_DO_GOOGLE_APPS_SCRIPT_AQUI"; // Cole a URL Web App do Apps Script aqui
+const GOOGLE_SCRIPT_URL = "SUA_URL_DO_GOOGLE_APPS_SCRIPT_AQUI"; // Cole a URL do Apps Script aqui
 
 let DB = {
   veiculos: [],
@@ -24,24 +24,21 @@ document.addEventListener("DOMContentLoaded", () => {
   carregarDados();
   definirDataHoraPadrao();
   configurarEventosDOM();
-  setInterval(verificarAlarmes, 60000); // Checa alarmes a cada 1 minuto
+  setInterval(verificarAlarmes, 60000);
 });
 
 function configurarEventosDOM() {
-  // Fechar dropdowns ao clicar fora
   window.onclick = function (event) {
     if (!event.target.matches('.action-btn')) {
       const dropdowns = document.getElementsByClassName("dropdown-content");
       for (let i = 0; i < dropdowns.length; i++) {
-        const openDropdown = dropdowns[i];
-        if (openDropdown.classList.contains('show')) {
-          openDropdown.classList.remove('show');
+        if (dropdowns[i].classList.contains('show')) {
+          dropdowns[i].classList.remove('show');
         }
       }
     }
   };
 
-  // Alternar visualização de campos de alarme
   const chkAlarme = document.getElementById("chkAtivarAlarme");
   if (chkAlarme) {
     chkAlarme.addEventListener("change", toggleCamposAlarme);
@@ -107,7 +104,7 @@ function enviarParaGoogleSheets(acao, dados) {
 }
 
 // ============================================================
-// ATUALIZAÇÃO DA INTERFACE (TABELAS E DROPDOWNS)
+// ATUALIZAÇÃO DA INTERFACE (MANTENDO 9 COLUNAS ORIGINAIS)
 // ============================================================
 function atualizarListas() {
   listaVeiculosGlobal = DB.veiculos.map(v => ({ nome: v[0], placa: v[1] }));
@@ -157,9 +154,7 @@ function preencherTabelaVeiculos(dados) {
     tr.insertCell().textContent = r[1];
 
     const tdAcoes = tr.insertCell();
-    tdAcoes.innerHTML = `
-      <button type="button" class="btn btn-danger btn-sm" onclick="excluirVeiculo(${idx})">EXCLUIR</button>
-    `;
+    tdAcoes.innerHTML = `<button type="button" class="btn btn-danger btn-sm" onclick="excluirVeiculo(${idx})">EXCLUIR</button>`;
   });
 }
 
@@ -183,9 +178,7 @@ function preencherTabelaUso(dados) {
     tr.insertCell().textContent = r[5] || "-";
 
     const tdAcoes = tr.insertCell();
-    tdAcoes.innerHTML = `
-      <button type="button" class="btn btn-danger btn-sm" onclick="excluirRegistroUso(${idx})">EXCLUIR</button>
-    `;
+    tdAcoes.innerHTML = `<button type="button" class="btn btn-danger btn-sm" onclick="excluirRegistroUso(${idx})">EXCLUIR</button>`;
   });
 }
 
@@ -196,15 +189,17 @@ function preencherTabelaManutencao(dados) {
 
   const c = colunaOrdenacao.manutencao;
 
+  // Monta o cabeçalho original exatamente com 9 Colunas
   if (thead) {
     thead.innerHTML = `
-      <th onclick="ordenarTabela(0)" class="th-sortable">DATA / HORA${obterIndicadorOrdem('manutencao', 0)}</th>
+      <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('manutencao', 0)}</th>
       <th onclick="ordenarTabela(1)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 1)}</th>
       <th onclick="ordenarTabela(2)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 2)}</th>
-      <th onclick="ordenarTabela(3)" class="th-sortable">TIPO SERVIÇO${obterIndicadorOrdem('manutencao', 3)}</th>
-      <th onclick="ordenarTabela(5)" class="th-sortable">DURAÇÃO ALARME${obterIndicadorOrdem('manutencao', 5)}</th>
+      <th onclick="ordenarTabela(3)" class="th-sortable">TIPO${obterIndicadorOrdem('manutencao', 3)}</th>
+      <th onclick="ordenarTabela(4)" class="th-sortable">HORA${obterIndicadorOrdem('manutencao', 4)}</th>
+      <th onclick="ordenarTabela(5)" class="th-sortable">ALARME (H)${obterIndicadorOrdem('manutencao', 5)}</th>
       <th onclick="ordenarTabela(6)" class="th-sortable">DATA ALARME${obterIndicadorOrdem('manutencao', 6)}</th>
-      <th onclick="ordenarTabela(7)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
+      <th onclick="ordenarTabela(7)" class="th-sortable">OBS. ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
       <th>AÇÕES</th>
     `;
   }
@@ -212,7 +207,7 @@ function preencherTabelaManutencao(dados) {
   tbody.innerHTML = "";
 
   if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="8">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
     return;
   }
 
@@ -237,19 +232,20 @@ function preencherTabelaManutencao(dados) {
 
   dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
-    const dataHoraRegistro = `${formatarData(r[0])} ${r[4] ? r[4] : ''}`.trim();
 
-    tr.insertCell().textContent = dataHoraRegistro;
-    tr.insertCell().textContent = r[1];
-    tr.insertCell().textContent = r[2];
-    tr.insertCell().textContent = r[3];
-    tr.insertCell().textContent = r[5] ? `${r[5]} HORAS` : "-";
-    tr.insertCell().textContent = r[6] ? formatarData(r[6]) : "-";
-    tr.insertCell().textContent = r[7] ? r[7] : "-";
+    tr.insertCell().textContent = formatarData(r[0]); // 1. DATA
+    tr.insertCell().textContent = r[1] || "-";             // 2. PLACA
+    tr.insertCell().textContent = r[2] || "-";             // 3. VEÍCULO
+    tr.insertCell().textContent = r[3] || "-";             // 4. TIPO
+    tr.insertCell().textContent = r[4] || "-";             // 5. HORA
+    tr.insertCell().textContent = r[5] ? `${r[5]} H` : "-"; // 6. ALARME (H)
+    tr.insertCell().textContent = r[6] ? formatarData(r[6]) : "-"; // 7. DATA ALARME
+    tr.insertCell().textContent = r[7] || "-";             // 8. OBS. ALARME
 
-    const td = tr.insertCell();
-    td.innerHTML = `
-      <div class="dropdown">
+    // 9. AÇÕES (EDITAR + EXCLUIR)
+    const tdAcoes = tr.insertCell();
+    tdAcoes.innerHTML = `
+      <div class="dropdown" style="position:relative; display:inline-block;">
         <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${indexOriginal}')">MAIS</button>
         <div class="dropdown-content" id="dropdownmanut_${indexOriginal}">
           <button type="button" onclick="abrirModalEditarManutencao(${indexOriginal})">EDITAR</button>
@@ -261,7 +257,7 @@ function preencherTabelaManutencao(dados) {
 }
 
 // ============================================================
-// ORDENAÇÃO E UTILITÁRIOS DE INTERFACE
+// FUNÇÕES UTILITÁRIAS
 // ============================================================
 function toggleDropdown(event, id) {
   event.stopPropagation();
@@ -304,15 +300,13 @@ function formatarData(dataStr) {
 
 function confirmarSenha() {
   const senha = prompt("DIGITE A SENHA DE CONFIRMAÇÃO:");
-  if (senha === "1234") { // Altere a senha se necessário
-    return true;
-  }
+  if (senha === "1234") return true;
   alert("SENHA INCORRETA!");
   return false;
 }
 
 // ============================================================
-// AÇÕES DE CADASTRO E EXCLUSÃO
+// CADASTRO E EXCLUSÃO DE MANUTENÇÃO
 // ============================================================
 function salvarVeiculo() {
   const nome = document.getElementById("nomeVeiculo")?.value.trim().toUpperCase();
@@ -323,8 +317,7 @@ function salvarVeiculo() {
     return;
   }
 
-  const existe = DB.veiculos.some(v => v[1] === placa);
-  if (existe) {
+  if (DB.veiculos.some(v => v[1] === placa)) {
     alert("JÁ EXISTE UM VEÍCULO COM ESTA PLACA.");
     return;
   }
@@ -342,7 +335,6 @@ function salvarVeiculo() {
 
 function excluirVeiculo(index) {
   if (!confirmarSenha()) return;
-
   const item = DB.veiculos[index];
   DB.veiculos.splice(index, 1);
   salvarDB();
@@ -374,7 +366,6 @@ function registrarManutencao() {
   atualizarListas();
   enviarParaGoogleSheets("registrarManutencao", registro);
 
-  // Limpar formulário
   document.getElementById("tipoManutencao").value = "";
   if (document.getElementById("chkAtivarAlarme")) {
     document.getElementById("chkAtivarAlarme").checked = false;
@@ -386,7 +377,6 @@ function registrarManutencao() {
 
 function excluirManutencao(index) {
   if (!confirmarSenha()) return;
-
   const item = DB.manutencao[index];
   DB.manutencao.splice(index, 1);
   salvarDB();
@@ -395,7 +385,7 @@ function excluirManutencao(index) {
 }
 
 // ============================================================
-// EDITAR MANUTENÇÃO
+// EDIÇÃO DE MANUTENÇÃO (MODAL)
 // ============================================================
 function abrirModalEditarManutencao(index) {
   const registro = DB.manutencao[index];
@@ -489,47 +479,47 @@ function criarModalEditarManutencao() {
         <button type="button" class="close" onclick="fecharModalEditarManutencao()" style="float:right; border:none; background:none; font-size:20px;">&times;</button>
         <h2>EDITAR MANUTENÇÃO</h2>
         <input type="hidden" id="editManutIndex">
-        <div class="grid-2" style="display:flex; gap:10px;">
-          <div class="form-group" style="flex:1;">
-            <label for="editDataManutencao">DATA</label>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <div style="flex:1;">
+            <label>DATA</label>
             <input type="date" id="editDataManutencao" style="width:100%;">
           </div>
-          <div class="form-group" style="flex:1;">
-            <label for="editHoraManutencao">HORÁRIO</label>
+          <div style="flex:1;">
+            <label>HORÁRIO</label>
             <input type="time" id="editHoraManutencao" style="width:100%;">
           </div>
         </div>
-        <div class="form-group" style="margin-top:10px;">
-          <label for="editSelectVeiculoManutencao">VEÍCULO</label>
+        <div style="margin-top:10px;">
+          <label>VEÍCULO</label>
           <select id="editSelectVeiculoManutencao" style="width:100%;"></select>
         </div>
-        <div class="form-group" style="margin-top:10px;">
-          <label for="editTipoManutencao">TIPO DE SERVIÇO</label>
+        <div style="margin-top:10px;">
+          <label>TIPO DE SERVIÇO</label>
           <input type="text" id="editTipoManutencao" style="width:100%;">
         </div>
-        <div class="form-group" style="margin-top: 15px;">
-          <label class="checkbox-alarme-label">
+        <div style="margin-top:15px;">
+          <label>
             <input type="checkbox" id="editChkAtivarAlarme" onchange="toggleCamposAlarmeEditar()">
             ⏰ DEFINIR ALARME / LEMBRETE
           </label>
         </div>
-        <div id="editContainerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-top:10px;">
-          <div class="grid-2" style="display:flex; gap:10px;">
-            <div class="form-group" style="flex:1;">
-              <label for="editDataAlarme">DATA DO ALARME</label>
+        <div id="editContainerAlarme" style="display:none; background:#f8f9fa; padding:12px; border-radius:6px; border:1px dashed #ccc; margin-top:10px;">
+          <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+              <label>DATA DO ALARME</label>
               <input type="date" id="editDataAlarme" style="width:100%;">
             </div>
-            <div class="form-group" style="flex:1;">
-              <label for="editHorasAlarme">DURAÇÃO (HORAS)</label>
+            <div style="flex:1;">
+              <label>DURAÇÃO (HORAS)</label>
               <input type="number" id="editHorasAlarme" min="1" style="width:100%;">
             </div>
           </div>
-          <div class="form-group" style="margin-top:10px;">
-            <label for="editObsAlarme">OBSERVAÇÃO / LEMBRETE</label>
+          <div style="margin-top:10px;">
+            <label>OBSERVAÇÃO / LEMBRETE</label>
             <input type="text" id="editObsAlarme" style="width:100%;">
           </div>
         </div>
-        <div class="btn-group" style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+        <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
           <button type="button" class="btn btn-primary" onclick="salvarEdicaoManutencao()">SALVAR</button>
           <button type="button" class="btn btn-secondary" onclick="fecharModalEditarManutencao()">CANCELAR</button>
         </div>
@@ -540,11 +530,10 @@ function criarModalEditarManutencao() {
 }
 
 // ============================================================
-// SISTEMA DE ALARMES E NOTIFICAÇÕES
+// VERIFICAÇÃO DE ALARMES
 // ============================================================
 function verificarAlarmes() {
   if (!DB.manutencao.length) return;
-
   const hoje = new Date().toISOString().split("T")[0];
 
   DB.manutencao.forEach(item => {
@@ -553,7 +542,7 @@ function verificarAlarmes() {
     const placa = item[1];
 
     if (dataAlarme && dataAlarme <= hoje) {
-      console.log(`⏰ ALARME: Veículo ${placa} possui manutenção/lembrete pendente: ${obs}`);
+      console.log(`⏰ ALARME: Veículo ${placa} possui manutenção pendente: ${obs}`);
     }
   });
 }
