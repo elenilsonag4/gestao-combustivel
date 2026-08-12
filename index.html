@@ -1,92 +1,74 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AG4 FROTA - Gestão e Manutenção</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-  <div class="container">
-    <!-- FORMULÁRIO DE MANUTENÇÃO -->
-    <div class="card">
-      <h2>REGISTRAR MANUTENÇÃO</h2>
-      
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="dataManutencao">DATA</label>
-          <input type="date" id="dataManutencao">
-        </div>
-        <div class="form-group">
-          <label for="horaManutencao">HORÁRIO</label>
-          <input type="time" id="horaManutencao">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="selectVeiculoManutencao">VEÍCULO</label>
-        <select id="selectVeiculoManutencao"></select>
-      </div>
-
-      <div class="form-group">
-        <label for="tipoManutencao">TIPO</label>
-        <input type="text" id="tipoManutencao" placeholder="EX: TROCA DE ÓLEO E FILTROS">
-      </div>
-
-      <!-- CHECKBOX DE ALARME -->
-      <div class="form-group" style="margin-top: 15px;">
-        <label class="checkbox-alarme-label">
-          <input type="checkbox" id="chkAtivarAlarme" onchange="toggleCamposAlarme()">
-          ⏰ DEFINIR ALARME / LEMBRETE
-        </label>
-      </div>
-
-      <!-- CONTAINER DE CONFIGURAÇÃO DO ALARME -->
-      <div id="containerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
-        <div class="grid-2">
-          <div class="form-group">
-            <label for="dataAlarme">DATA DO ALARME</label>
-            <input type="date" id="dataAlarme">
-          </div>
-          <div class="form-group">
-            <label for="horasAlarme">DURAÇÃO (EM HORAS)</label>
-            <input type="number" id="horasAlarme" min="1" placeholder="EX: 24, 48">
-          </div>
-        </div>
-        <div class="form-group" style="margin-bottom: 0;">
-          <label for="obsAlarme">OBSERVAÇÃO / LEMBRETE</label>
-          <input type="text" id="obsAlarme" placeholder="EX: VERIFICAR NÍVEL DO ÓLEO">
-        </div>
-      </div>
-
-      <button type="button" class="btn btn-primary" onclick="salvarManutencao()">SALVAR MANUTENÇÃO</button>
+<!-- CADASTRO DE MANUTENÇÃO -->
+<div class="card">
+  <h2>REGISTRAR MANUTENÇÃO</h2>
+  
+  <div class="grid-2">
+    <div class="form-group">
+      <label for="dataManutencao">DATA</label>
+      <input type="date" id="dataManutencao">
     </div>
-
-    <!-- TABELA HISTÓRICO DE MANUTENÇÃO -->
-    <div class="card" style="margin-top: 20px;">
-      <h2>HISTÓRICO DE MANUTENÇÃO</h2>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>DATA</th>
-              <th>PLACA</th>
-              <th>VEÍCULO</th>
-              <th>TIPO</th>
-              <th>HORA</th>
-              <th>ALARME (H)</th>
-              <th>DATA ALARME</th>
-              <th>OBS. ALARME</th>
-              <th>AÇÕES</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyManutencao"></tbody>
-        </table>
-      </div>
+    <div class="form-group">
+      <label for="horaManutencao">HORÁRIO</label>
+      <input type="time" id="horaManutencao">
     </div>
   </div>
 
-  <script src="app.js"></script>
-</body>
-</html>
+  <div class="form-group">
+    <label for="selectVeiculoManutencao">VEÍCULO</label>
+    <select id="selectVeiculoManutencao"></select>
+  </div>
+
+  <div class="form-group">
+    <label for="tipoManutencao">TIPO</label>
+    <input type="text" id="tipoManutencao" placeholder="EX: TROCA DE ÓLEO E FILTROS">
+  </div>
+
+  <div class="form-group" style="margin-top: 15px;">
+    <label class="checkbox-alarme-label">
+      <input type="checkbox" id="chkAtivarAlarme" onchange="toggleCamposAlarme()">
+      ⏰ DEFINIR ALARME / LEMBRETE
+    </label>
+  </div>
+
+  <div id="containerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="dataAlarme">DATA DO ALARME</label>
+        <input type="date" id="dataAlarme">
+      </div>
+      <div class="form-group">
+        <label for="horasAlarme">DURAÇÃO (EM HORAS)</label>
+        <input type="number" id="horasAlarme" min="1" placeholder="EX: 24, 48">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom: 0;">
+      <label for="obsAlarme">OBSERVAÇÃO / LEMBRETE</label>
+      <input type="text" id="obsAlarme" placeholder="EX: VERIFICAR NÍVEL DO ÓLEO">
+    </div>
+  </div>
+
+  <button type="button" class="btn btn-primary" onclick="salvarManutencao()">SALVAR MANUTENÇÃO</button>
+</div>
+
+<!-- HISTÓRICO -->
+<div class="card" style="margin-top: 20px;">
+  <h2>HISTÓRICO DE MANUTENÇÃO</h2>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>DATA</th>
+          <th>PLACA</th>
+          <th>VEÍCULO</th>
+          <th>TIPO</th>
+          <th>HORA</th>
+          <th>ALARME (H)</th>
+          <th>DATA ALARME</th>
+          <th>OBS. ALARME</th>
+          <th>AÇÕES</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyManutencao"></tbody>
+    </table>
+  </div>
+</div>
