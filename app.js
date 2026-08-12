@@ -903,7 +903,11 @@ function salvarEdicaoManutencao() {
 
   const temAlarme = document.getElementById("editChkAtivarAlarme")?.checked || false;
   const dataAlarme = temAlarme ? document.getElementById("editDataAlarme").value : "";
-  const horasAlarme = temAlarme ? (Number(document.getElementById("editHorasAlarme")?.value) || "") : "";
+  
+  // Garantir que a Duração (Horas) seja gravada estritamente como Número
+  const valorHoras = document.getElementById("editHorasAlarme")?.value;
+  const horasAlarme = temAlarme && valorHoras !== "" ? Number(valorHoras) : "";
+  
   const obsAlarme = temAlarme ? document.getElementById("editObsAlarme").value.trim().toUpperCase() : "";
 
   if (!data || !placa || !tipo) {
@@ -913,6 +917,7 @@ function salvarEdicaoManutencao() {
 
   if (!confirmarSenha()) return;
 
+  // Array estruturada para a planilha: [DATA, PLACA, NOME, TIPO, HORA, PROXIMA_TROCA_HORAS, DATA_ALARME, OBS]
   const novoRegistro = [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme];
 
   DB.manutencao[index] = novoRegistro;
