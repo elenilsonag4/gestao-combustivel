@@ -1,263 +1,249 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AG4 FROTA - Gestão Combustível</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-  <!-- SPINNER DE CARREGAMENTO -->
-  <div id="loadingSpinner" class="loading-overlay" style="display: none;">
-    <div class="spinner"></div>
-    <div style="color: white; margin-top: 10px; font-weight: bold;">CONECTANDO AO SERVIDOR...</div>
-  </div>
-
-  <!-- TELA DE LOGIN -->
-  <div id="telaLogin" class="login-overlay">
-    <div class="login-card">
-      <img src="logo frota.png" alt="AG4 FROTA" class="login-logo" onerror="this.style.display='none'">
-      <h2>ACESSO AO SISTEMA</h2>
-      <p style="font-size: 13px; color: #666; margin-bottom: 20px;">DIGITE SEU E-MAIL E SENHA PARA CONTINUAR</p>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+      body { margin: 15px; background-color: #ffffff; color: #333; }
       
-      <form onsubmit="fazerLogin(event)">
-        <div class="form-group" style="text-align: left;">
-          <label for="loginEmail">E-MAIL DE ACESSO</label>
-          <input type="email" id="loginEmail" required placeholder="seuemail@ag4.com">
+      .header-title { 
+        color: #1a62bf; 
+        font-weight: bold; 
+        font-size: 16px; 
+        margin-bottom: 15px; 
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .form-group { margin-bottom: 12px; }
+      .row { display: flex; gap: 10px; }
+      .col { flex: 1; }
+
+      label { 
+        display: block; 
+        font-size: 11px; 
+        font-weight: bold; 
+        color: #555; 
+        margin-bottom: 4px; 
+        text-transform: uppercase; 
+      }
+
+      input[type="text"], 
+      input[type="date"], 
+      input[type="time"], 
+      select { 
+        width: 100%; 
+        padding: 8px 10px; 
+        border: 1px solid #ccc; 
+        border-radius: 4px; 
+        font-size: 13px; 
+        outline: none; 
+      }
+
+      input[readonly] { background-color: #eaeaea; color: #555; }
+      input:focus, select:focus { border-color: #1a62bf; }
+
+      /* Caixa de Alarme */
+      .checkbox-container { 
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        margin: 15px 0 8px 0; 
+      }
+
+      .checkbox-container label { 
+        color: #1a62bf; 
+        font-size: 12px; 
+        cursor: pointer; 
+        margin: 0; 
+      }
+
+      .alarm-box { 
+        border: 1px dashed #bbb; 
+        background-color: #fcfcfc; 
+        padding: 12px; 
+        border-radius: 4px; 
+        margin-bottom: 15px; 
+      }
+
+      /* Botões */
+      .btn-container { display: flex; gap: 10px; margin-top: 15px; }
+      
+      .btn { 
+        flex: 1; 
+        padding: 10px; 
+        border: none; 
+        border-radius: 4px; 
+        font-weight: bold; 
+        color: white; 
+        cursor: pointer; 
+        font-size: 13px; 
+      }
+
+      .btn-salvar { background-color: #1565c0; }
+      .btn-cancelar { background-color: #1565c0; }
+      .btn:hover { opacity: 0.9; }
+      .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+    </style>
+  </head>
+  <body>
+
+    <div class="header-title">Registrar Manutenção</div>
+
+    <form id="formManutencao">
+      
+      <!-- Data e Horário -->
+      <div class="form-group row">
+        <div class="col">
+          <label>Data</label>
+          <input type="date" id="data" required>
+        </div>
+        <div class="col">
+          <label>Horário</label>
+          <input type="time" id="horario" required>
+        </div>
+      </div>
+
+      <!-- Placa -->
+      <div class="form-group">
+        <label>Placa</label>
+        <select id="placa" onchange="atualizarNomeVeiculo()" required>
+          <option value="">Selecione...</option>
+          <option value="GERADOR ARMAZÉM - A0">GERADOR ARMAZÉM - A0</option>
+        </select>
+      </div>
+
+      <!-- Nome Veículo -->
+      <div class="form-group">
+        <label>Nome_Veiculo</label>
+        <input type="text" id="nome_veiculo" readonly placeholder="GERADOR ARMAZÉM">
+      </div>
+
+      <!-- Tipo -->
+      <div class="form-group">
+        <label>Tipo</label>
+        <input type="text" id="tipo" required placeholder="EX: TROCA / COMBUSTÍVEL">
+      </div>
+
+      <!-- KM e Próxima Troca -->
+      <div class="form-group row">
+        <div class="col">
+          <label>KM</label>
+          <input type="text" id="km" required placeholder="00:00 ou KM">
+        </div>
+        <div class="col">
+          <label>Próxima Troca (KM)</label>
+          <input type="text" id="proxima_troca" required placeholder="1">
+        </div>
+      </div>
+
+      <!-- Checkbox Lembrete -->
+      <div class="checkbox-container">
+        <input type="checkbox" id="chkAlarme" onchange="toggleAlarme()">
+        <label for="chkAlarme">⏰ DEFINIR ALARME / LEMBRETE</label>
+      </div>
+
+      <!-- Painel do Alarme -->
+      <div id="alarmBox" class="alarm-box" style="display: none;">
+        <div class="form-group row">
+          <div class="col">
+            <label>Definir Alarme / Lembrete (Data)</label>
+            <input type="date" id="alarme_data">
+          </div>
+          <div class="col">
+            <label>Definir Alarme / Lembrete (Hora)</label>
+            <input type="time" id="alarme_hora">
+          </div>
         </div>
         
-        <div class="form-group" style="text-align: left;">
-          <label for="loginSenha">SENHA</label>
-          <input type="password" id="loginSenha" required placeholder="******">
-        </div>
-
-        <div id="loginErro" class="error-message" style="display: none;"></div>
-
-        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">ENTRAR</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- CONTEÚDO PRINCIPAL DO APP -->
-  <div class="container" id="appContainer" style="display: none;">
-    <header>
-      <img src="logo frota.png" alt="AG4 FROTA" class="logo">
-      <h1>GESTÃO COMBUSTÍVEL</h1>
-      <div class="user-bar">
-        <span id="nomeUsuarioLogado"></span>
-        <button type="button" class="btn btn-primary btn-sm" id="btnThemeToggle" onclick="toggleTheme()" title="Alternar Tema">🌙</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="sincronizarComNuvem()">🔄 </button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="fazerLogout()">SAIR</button>
-      </div>
-    </header>
-
-    <div class="section-title">GERENCIAR VEÍCULOS</div>
-    <div class="card">
-      <h2>CADASTRO DE VEÍCULO</h2>
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="nomeVeiculo">NOME</label>
-          <input type="text" id="nomeVeiculo" placeholder="NOME DO VEÍCULO">
-        </div>
-        <div class="form-group">
-          <label for="placaVeiculo">PLACA</label>
-          <input type="text" id="placaVeiculo" placeholder="DIGITE A PLACA" maxlength="8">
-        </div>
-      </div>
-      <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="cadastrarVeiculo()">CADASTRAR</button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalEditar()">EDITAR</button>
-      </div>
-    </div>
-
-    <div class="section-title">REGISTRAR ABASTECIMENTO</div>
-    <div class="card">
-      <h2>ABASTECIMENTO</h2>
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="dataAbastecimento">DATA</label>
-          <input type="date" id="dataAbastecimento">
-        </div>
-        <div class="form-group">
-          <label for="selectVeiculo">LISTA DE VEÍCULOS</label>
-          <select id="selectVeiculo">
-            <option value="">SELECIONE UM VEÍCULO</option>
-          </select>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="motorista">MOTORISTA</label>
-          <input type="text" id="motorista" placeholder="NOME DO MOTORISTA">
-        </div>
-        <div class="form-group">
-          <label for="litros">LITROS</label>
-          <input type="number" step="0.01" min="0" id="litros" placeholder="0.00">
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="valorTotal">VALOR TOTAL R$</label>
-          <input type="number" step="0.01" min="0" id="valorTotal" placeholder="0.00">
-        </div>
-        <div class="form-group">
-          <label for="kmAtual">KM ATUAL</label>
-          <input type="number" step="1" min="0" id="kmAtual" placeholder="KM">
-        </div>
-      </div>
-      <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="registrarAbastecimento()">REGISTRAR</button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalManutencao()">MANUTENÇÃO</button>
-      </div>
-    </div>
-
-    <div class="section-title">HISTÓRICO</div>
-    <div class="card">
-      <div class="tabs-container">
-        <button type="button" class="tab-btn active" id="btnTabAbastecimento" onclick="trocarAba('abastecimento')">
-          HISTÓRICO ABASTECIMENTO
-        </button>
-        <button type="button" class="tab-btn" id="btnTabManutencao" onclick="trocarAba('manutencao')">
-          HISTÓRICO MANUTENÇÃO
-        </button>
-      </div>
-
-      <div class="btn-group report-buttons">
-        <button type="button" class="btn btn-primary" onclick="gerarPDFGeral()">GERAL</button>
-        <button type="button" class="btn btn-primary" onclick="abrirModalSeletiva()">SELETIVA</button>
-      </div>
-
-      <div class="table-responsive">
-        <table id="tabelaHistorico">
-          <thead>
-            <tr id="cabecalhoTabela"></tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="9">NENHUM REGISTRO ENCONTRADO</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL MANUTENÇÃO -->
-  <div id="modalManutencao" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <button type="button" class="close" onclick="fecharModalManutencao()" aria-label="Fechar">&times;</button>
-      <h2>REGISTRAR MANUTENÇÃO</h2>
-
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="dataManutencao">DATA</label>
-          <input type="date" id="dataManutencao">
-        </div>
-        <div class="form-group">
-          <label for="horaManutencao">HORÁRIO</label>
-          <input type="time" id="horaManutencao">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="selectVeiculoManutencao">PLACA</label>
-        <select id="selectVeiculoManutencao" onchange="carregarNomeVeiculo()">
-          <option value="">SELECIONE UM VEÍCULO</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="nomeVeiculoManutencao">NOME_VEICULO</label>
-        <input type="text" id="nomeVeiculoManutencao" placeholder="CARREGA AUTOMÁTICO" readonly>
-      </div>
-
-      <div class="form-group">
-        <label for="tipoManutencao">TIPO</label>
-        <input type="text" id="tipoManutencao" placeholder="EX: TROCA DE ÓLEO, PNEU">
-      </div>
-
-      <div class="grid-2">
-        <div class="form-group">
-          <label for="kmManutencao">KM</label>
-          <input type="number" id="kmManutencao" placeholder="KM ATUAL">
-        </div>
-        <div class="form-group">
-          <label for="proximaTrocaManutencao">PRÓXIMA TROCA (KM)</label>
-          <input type="number" id="proximaTrocaManutencao" placeholder="PRÓXIMA TROCA">
-        </div>
-      </div>
-
-      <div class="form-group" style="margin-top: 15px;">
-        <label class="checkbox-alarme-label">
-          <input type="checkbox" id="chkAtivarAlarme" onchange="toggleCamposAlarme()">
-          ⏰ DEFINIR ALARME / LEMBRETE
-        </label>
-      </div>
-
-      <div id="containerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
-        <div class="form-group">
-          <label for="dataAlarme">DEFINIR ALARME / LEMBRETE (DATA)</label>
-          <input type="date" id="dataAlarme">
-        </div>
         <div class="form-group" style="margin-bottom: 0;">
-          <label for="obsAlarme">OBSERVAÇÃO (DO ALARME)</label>
-          <input type="text" id="obsAlarme" placeholder="EX: CHECAR NIVEL DO ÓLEO">
+          <label>Observação (do Alarme)</label>
+          <input type="text" id="observacao_alarme" placeholder="EX: CHECAR NÍVEL DO ÓLEO">
         </div>
       </div>
 
-      <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="registrarManutencao()">SALVAR</button>
-        <button type="button" class="btn btn-primary" onclick="fecharModalManutencao()">CANCELAR</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL EDITAR VEÍCULO -->
-  <div id="modalEditarVeiculo" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <button type="button" class="close" onclick="fecharModalEditar()" aria-label="Fechar">&times;</button>
-      <h2>EDITAR VEÍCULO</h2>
-
-      <div class="form-group">
-        <label for="selectVeiculoEditar">SELECIONE O VEÍCULO</label>
-        <select id="selectVeiculoEditar" onchange="carregarDadosEdicao()">
-          <option value="">SELECIONE UM VEÍCULO</option>
-        </select>
+      <!-- Ações -->
+      <div class="btn-container">
+        <button type="button" class="btn btn-salvar" id="btnSalvar" onclick="salvarDadosFormulario()">SALVAR</button>
+        <button type="button" class="btn btn-cancelar" onclick="google.script.host.close()">CANCELAR</button>
       </div>
 
-      <div class="form-group">
-        <label for="nomeVeiculoEditar">NOME</label>
-        <input type="text" id="nomeVeiculoEditar" placeholder="NOVO NOME">
-      </div>
+    </form>
 
-      <div class="form-group">
-        <label for="placaVeiculoEditar">PLACA</label>
-        <input type="text" id="placaVeiculoEditar" placeholder="NOVA PLACA" maxlength="8">
-      </div>
+    <script>
+      // Preenche Data e Hora padrão ao abrir
+      window.onload = function() {
+        const hoje = new Date();
+        const dataFormatada = hoje.toISOString().split('T')[0];
+        const horaFormatada = hoje.toTimeString().split(' ')[0].substring(0, 5);
+        
+        document.getElementById('data').value = dataFormatada;
+        document.getElementById('horario').value = horaFormatada;
+      };
 
-      <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="salvarEdicaoVeiculo()">SALVAR</button>
-        <button type="button" class="btn btn-danger" onclick="excluirVeiculo()">EXCLUIR</button>
-        <button type="button" class="btn btn-secondary" onclick="fecharModalEditar()">CANCELAR</button>
-      </div>
-    </div>
-  </div>
+      function atualizarNomeVeiculo() {
+        const placaVal = document.getElementById('placa').value;
+        if (placaVal.includes('-')) {
+          document.getElementById('nome_veiculo').value = placaVal.split('-')[0].trim();
+        } else {
+          document.getElementById('nome_veiculo').value = placaVal;
+        }
+      }
 
-  <!-- MODAL SELETIVA PDF -->
-  <div id="modalSeletiva" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <button type="button" class="close" onclick="fecharModalSeletiva()" aria-label="Fechar">&times;</button>
-      <h2>SELECIONAR VEÍCULOS PARA O PDF</h2>
-      <div id="listaCheckboxesVeiculos" class="checkbox-list"></div>
-      <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="gerarPDFSeletiva()">GERAR PDF</button>
-        <button type="button" class="btn btn-secondary" onclick="fecharModalSeletiva()">CANCELAR</button>
-      </div>
-    </div>
-  </div>
+      function toggleAlarme() {
+        const chk = document.getElementById('chkAlarme').checked;
+        document.getElementById('alarmBox').style.display = chk ? 'block' : 'none';
+      }
 
-  <script src="app.js"></script>
-</body>
+      function salvarDadosFormulario() {
+        const btn = document.getElementById('btnSalvar');
+        
+        // Pega ou DATA ou HORA no alarme
+        let alarmeValor = "";
+        const dataAlarme = document.getElementById('alarme_data').value;
+        const horaAlarme = document.getElementById('alarme_hora').value;
+
+        if (document.getElementById('chkAlarme').checked) {
+          if (dataAlarme) {
+            alarmeValor = dataAlarme;
+          } else if (horaAlarme) {
+            alarmeValor = horaAlarme;
+          }
+        }
+
+        // Mapeamento dos campos enviado ao servidor
+        const dados = {
+          data: document.getElementById('data').value,
+          hora: document.getElementById('horario').value,
+          placa: document.getElementById('placa').value,
+          nome_veiculo: document.getElementById('nome_veiculo').value,
+          tipo: document.getElementById('tipo').value,
+          km: document.getElementById('km').value,
+          proxima_troca: document.getElementById('proxima_troca').value,
+          alarme: alarmeValor,
+          observacao: document.getElementById('chkAlarme').checked ? document.getElementById('observacao_alarme').value : ""
+        };
+
+        // Validação simples
+        if (!dados.placa || !dados.tipo || !dados.km) {
+          alert("Por favor, preencha os campos obrigatórios (Placa, Tipo e KM).");
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "SALVANDO...";
+
+        google.script.run
+          .withSuccessHandler(function() {
+            google.script.host.close();
+          })
+          .withFailureHandler(function(err) {
+            alert("Erro ao salvar: " + err.message);
+            btn.disabled = false;
+            btn.innerText = "SALVAR";
+          })
+          .salvarManutencaoNoSheet(dados);
+      }
+    </script>
+  </body>
 </html>
