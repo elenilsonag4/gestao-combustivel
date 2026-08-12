@@ -99,15 +99,26 @@ function atualizarIconeTema(isDark) {
 // GOOGLE SHEETS & AUTENTICAÇÃO
 // ============================================================
 
+// ============================================================
+// GOOGLE SHEETS & AUTENTICAÇÃO (CORRIGIDOS PARA SINCRONIZAÇÃO)
+// ============================================================
+
 async function enviarParaGoogleSheets(acao, dados) {
   const payload = JSON.stringify({ acao, dados });
   try {
-    await fetch(APPS_SCRIPT_URL, {
+    const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: payload
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ payload: payload })
     });
+
+    const res = await response.json();
+    if (!res.ok) {
+      console.error("[AG4] Erro retornado pela planilha:", res.mensagem);
+      alert("ATENÇÃO: " + (res.mensagem || "Erro ao salvar na planilha."));
+      return false;
+    }
+
     return true;
   } catch (erro) {
     console.error("[AG4] Erro de comunicação com Google Sheets:", erro);
@@ -121,8 +132,8 @@ async function sincronizarComNuvem() {
   try {
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ acao: "obterDados" })
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ payload: JSON.stringify({ acao: "obterDados" }) })
     });
 
     const res = await response.json();
