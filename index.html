@@ -178,6 +178,17 @@
         <input type="text" id="tipoManutencao" placeholder="EX: TROCA DE ÓLEO, PNEU">
       </div>
 
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="kmManutencao">KM</label>
+          <input type="number" id="kmManutencao" placeholder="KM ATUAL">
+        </div>
+        <div class="form-group">
+          <label for="proximaTrocaManutencao">PRÓXIMA TROCA (KM)</label>
+          <input type="number" id="proximaTrocaManutencao" placeholder="PRÓXIMA TROCA">
+        </div>
+      </div>
+
       <div class="form-group" style="margin-top: 15px;">
         <label class="checkbox-alarme-label">
           <input type="checkbox" id="chkAtivarAlarme" onchange="toggleCamposAlarme()">
@@ -186,18 +197,12 @@
       </div>
 
       <div id="containerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
-        <div class="grid-2">
-          <div class="form-group">
-            <label for="dataAlarme">DATA DO ALARME</label>
-            <input type="date" id="dataAlarme">
-          </div>
-          <div class="form-group">
-            <label for="horasAlarme">DURAÇÃO (EM HORAS)</label>
-            <input type="number" id="horasAlarme" min="1" placeholder="EX: 24, 48, 100">
-          </div>
+        <div class="form-group">
+          <label for="dataAlarme">DEFINIR ALARME / LEMBRETE (DATA)</label>
+          <input type="date" id="dataAlarme">
         </div>
         <div class="form-group" style="margin-bottom: 0;">
-          <label for="obsAlarme">OBSERVAÇÃO / LEMBRETE</label>
+          <label for="obsAlarme">OBSERVAÇÃO (DO ALARME)</label>
           <input type="text" id="obsAlarme" placeholder="EX: CHECAR NIVEL DO ÓLEO">
         </div>
       </div>
