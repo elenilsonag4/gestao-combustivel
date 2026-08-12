@@ -10,8 +10,7 @@ let DB = {
 };
 let listaVeiculosGlobal = [];
 
-// INSIRA AQUI A SUA URL DO GOOGLE APPS SCRIPT
-const URL_APPS_SCRIPT = "COLE_AQUI_A_URL_DO_SEU_WEB_APP";
+const URL_APPS_SCRIPT = "SEU_URL_DO_APPS_SCRIPT_AQUI"; // Cole a URL do Web App implantado
 
 // ------------------------------------------------------------
 // INICIALIZAÇÃO
@@ -29,7 +28,7 @@ function horaAgoraInput() {
 }
 
 // ------------------------------------------------------------
-// REGRA MUTUAMENTE EXCLUSIVA DE ALARME (DATA OU HORAS)
+// CORREÇÃO: REGRA MUTUAMENTE EXCLUSIVA DE ALARME (DATA OU HORAS)
 // ------------------------------------------------------------
 function vincularEventosExclusividadeAlarme() {
   configurarAlarmeMutuo('dataManutencao', 'horaManutencao', 'dataAlarme', 'horasAlarme');
@@ -43,7 +42,7 @@ function configurarAlarmeMutuo(idDataRef, idHoraRef, idDataAlarme, idHorasAlarme
 
   if (!campoDataAlarme || !campoHorasAlarme) return;
 
-  // Quando digita Horas: limpa Data do Alarme e calcula a nova data
+  // Quando digita Horas: limpa Data do Alarme e calcula a data limite se houver data/hora base
   campoHorasAlarme.addEventListener("input", () => {
     const horas = Number(campoHorasAlarme.value);
     if (horas > 0) {
@@ -65,7 +64,7 @@ function configurarAlarmeMutuo(idDataRef, idHoraRef, idDataAlarme, idHorasAlarme
     }
   });
 
-  // Quando escolhe Data do Alarme: limpa o campo Horas
+  // Quando escolhe Data do Alarme: limpa o campo de Horas
   campoDataAlarme.addEventListener("input", () => {
     if (campoDataAlarme.value) {
       campoHorasAlarme.value = "";
@@ -117,21 +116,16 @@ function renderizarTabelas() {
 }
 
 function atualizarSelectsVeiculos() {
-  const selects = [
-    document.getElementById("selectVeiculoManutencao")
-  ];
+  const select = document.getElementById("selectVeiculoManutencao");
+  if (!select) return;
+  select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
 
-  selects.forEach(select => {
-    if (!select) return;
-    select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
-    
-    const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
-      (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
-    );
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
 
-    veiculosOrdenados.forEach(v => {
-      select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
-    });
+  veiculosOrdenados.forEach(v => {
+    select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
   });
 }
 
@@ -163,14 +157,6 @@ function salvarManutencao() {
   preencherTabelaManutencao();
 
   enviarParaGoogleSheets("registrarManutencao", novoRegistro);
-  
-  // Limpar Formulário
-  document.getElementById("tipoManutencao").value = "";
-  if (document.getElementById("chkAtivarAlarme")) {
-    document.getElementById("chkAtivarAlarme").checked = false;
-    toggleCamposAlarme();
-  }
-  
   alert("MANUTENÇÃO REGISTRADA COM SUCESSO!");
 }
 
@@ -214,7 +200,7 @@ function abrirModalEditarManutencao(index) {
     criarModalEditarManutencao();
   }
 
-  // Ativa a regra mútua nos inputs do modal
+  // Configura exclusividade mutua nos campos de edição
   configurarAlarmeMutuo('editDataManutencao', 'editHoraManutencao', 'editDataAlarme', 'editHorasAlarme');
 
   const select = document.getElementById("editSelectVeiculoManutencao");
