@@ -1,5 +1,5 @@
 // ============================================================
-// AG4 FROTA - APP.JS
+// AG4 FROTA - APP.JS (CORRIGIDO E ADAPTADO)
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -371,9 +371,9 @@ function salvarEdicaoVeiculo() {
   });
 
   DB.manutencao.forEach(r => {
-    if (r[1] === placaAntiga) {
-      r[1] = placaNova;
-      r[2] = nomeNovo;
+    if (r[2] === placaAntiga) {
+      r[2] = placaNova;
+      r[3] = nomeNovo;
     }
   });
 
@@ -401,7 +401,7 @@ function excluirVeiculo() {
 
   DB.veiculos = DB.veiculos.filter(v => v.placa !== placa);
   DB.abastecimento = DB.abastecimento.filter(r => r[1] !== placa);
-  DB.manutencao = DB.manutencao.filter(r => r[1] !== placa);
+  DB.manutencao = DB.manutencao.filter(r => r[2] !== placa);
 
   salvarDB();
   carregarDados();
@@ -488,7 +488,7 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL POR HORAS/DATA
+// MANUTENÇÃO COM ALARME OPCIONAL POR DATA/OBSERVAÇÃO, KM E PRÓXIMA TROCA
 // ============================================================
 
 function toggleCamposAlarme() {
@@ -530,6 +530,8 @@ function fecharModalManutencao() {
   document.getElementById("selectVeiculoManutencao").value = "";
   document.getElementById("nomeVeiculoManutencao").value = "";
   document.getElementById("tipoManutencao").value = "";
+  document.getElementById("kmManutencao").value = "";
+  document.getElementById("proximaTrocaManutencao").value = "";
   if (document.getElementById("horaManutencao")) {
     document.getElementById("horaManutencao").value = "";
   }
@@ -537,9 +539,6 @@ function fecharModalManutencao() {
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
   document.getElementById("dataAlarme").value = "";
-  if (document.getElementById("horasAlarme")) {
-    document.getElementById("horasAlarme").value = "";
-  }
   document.getElementById("obsAlarme").value = "";
   toggleCamposAlarme();
 }
@@ -550,29 +549,17 @@ function carregarNomeVeiculo() {
   document.getElementById("nomeVeiculoManutencao").value = veiculo?.nome || "";
 }
 
-function calcularDataHoraAlarme(dataBase, horaBase, horasSoma) {
-  if (!dataBase || !horasSoma) return "";
-  const [ano, mes, dia] = dataBase.split("-");
-  const [hora, min] = (horaBase || "00:00").split(":");
-  const dt = new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(min));
-  dt.setHours(dt.getHours() + Number(horasSoma));
-  
-  const a = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, "0");
-  const d = String(dt.getDate()).padStart(2, "0");
-  return `${a}-${m}-${d}`;
-}
-
 function registrarManutencao() {
   const data = document.getElementById("dataManutencao").value;
   const hora = document.getElementById("horaManutencao")?.value || horaAgoraInput();
   const placa = document.getElementById("selectVeiculoManutencao").value;
   const nome = document.getElementById("nomeVeiculoManutencao").value;
   const tipo = document.getElementById("tipoManutencao").value.trim().toUpperCase();
+  const km = document.getElementById("kmManutencao").value ? Number(document.getElementById("kmManutencao").value) : "";
+  const proximaTroca = document.getElementById("proximaTrocaManutencao").value ? Number(document.getElementById("proximaTrocaManutencao").value) : "";
   
   const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
-  let dataAlarme = temAlarme ? document.getElementById("dataAlarme").value : "";
-  const horasAlarme = temAlarme ? (Number(document.getElementById("horasAlarme")?.value) || "") : "";
+  const dataAlarme = temAlarme ? document.getElementById("dataAlarme").value : "";
   const obsAlarme = temAlarme ? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
 
   if (!data || !placa || !tipo) {
@@ -580,11 +567,8 @@ function registrarManutencao() {
     return;
   }
 
-  if (temAlarme && !dataAlarme && horasAlarme) {
-    dataAlarme = calcularDataHoraAlarme(data, hora, horasAlarme);
-  }
-
-  const registro = [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme];
+  // ESTRUTURA PLANILHA: [DATA, HORA, PLACA, NOME_VEICULO, TIPO, KM, PROXIMA TROCA, ALARME, OBSERVAÇÃO]
+  const registro = [data, hora, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
 
   DB.manutencao.push(registro);
   salvarDB();
@@ -619,21 +603,22 @@ function abrirModalEditarManutencao(index) {
   });
 
   document.getElementById("editManutIndex").value = index;
-  document.getElementById("editDataManutencao").value = registro[0];
-  document.getElementById("editHoraManutencao").value = registro[4] || "";
-  document.getElementById("editSelectVeiculoManutencao").value = registro[1];
+  document.getElementById("editDataManutencao").value = registro[0] || "";
+  document.getElementById("editHoraManutencao").value = registro[1] || "";
+  document.getElementById("editSelectVeiculoManutencao").value = registro[2] || "";
   
-  const veic = DB.veiculos.find(v => v.placa === registro[1]);
-  document.getElementById("editNomeVeiculoManutencao").value = veic?.nome || registro[2] || "";
-  document.getElementById("editTipoManutencao").value = registro[3] || "";
+  const veic = DB.veiculos.find(v => v.placa === registro[2]);
+  document.getElementById("editNomeVeiculoManutencao").value = veic?.nome || registro[3] || "";
+  document.getElementById("editTipoManutencao").value = registro[4] || "";
+  document.getElementById("editKmManutencao").value = registro[5] ?? "";
+  document.getElementById("editProximaTrocaManutencao").value = registro[6] ?? "";
 
-  const temAlarme = Boolean(registro[5] || registro[6] || registro[7]);
+  const temAlarme = Boolean(registro[7] || registro[8]);
   const chk = document.getElementById("editChkAtivarAlarme");
   chk.checked = temAlarme;
   
-  document.getElementById("editHorasAlarme").value = registro[5] || "";
-  document.getElementById("editDataAlarme").value = registro[6] || "";
-  document.getElementById("editObsAlarme").value = registro[7] || "";
+  document.getElementById("editDataAlarme").value = registro[7] || "";
+  document.getElementById("editObsAlarme").value = registro[8] || "";
 
   toggleCamposAlarmeEdit();
   document.getElementById("modalEditarManutencao").style.display = "block";
@@ -660,10 +645,11 @@ function salvarEdicaoManutencao() {
   const placa = document.getElementById("editSelectVeiculoManutencao").value;
   const nome = document.getElementById("editNomeVeiculoManutencao").value;
   const tipo = document.getElementById("editTipoManutencao").value.trim().toUpperCase();
+  const km = document.getElementById("editKmManutencao").value !== "" ? Number(document.getElementById("editKmManutencao").value) : "";
+  const proximaTroca = document.getElementById("editProximaTrocaManutencao").value !== "" ? Number(document.getElementById("editProximaTrocaManutencao").value) : "";
 
   const temAlarme = document.getElementById("editChkAtivarAlarme")?.checked || false;
-  let dataAlarme = temAlarme ? document.getElementById("editDataAlarme").value : "";
-  const horasAlarme = temAlarme ? (Number(document.getElementById("editHorasAlarme")?.value) || "") : "";
+  const dataAlarme = temAlarme ? document.getElementById("editDataAlarme").value : "";
   const obsAlarme = temAlarme ? document.getElementById("editObsAlarme").value.trim().toUpperCase() : "";
 
   if (!data || !placa || !tipo) {
@@ -673,11 +659,7 @@ function salvarEdicaoManutencao() {
 
   if (!confirmarSenha()) return;
 
-  if (temAlarme && !dataAlarme && horasAlarme) {
-    dataAlarme = calcularDataHoraAlarme(data, hora, horasAlarme);
-  }
-
-  const novoRegistro = [data, placa, nome, tipo, hora, horasAlarme, dataAlarme, obsAlarme];
+  const novoRegistro = [data, hora, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
 
   DB.manutencao[index] = novoRegistro;
   salvarDB();
@@ -721,6 +703,17 @@ function criarModalEditarManutencao() {
           <input type="text" id="editTipoManutencao">
         </div>
 
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editKmManutencao">KM</label>
+            <input type="number" id="editKmManutencao" placeholder="KM ATUAL">
+          </div>
+          <div class="form-group">
+            <label for="editProximaTrocaManutencao">PRÓXIMA TROCA (KM)</label>
+            <input type="number" id="editProximaTrocaManutencao" placeholder="PRÓXIMA TROCA">
+          </div>
+        </div>
+
         <div class="form-group" style="margin-top: 15px;">
           <label class="checkbox-alarme-label">
             <input type="checkbox" id="editChkAtivarAlarme" onchange="toggleCamposAlarmeEdit()">
@@ -729,18 +722,12 @@ function criarModalEditarManutencao() {
         </div>
 
         <div id="editContainerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
-          <div class="grid-2">
-            <div class="form-group">
-              <label for="editDataAlarme">DATA DO ALARME</label>
-              <input type="date" id="editDataAlarme">
-            </div>
-            <div class="form-group">
-              <label for="editHorasAlarme">DURAÇÃO (EM HORAS)</label>
-              <input type="number" id="editHorasAlarme" min="1" placeholder="EX: 24, 48, 100">
-            </div>
+          <div class="form-group">
+            <label for="editDataAlarme">DEFINIR ALARME / LEMBRETE (DATA)</label>
+            <input type="date" id="editDataAlarme">
           </div>
           <div class="form-group" style="margin-bottom: 0;">
-            <label for="editObsAlarme">OBSERVAÇÃO / LEMBRETE</label>
+            <label for="editObsAlarme">OBSERVAÇÃO (DO ALARME)</label>
             <input type="text" id="editObsAlarme">
           </div>
         </div>
@@ -870,19 +857,20 @@ function preencherTabelaManutencao(dados) {
 
   thead.innerHTML = `
     <th onclick="ordenarTabela(0)" class="th-sortable">DATA / HORA${obterIndicadorOrdem('manutencao', 0)}</th>
-    <th onclick="ordenarTabela(1)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 1)}</th>
-    <th onclick="ordenarTabela(2)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 2)}</th>
-    <th onclick="ordenarTabela(3)" class="th-sortable">TIPO SERVIÇO${obterIndicadorOrdem('manutencao', 3)}</th>
-    <th onclick="ordenarTabela(5)" class="th-sortable">DURAÇÃO ALARME${obterIndicadorOrdem('manutencao', 5)}</th>
-    <th onclick="ordenarTabela(6)" class="th-sortable">DATA ALARME${obterIndicadorOrdem('manutencao', 6)}</th>
-    <th onclick="ordenarTabela(7)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
+    <th onclick="ordenarTabela(2)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 2)}</th>
+    <th onclick="ordenarTabela(3)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 3)}</th>
+    <th onclick="ordenarTabela(4)" class="th-sortable">TIPO${obterIndicadorOrdem('manutencao', 4)}</th>
+    <th onclick="ordenarTabela(5)" class="th-sortable">KM${obterIndicadorOrdem('manutencao', 5)}</th>
+    <th onclick="ordenarTabela(6)" class="th-sortable">PRÓXIMA TROCA (KM)${obterIndicadorOrdem('manutencao', 6)}</th>
+    <th onclick="ordenarTabela(7)" class="th-sortable">DATA ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
+    <th onclick="ordenarTabela(8)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 8)}</th>
     <th>AÇÕES</th>
   `;
 
   tbody.innerHTML = "";
 
   if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="8">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
     return;
   }
 
@@ -892,7 +880,7 @@ function preencherTabelaManutencao(dados) {
     let valA = a.item[c.indice];
     let valB = b.item[c.indice];
 
-    if (c.indice === 5) {
+    if ([5, 6].includes(c.indice)) {
       valA = Number(valA) || 0;
       valB = Number(valB) || 0;
     } else {
@@ -907,15 +895,16 @@ function preencherTabelaManutencao(dados) {
 
   dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
-    const dataHoraRegistro = `${formatarData(r[0])} ${r[4] ? r[4] : ''}`.trim();
+    const dataHoraRegistro = `${formatarData(r[0])} ${r[1] ? r[1] : ''}`.trim();
 
     tr.insertCell().textContent = dataHoraRegistro;
-    tr.insertCell().textContent = r[1];
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
-    tr.insertCell().textContent = r[5] ? `${r[5]} HORAS` : "-";
-    tr.insertCell().textContent = r[6] ? formatarData(r[6]) : "-";
-    tr.insertCell().textContent = r[7] ? r[7] : "-";
+    tr.insertCell().textContent = r[4];
+    tr.insertCell().textContent = r[5] !== "" && r[5] !== undefined ? `${r[5]} KM` : "-";
+    tr.insertCell().textContent = r[6] !== "" && r[6] !== undefined ? `${r[6]} KM` : "-";
+    tr.insertCell().textContent = r[7] ? formatarData(r[7]) : "-";
+    tr.insertCell().textContent = r[8] ? r[8] : "-";
 
     const td = tr.insertCell();
     td.innerHTML = `
@@ -1179,7 +1168,7 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 
 function gerarHTMLPDFManutencao(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
-    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
+    if (a[3] !== b[3]) return String(a[3]).localeCompare(String(b[3]), "pt-BR");
     return String(a[0]).localeCompare(String(b[0]));
   });
 
@@ -1187,20 +1176,21 @@ function gerarHTMLPDFManutencao(dados, titulo) {
   let veiculoAtual = "";
 
   registros.forEach(r => {
-    if (veiculoAtual !== r[2]) {
-      veiculoAtual = r[2];
-      linhas += `<tr class="cabecalho-veiculo"><td colspan="7">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
+    if (veiculoAtual !== r[3]) {
+      veiculoAtual = r[3];
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[3])} — PLACA: ${escaparHTML(r[2])}</td></tr>`;
     }
-    const dataHora = `${formatarData(r[0])} ${r[4] || ''}`.trim();
+    const dataHora = `${formatarData(r[0])} ${r[1] || ''}`.trim();
     linhas += `
       <tr>
         <td>${escaparHTML(dataHora)}</td>
-        <td><strong>${escaparHTML(r[1])}</strong></td>
-        <td>${escaparHTML(r[2])}</td>
-        <td>${escaparHTML(r[3] || "-")}</td>
-        <td>${r[5] ? `${escaparHTML(r[5])} HRS` : "-"}</td>
-        <td>${r[6] ? formatarData(r[6]) : "-"}</td>
-        <td>${escaparHTML(r[7] || "-")}</td>
+        <td><strong>${escaparHTML(r[2])}</strong></td>
+        <td>${escaparHTML(r[3])}</td>
+        <td>${escaparHTML(r[4] || "-")}</td>
+        <td>${r[5] !== "" && r[5] !== undefined ? `${escaparHTML(r[5])} KM` : "-"}</td>
+        <td>${r[6] !== "" && r[6] !== undefined ? `${escaparHTML(r[6])} KM` : "-"}</td>
+        <td>${r[7] ? formatarData(r[7]) : "-"}</td>
+        <td>${escaparHTML(r[8] || "-")}</td>
       </tr>`;
   });
 
@@ -1235,7 +1225,7 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
   <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
 </div>
 <table>
-<thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>HORAS ALARME</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
+<thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
 <script>window.onload=()=>window.print();</script>
@@ -1314,7 +1304,7 @@ function gerarPDFSeletiva() {
     if (!dados.length) return alert("NENHUM ABASTECIMENTO ENCONTRADO.");
     abrirNovaAbaComPDF(gerarHTMLPDF(dados, `RELATÓRIO SELETIVO: ${nomes}`));
   } else {
-    const dados = DB.manutencao.filter(r => placas.includes(r[1]));
+    const dados = DB.manutencao.filter(r => placas.includes(r[2]));
     if (!dados.length) return alert("NENHUMA MANUTENÇÃO ENCONTRADA.");
     abrirNovaAbaComPDF(gerarHTMLPDFManutencao(dados, `RELATÓRIO SELETIVO: ${nomes}`));
   }
