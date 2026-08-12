@@ -488,7 +488,7 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL POR DATA/OBSERVAÇÃO, KM E PRÓXIMA TROCA
+// MANUTENÇÃO COM ALARME OPCIONAL POR DATA/HORA E OBSERVAÇÃO
 // ============================================================
 
 function toggleCamposAlarme() {
@@ -539,6 +539,7 @@ function fecharModalManutencao() {
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
   document.getElementById("dataAlarme").value = "";
+  if (document.getElementById("horaAlarme")) document.getElementById("horaAlarme").value = "";
   document.getElementById("obsAlarme").value = "";
   toggleCamposAlarme();
 }
@@ -560,6 +561,7 @@ function registrarManutencao() {
   
   const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
   const dataAlarme = temAlarme ? document.getElementById("dataAlarme").value : "";
+  const horaAlarme = temAlarme ? (document.getElementById("horaAlarme")?.value || "") : "";
   const obsAlarme = temAlarme ? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
 
   if (!data || !placa || !tipo) {
@@ -567,8 +569,9 @@ function registrarManutencao() {
     return;
   }
 
-  // ESTRUTURA PLANILHA: [DATA, HORA, PLACA, NOME_VEICULO, TIPO, KM, PROXIMA TROCA, ALARME, OBSERVAÇÃO]
-  const registro = [data, hora, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
+  // ESTRUTURA PLANILHA: [DATA, HORA, PLACA, NOME_VEICULO, TIPO, KM, PROXIMA TROCA, ALARME (DATA/HORA), OBSERVAÇÃO]
+  const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
+  const registro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme];
 
   DB.manutencao.push(registro);
   salvarDB();
@@ -617,7 +620,11 @@ function abrirModalEditarManutencao(index) {
   const chk = document.getElementById("editChkAtivarAlarme");
   chk.checked = temAlarme;
   
-  document.getElementById("editDataAlarme").value = registro[7] || "";
+  const partesAlarme = (registro[7] || "").split(" ");
+  document.getElementById("editDataAlarme").value = partesAlarme[0] || "";
+  if (document.getElementById("editHoraAlarme")) {
+    document.getElementById("editHoraAlarme").value = partesAlarme[1] || "";
+  }
   document.getElementById("editObsAlarme").value = registro[8] || "";
 
   toggleCamposAlarmeEdit();
@@ -650,6 +657,7 @@ function salvarEdicaoManutencao() {
 
   const temAlarme = document.getElementById("editChkAtivarAlarme")?.checked || false;
   const dataAlarme = temAlarme ? document.getElementById("editDataAlarme").value : "";
+  const horaAlarme = temAlarme ? (document.getElementById("editHoraAlarme")?.value || "") : "";
   const obsAlarme = temAlarme ? document.getElementById("editObsAlarme").value.trim().toUpperCase() : "";
 
   if (!data || !placa || !tipo) {
@@ -659,7 +667,8 @@ function salvarEdicaoManutencao() {
 
   if (!confirmarSenha()) return;
 
-  const novoRegistro = [data, hora, placa, nome, tipo, km, proximaTroca, dataAlarme, obsAlarme];
+  const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
+  const novoRegistro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme];
 
   DB.manutencao[index] = novoRegistro;
   salvarDB();
@@ -706,11 +715,11 @@ function criarModalEditarManutencao() {
         <div class="grid-2">
           <div class="form-group">
             <label for="editKmManutencao">KM</label>
-            <input type="number" id="editKmManutencao" placeholder="KM ATUAL">
+            <input type="number" id="editKmManutencao">
           </div>
           <div class="form-group">
             <label for="editProximaTrocaManutencao">PRÓXIMA TROCA (KM)</label>
-            <input type="number" id="editProximaTrocaManutencao" placeholder="PRÓXIMA TROCA">
+            <input type="number" id="editProximaTrocaManutencao">
           </div>
         </div>
 
@@ -723,8 +732,11 @@ function criarModalEditarManutencao() {
 
         <div id="editContainerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
           <div class="form-group">
-            <label for="editDataAlarme">DEFINIR ALARME / LEMBRETE (DATA)</label>
-            <input type="date" id="editDataAlarme">
+            <label for="editDataAlarme">DEFINIR ALARME / LEMBRETE (DATA / HORA)</label>
+            <div class="grid-2">
+              <input type="date" id="editDataAlarme">
+              <input type="time" id="editHoraAlarme">
+            </div>
           </div>
           <div class="form-group" style="margin-bottom: 0;">
             <label for="editObsAlarme">OBSERVAÇÃO (DO ALARME)</label>
