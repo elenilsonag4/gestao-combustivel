@@ -175,20 +175,20 @@ function configurarAutocompleteMotorista(inputId, suggestionsId) {
 }
 
 // ============================================================
-// LÓGICA DE ALTERNÂNCIA DE TEMA
+// LÓGICA DE ALTERNÂNCIA DE TEMA (INTERMEDIÁRIO / CLARO)
 // ============================================================
 
 function toggleTheme() {
-  const isIntermediate = document.body.classList.toggle("intermediate-theme");
-  localStorage.setItem(THEME_KEY, isIntermediate ? "intermediate" : "standard");
+  const isLight = document.body.classList.toggle("light-theme");
+  localStorage.setItem(THEME_KEY, isLight ? "light" : "slate");
 }
 
 function aplicarTemaSalvo() {
   const temaSalvo = localStorage.getItem(THEME_KEY);
-  if (temaSalvo === "standard") {
-    document.body.classList.remove("intermediate-theme");
+  if (temaSalvo === "light") {
+    document.body.classList.add("light-theme");
   } else {
-    document.body.classList.add("intermediate-theme");
+    document.body.classList.remove("light-theme");
   }
 }
 
