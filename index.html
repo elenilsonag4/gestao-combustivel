@@ -92,7 +92,10 @@
       <div class="grid-2">
         <div class="form-group">
           <label for="motorista">MOTORISTA</label>
-          <input type="text" id="motorista" placeholder="NOME DO MOTORISTA">
+          <div class="autocomplete-wrapper">
+            <input type="text" id="motorista" placeholder="NOME DO MOTORISTA" autocomplete="off">
+            <div id="sugestoesMotorista" class="suggestions-box"></div>
+          </div>
         </div>
         <div class="form-group">
           <label for="litros">LITROS</label>
