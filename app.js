@@ -8,6 +8,7 @@ const APPS_SCRIPT_URL =
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
 const THEME_KEY = "ag4_tema_escuro";
+const MOTORISTAS_KEY = "ag4_historico_motoristas";
 const SENHA_MESTRE = "frot@AG4";
 
 let DB = carregarDB();
@@ -66,6 +67,115 @@ function escaparHTML(valor) {
 }
 
 // ============================================================
+// LÓGICA DE GERENCIAMENTO DE MOTORISTAS (AUTOCOMPLETE + DELETE)
+// ============================================================
+
+function obterMotoristasUnicos() {
+  let salvos = [];
+  try {
+    salvos = JSON.parse(localStorage.getItem(MOTORISTAS_KEY)) || [];
+  } catch (e) {
+    salvos = [];
+  }
+
+  const doHistorico = DB.abastecimento
+    .map(r => r[3])
+    .filter(m => m && typeof m === "string" && m.trim() !== "");
+
+  const conjunto = new Set([...salvos, ...doHistorico]);
+  return Array.from(conjunto).sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function salvarNovoMotorista(nome) {
+  if (!nome || typeof nome !== "string") return;
+  const limpo = nome.trim().toUpperCase();
+  if (!limpo) return;
+
+  const lista = obterMotoristasUnicos();
+  if (!lista.includes(limpo)) {
+    lista.push(limpo);
+    localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(lista));
+  }
+}
+
+function removerMotoristaDoHistorico(nomeParaRemover) {
+  let salvos = [];
+  try {
+    salvos = JSON.parse(localStorage.getItem(MOTORISTAS_KEY)) || [];
+  } catch (e) {
+    salvos = [];
+  }
+
+  const novaLista = salvos.filter(m => m !== nomeParaRemover);
+  localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(novaLista));
+
+  // Remove também das instâncias locais do banco para garantir que não volte
+  DB.abastecimento.forEach(r => {
+    if (r[3] === nomeParaRemover) {
+      r[3] = "";
+    }
+  });
+  salvarDB();
+}
+
+function configurarAutocompleteMotorista(inputId, suggestionsId) {
+  const input = document.getElementById(inputId);
+  const suggestionsBox = document.getElementById(suggestionsId);
+
+  if (!input || !suggestionsBox) return;
+
+  function renderizarSugestoes(termo = "") {
+    const todos = obterMotoristasUnicos();
+    const filtro = termo.trim().toUpperCase();
+    const filtrados = todos.filter(m => m.includes(filtro));
+
+    suggestionsBox.innerHTML = "";
+
+    if (filtrados.length === 0) {
+      suggestionsBox.classList.remove("show");
+      return;
+    }
+
+    filtrados.forEach(nome => {
+      const item = document.createElement("div");
+      item.className = "suggestion-item";
+
+      const spanNome = document.createElement("span");
+      spanNome.textContent = nome;
+      spanNome.onclick = () => {
+        input.value = nome;
+        suggestionsBox.classList.remove("show");
+      };
+
+      const btnExcluir = document.createElement("span");
+      btnExcluir.className = "btn-delete-suggestion";
+      btnExcluir.textContent = "x";
+      btnExcluir.title = "Excluir nome da lista de sugestão";
+      btnExcluir.onclick = (e) => {
+        e.stopPropagation();
+        removerMotoristaDoHistorico(nome);
+        renderizarSugestoes(input.value);
+      };
+
+      item.appendChild(spanNome);
+      item.appendChild(btnExcluir);
+      suggestionsBox.appendChild(item);
+    });
+
+    suggestionsBox.classList.add("show");
+  }
+
+  input.addEventListener("focus", () => renderizarSugestoes(input.value));
+  input.addEventListener("input", () => renderizarSugestoes(input.value));
+
+  document.addEventListener("click", (e) => {
+    if (!input.contains(e.target) && !suggestionsBox.contains(e.target)) {
+      suggestionsBox.classList.remove("show");
+    }
+  });
+}
+
+// ============================================================
 // LÓGICA DE ALTERNÂNCIA DE TEMA (MODO ESCURO / CLARO)
 // ============================================================
 
@@ -97,10 +207,6 @@ function atualizarIconeTema(isDark) {
 
 // ============================================================
 // GOOGLE SHEETS & AUTENTICAÇÃO
-// ============================================================
-
-// ============================================================
-// GOOGLE SHEETS & AUTENTICAÇÃO (CORRIGIDOS PARA SINCRONIZAÇÃO)
 // ============================================================
 
 async function enviarParaGoogleSheets(acao, dados) {
@@ -227,6 +333,8 @@ document.addEventListener("DOMContentLoaded", () => {
       e.target.value = e.target.value.toUpperCase();
     }
   });
+
+  configurarAutocompleteMotorista("motorista", "sugestoesMotorista");
 
   const usuarioSalvo = JSON.parse(localStorage.getItem(USER_KEY));
   if (usuarioSalvo) {
@@ -479,6 +587,8 @@ function registrarAbastecimento() {
     return;
   }
 
+  salvarNovoMotorista(motorista);
+
   const registro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
 
   DB.abastecimento.push(registro);
@@ -580,7 +690,6 @@ function registrarManutencao() {
     return;
   }
 
-  // ESTRUTURA PLANILHA: [DATA, HORA, PLACA, NOME_VEICULO, TIPO, KM, PROXIMA TROCA, ALARME (DATA/HORA), OBSERVAÇÃO]
   const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
   const registro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme];
 
@@ -919,7 +1028,6 @@ function preencherTabelaManutencao(dados) {
   dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
 
-    // EXIBE SOMENTE A DATA (r[0]) FORMATADA
     tr.insertCell().textContent = formatarData(r[0]);
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
@@ -1029,6 +1137,8 @@ function abrirModalEditarAbastecimento(index) {
   document.getElementById("editValorTotal").value = registro[5];
   document.getElementById("editKmAtual").value = registro[6];
 
+  configurarAutocompleteMotorista("editMotorista", "editSugestoesMotorista");
+
   document.getElementById("modalEditarAbastecimento").style.display = "block";
 }
 
@@ -1056,6 +1166,8 @@ function salvarEdicaoAbastecimento() {
   }
 
   if (!confirmarSenha()) return;
+
+  salvarNovoMotorista(motorista);
 
   const novoRegistro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
 
@@ -1087,7 +1199,10 @@ function criarModalEditarAbastecimento() {
         <div class="grid-2">
           <div class="form-group">
             <label for="editMotorista">MOTORISTA</label>
-            <input type="text" id="editMotorista">
+            <div class="autocomplete-wrapper">
+              <input type="text" id="editMotorista" autocomplete="off">
+              <div id="editSugestoesMotorista" class="suggestions-box"></div>
+            </div>
           </div>
           <div class="form-group">
             <label for="editLitros">LITROS</label>
