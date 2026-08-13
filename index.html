@@ -9,12 +9,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="intermediate-theme">
+<body>
 
   <!-- SPINNER DE CARREGAMENTO -->
   <div id="loadingSpinner" class="loading-overlay" style="display: none;">
     <div class="spinner"></div>
-    <div style="color: #f1f5f9; margin-top: 10px; font-weight: bold;">CONECTANDO AO SERVIDOR...</div>
+    <div style="color: white; margin-top: 10px; font-weight: bold;">CONECTANDO AO SERVIDOR...</div>
   </div>
 
   <!-- TELA DE LOGIN -->
@@ -22,7 +22,7 @@
     <div class="login-card">
       <img src="logo frota.png" alt="AG4 FROTA" class="login-logo" onerror="this.style.display='none'">
       <h2>ACESSO AO SISTEMA</h2>
-      <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">DIGITE SEU E-MAIL E SENHA PARA CONTINUAR</p>
+      <p style="font-size: 13px; color: #666; margin-bottom: 20px;">DIGITE SEU E-MAIL E SENHA PARA CONTINUAR</p>
       
       <form onsubmit="fazerLogin(event)">
         <div class="form-group" style="text-align: left;">
@@ -49,7 +49,7 @@
       <h1>GESTÃO COMBUSTÍVEL</h1>
       <div class="user-bar">
         <span id="nomeUsuarioLogado"></span>
-        <button type="button" class="btn btn-primary btn-sm" id="btnThemeToggle" onclick="toggleTheme()" title="Alternar Tema">🎨</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnThemeToggle" onclick="toggleTheme()" title="Alternar Tema (Claro / Médio / Escuro)">☀️</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="sincronizarComNuvem()">🔄 </button>
         <button type="button" class="btn btn-primary btn-sm" onclick="fazerLogout()">SAIR</button>
       </div>
@@ -147,7 +147,7 @@
     </div>
   </div>
 
-  <!-- MODAL MANUTENÇÃO -->
+  <!-- MODAL MANUTENÇÃO (LAYOUT AJUSTADO) -->
   <div id="modalManutencao" class="modal" aria-hidden="true">
     <div class="modal-content">
       <button type="button" class="close" onclick="fecharModalManutencao()" aria-label="Fechar">&times;</button>
@@ -215,7 +215,7 @@
 
       <div class="btn-group">
         <button type="button" class="btn btn-primary" onclick="registrarManutencao()">SALVAR</button>
-        <button type="button" class="btn btn-secondary" onclick="fecharModalManutencao()">CANCELAR</button>
+        <button type="button" class="btn btn-primary" onclick="fecharModalManutencao()">CANCELAR</button>
       </div>
     </div>
   </div>
