@@ -569,32 +569,40 @@ function excluirVeiculo() {
 // ============================================================
 
 function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
-  const km = Number(kmAtual);
-  const l = Number(litros);
+  // Função auxiliar para converter strings formatadas (ex: "427.316" ou "112,46") para número real
+  const limparNumero = (val) => {
+    if (!val) return 0;
+    // Remove pontos de milhar e substitui vírgula por ponto decimal se houver
+    const strLimpa = String(val).replace(/\./g, '').replace(',', '.');
+    return Number(strLimpa) || 0;
+  };
+
+  const km = limparNumero(kmAtual);
+  const l = limparNumero(litros);
 
   if (!placa || km <= 0 || l <= 0) return "-";
 
-  // Busca todos os abastecimentos do mesmo veículo com KM menor que o atual
+  // Busca abastecimentos anteriores do mesmo veículo
   const anteriores = DB.abastecimento
     .map((registro, index) => ({ registro, index }))
-    .filter(item =>
-      item.index !== indiceIgnorado &&
-      item.registro[1] === placa &&
-      Number(item.registro[6]) < km
-    )
-    .sort((a, b) => Number(a.registro[6]) - Number(b.registro[6]));
+    .filter(item => {
+      const kmReg = limparNumero(item.registro[6]);
+      return item.index !== indiceIgnorado && item.registro[1] === placa && kmReg < km;
+    })
+    .sort((a, b) => limparNumero(a.registro[6]) - limparNumero(b.registro[6]));
 
   if (!anteriores.length) return "-";
 
-  // Penúltimo abastecimento (registro anterior mais recente)
-  const penultimo = anteriores[anteriores.length - 1].registro;
-  
-  // (Último KM - Penúltimo KM)
-  const kmRodado = km - Number(penultimo[6]);
+  // Pega o registro anterior mais recente
+  const anterior = anteriores[anteriores.length - 1].registro;
+  const kmAnterior = limparNumero(anterior[6]);
+
+  // Diferença em KM (ex: 427316 - 426992 = 324 km)
+  const kmRodado = km - kmAnterior;
 
   if (kmRodado <= 0) return "0.00";
 
-  // Dividido pelos Litros do ÚLTIMO Abastecimento
+  // (324 km / 112.46 L) = 2.88 KM/L
   return (kmRodado / l).toFixed(2);
 }
 
