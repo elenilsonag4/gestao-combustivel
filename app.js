@@ -1,5 +1,5 @@
 // ============================================================
-// AG4 FROTA - APP.JS (CORRIGIDO E ADAPTADO)
+// AG4 FROTA - APP.JS (CORRIGIDO E ADAPTADO PARA TEMA INTERMEDIÁRIO)
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -7,7 +7,7 @@ const APPS_SCRIPT_URL =
 
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
-const THEME_KEY = "ag4_tema_escuro";
+const THEME_KEY = "ag4_tema_intermediario";
 const MOTORISTAS_KEY = "ag4_historico_motoristas";
 const SENHA_MESTRE = "frot@AG4";
 
@@ -109,7 +109,6 @@ function removerMotoristaDoHistorico(nomeParaRemover) {
   const novaLista = salvos.filter(m => m !== nomeParaRemover);
   localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(novaLista));
 
-  // Remove também das instâncias locais do banco para garantir que não volte
   DB.abastecimento.forEach(r => {
     if (r[3] === nomeParaRemover) {
       r[3] = "";
@@ -176,32 +175,20 @@ function configurarAutocompleteMotorista(inputId, suggestionsId) {
 }
 
 // ============================================================
-// LÓGICA DE ALTERNÂNCIA DE TEMA (MODO ESCURO / CLARO)
+// LÓGICA DE ALTERNÂNCIA DE TEMA
 // ============================================================
 
 function toggleTheme() {
-  const isDark = document.body.classList.toggle("dark-theme");
-  localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
-  atualizarIconeTema(isDark);
+  const isIntermediate = document.body.classList.toggle("intermediate-theme");
+  localStorage.setItem(THEME_KEY, isIntermediate ? "intermediate" : "standard");
 }
 
 function aplicarTemaSalvo() {
   const temaSalvo = localStorage.getItem(THEME_KEY);
-  const prefereEscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-  if (temaSalvo === "dark" || (!temaSalvo && prefereEscuro)) {
-    document.body.classList.add("dark-theme");
-    atualizarIconeTema(true);
+  if (temaSalvo === "standard") {
+    document.body.classList.remove("intermediate-theme");
   } else {
-    document.body.classList.remove("dark-theme");
-    atualizarIconeTema(false);
-  }
-}
-
-function atualizarIconeTema(isDark) {
-  const btn = document.getElementById("btnThemeToggle");
-  if (btn) {
-    btn.textContent = isDark ? "☀️" : "🌙";
+    document.body.classList.add("intermediate-theme");
   }
 }
 
@@ -609,7 +596,7 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL POR DATA/HORA E OBSERVAÇÃO
+// MANUTENÇÃO
 // ============================================================
 
 function toggleCamposAlarme() {
@@ -850,7 +837,7 @@ function criarModalEditarManutencao() {
           </label>
         </div>
 
-        <div id="editContainerAlarme" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 15px;">
+        <div id="editContainerAlarme" class="alarme-box" style="display: none;">
           <div class="form-group">
             <label for="editDataAlarme">DEFINIR ALARME / LEMBRETE (DATA / HORA)</label>
             <div class="grid-2">
