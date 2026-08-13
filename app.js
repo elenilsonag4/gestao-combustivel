@@ -574,6 +574,7 @@ function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
 
   if (!placa || km <= 0 || l <= 0) return "-";
 
+  // Busca todos os abastecimentos do mesmo veículo com KM menor que o atual
   const anteriores = DB.abastecimento
     .map((registro, index) => ({ registro, index }))
     .filter(item =>
@@ -585,10 +586,15 @@ function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
 
   if (!anteriores.length) return "-";
 
-  const anterior = anteriores[anteriores.length - 1].registro;
-  const kmRodado = km - Number(anterior[6]);
+  // Penúltimo abastecimento (registro anterior mais recente)
+  const penultimo = anteriores[anteriores.length - 1].registro;
+  
+  // (Último KM - Penúltimo KM)
+  const kmRodado = km - Number(penultimo[6]);
 
   if (kmRodado <= 0) return "0.00";
+
+  // Dividido pelos Litros do ÚLTIMO Abastecimento
   return (kmRodado / l).toFixed(2);
 }
 
