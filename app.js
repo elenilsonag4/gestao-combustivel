@@ -1391,7 +1391,6 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
-<script>window.onload=()=>window.print();</script>
 </body>
 </html>`;
 }
@@ -1458,7 +1457,6 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 <thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
-<script>window.onload=()=>window.print();</script>
 </body>
 </html>`;
 }
