@@ -67,6 +67,38 @@ function escaparHTML(valor) {
 }
 
 // ============================================================
+// FUNÇÕES AUXILIARES DE MÁSCARA
+// ============================================================
+
+// Máscara de Litros: 3 casas decimais separadas por vírgula (ex: 123,456)
+function mascararLitros(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.padStart(4, "0");
+  const parteInteira = v.slice(0, -3).replace(/^0+(?=\d)/, "");
+  const parteDecimal = v.slice(-3);
+  e.target.value = `${parteInteira},${parteDecimal}`;
+}
+
+// Máscara de Valor: 2 casas decimais separadas por vírgula (ex: 123,45)
+function mascararValor(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.padStart(3, "0");
+  const parteInteira = v.slice(0, -2).replace(/^0+(?=\d)/, "");
+  const parteDecimal = v.slice(-2);
+  e.target.value = `${parteInteira},${parteDecimal}`;
+}
+
+// Máscara de KM: Milhares separados por ponto (ex: 1.111.111)
+function mascararKM(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.replace(/^0+/, "");
+  e.target.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+// ============================================================
 // LÓGICA DE GERENCIAMENTO DE MOTORISTAS (AUTOCOMPLETE + DELETE)
 // ============================================================
 
@@ -368,6 +400,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Vincula as máscaras aos campos de entrada de abastecimento
+  const elLitros = document.getElementById("litros");
+  const elValor = document.getElementById("valorTotal");
+  const elKM = document.getElementById("kmAtual");
+
+  if (elLitros) elLitros.addEventListener("input", mascararLitros);
+  if (elValor) elValor.addEventListener("input", mascararValor);
+  if (elKM) elKM.addEventListener("input", mascararKM);
+
   configurarAutocompleteMotorista("motorista", "sugestoesMotorista");
 
   const usuarioSalvo = JSON.parse(localStorage.getItem(USER_KEY));
@@ -623,20 +664,24 @@ function registrarAbastecimento() {
   const data = document.getElementById("dataAbastecimento").value;
   const placa = document.getElementById("selectVeiculo").value;
   const motorista = document.getElementById("motorista").value.trim().toUpperCase();
-  const litros = Number(document.getElementById("litros").value);
-  const valor = Number(document.getElementById("valorTotal").value);
-  const kmAtual = Number(document.getElementById("kmAtual").value);
+  
+  // Obtém os valores já formatados
+  const litros = document.getElementById("litros").value.trim();
+  const valor = document.getElementById("valorTotal").value.trim();
+  const kmAtual = document.getElementById("kmAtual").value.trim();
 
   const veiculo = DB.veiculos.find(v => v.placa === placa);
   const nome = veiculo?.nome || "";
 
-  if (!data || !placa || !motorista || litros <= 0 || valor < 0 || kmAtual <= 0) {
-    alert("PREENCHA TODOS OS CAMPOS CORRECTAMENTE.");
+  // Validação considerando valores em formato string com vírgula/ponto
+  if (!data || !placa || !motorista || !litros || !valor || !kmAtual) {
+    alert("PREENCHA TODOS OS CAMPOS CORRETAMENTE.");
     return;
   }
 
   salvarNovoMotorista(motorista);
 
+  // O registro manterá as strings formatadas ("123,456", "123,45", "1.111.111")
   const registro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
 
   DB.abastecimento.push(registro);
@@ -646,6 +691,7 @@ function registrarAbastecimento() {
 
   enviarParaGoogleSheets("registrarAbastecimento", registro);
 
+  // Limpeza dos campos
   document.getElementById("dataAbastecimento").value = dataHojeInput();
   document.getElementById("selectVeiculo").value = "";
   document.getElementById("motorista").value = "";
@@ -991,8 +1037,10 @@ function preencherTabelaAbastecimento(dados) {
     let valB = b.item[c.indice];
 
     if ([4, 5, 6].includes(c.indice)) {
-      valA = Number(valA) || 0;
-      valB = Number(valB) || 0;
+      const numA = Number(String(valA || "").replace(/\./g, "").replace(",", ".")) || 0;
+      const numB = Number(String(valB || "").replace(/\./g, "").replace(",", ".")) || 0;
+      valA = numA;
+      valB = numB;
     } else if (c.indice === 7) {
       valA = valA === "-" ? -1 : Number(valA);
       valB = valB === "-" ? -1 : Number(valB);
@@ -1012,8 +1060,8 @@ function preencherTabelaAbastecimento(dados) {
     tr.insertCell().textContent = r[1];
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
-    tr.insertCell().textContent = `${Number(r[4]).toFixed(2)} L`;
-    tr.insertCell().textContent = `R$ ${Number(r[5]).toFixed(2)}`;
+    tr.insertCell().textContent = `${r[4]} L`;
+    tr.insertCell().textContent = `R$ ${r[5]}`;
     tr.insertCell().textContent = `${r[6]} KM`;
     tr.insertCell().textContent = r[7] !== "-" ? `${r[7]} KM/L` : "-";
 
@@ -1204,12 +1252,12 @@ function salvarEdicaoAbastecimento() {
   const placa = document.getElementById("editSelectVeiculo").value;
   const nome = document.getElementById("editSelectVeiculo").selectedOptions[0]?.text.split(" - ")[0] || "";
   const motorista = document.getElementById("editMotorista").value.trim().toUpperCase();
-  const litros = Number(document.getElementById("editLitros").value);
-  const valor = Number(document.getElementById("editValorTotal").value);
-  const kmAtual = Number(document.getElementById("editKmAtual").value);
+  const litros = document.getElementById("editLitros").value.trim();
+  const valor = document.getElementById("editValorTotal").value.trim();
+  const kmAtual = document.getElementById("editKmAtual").value.trim();
 
-  if (!data || !placa || !motorista || litros <= 0 || kmAtual <= 0) {
-    alert("PREENCHA CORRETAMENTE DATA, VEÍCULO, MOTORISTA, LITROS E KM.");
+  if (!data || !placa || !motorista || !litros || !valor || !kmAtual) {
+    alert("PREENCHA CORRETAMENTE DATA, VEÍCULO, MOTORISTA, LITROS, VALOR E KM.");
     return;
   }
 
@@ -1254,17 +1302,17 @@ function criarModalEditarAbastecimento() {
           </div>
           <div class="form-group">
             <label for="editLitros">LITROS</label>
-            <input type="number" step="0.01" min="0" id="editLitros">
+            <input type="text" inputmode="numeric" id="editLitros" placeholder="0,000">
           </div>
         </div>
         <div class="grid-2">
           <div class="form-group">
             <label for="editValorTotal">VALOR TOTAL R$</label>
-            <input type="number" step="0.01" min="0" id="editValorTotal">
+            <input type="text" inputmode="numeric" id="editValorTotal" placeholder="0,00">
           </div>
           <div class="form-group">
             <label for="editKmAtual">KM ATUAL</label>
-            <input type="number" min="0" id="editKmAtual">
+            <input type="text" inputmode="numeric" id="editKmAtual" placeholder="0">
           </div>
         </div>
         <div class="btn-group">
@@ -1275,6 +1323,15 @@ function criarModalEditarAbastecimento() {
     </div>
   `;
   document.body.insertAdjacentHTML("beforeend", html);
+
+  // Aplica as máscaras nos campos do modal dinâmico após criação
+  const editLitros = document.getElementById("editLitros");
+  const editValor = document.getElementById("editValorTotal");
+  const editKm = document.getElementById("editKmAtual");
+
+  if (editLitros) editLitros.addEventListener("input", mascararLitros);
+  if (editValor) editValor.addEventListener("input", mascararValor);
+  if (editKm) editKm.addEventListener("input", mascararKM);
 }
 
 // ============================================================
@@ -1282,13 +1339,15 @@ function criarModalEditarAbastecimento() {
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
+  const limparNum = (val) => Number(String(val || "").replace(/\./g, "").replace(",", ".")) || 0;
+
   const registros = [...dados].sort((a, b) => {
     if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
     return String(a[0]).localeCompare(String(b[0]));
   });
 
-  const totalLitros = registros.reduce((sum, r) => sum + (Number(r[4]) || 0), 0);
-  const totalValor = registros.reduce((sum, r) => sum + (Number(r[5]) || 0), 0);
+  const totalLitros = registros.reduce((sum, r) => sum + limparNum(r[4]), 0);
+  const totalValor = registros.reduce((sum, r) => sum + limparNum(r[5]), 0);
 
   let linhas = "";
   let veiculoAtual = "";
@@ -1304,8 +1363,8 @@ function gerarHTMLPDF(dados, titulo) {
         <td><strong>${escaparHTML(r[1])}</strong></td>
         <td>${escaparHTML(r[2])}</td>
         <td>${escaparHTML(r[3] || "-")}</td>
-        <td>${Number(r[4]).toFixed(2)} L</td>
-        <td>R$ ${Number(r[5]).toFixed(2)}</td>
+        <td>${escaparHTML(r[4])} L</td>
+        <td>R$ ${escaparHTML(r[5])}</td>
         <td>${escaparHTML(r[6])} KM</td>
         <td>${r[7] !== "-" ? `${escaparHTML(r[7])} KM/L` : "-"}</td>
       </tr>`;
@@ -1340,8 +1399,8 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 </div>
 <div class="cards">
   <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
-  <div class="card"><span>Total Combustível</span><strong>${totalLitros.toFixed(2)} L</strong></div>
-  <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toFixed(2)}</strong></div>
+  <div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
+  <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
 </div>
 <table>
 <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
