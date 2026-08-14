@@ -1,5 +1,5 @@
 // ============================================================
-// AG4 FROTA - APP.JS (COM SUPORTE A TEMA INTERMEDIÁRIO)
+// AG4 FROTA - APP.JS (COM CÁLCULO E RECALCULAGEM DE CONSUMO CORRIGIDOS)
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -7,7 +7,7 @@ const APPS_SCRIPT_URL =
 
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
-const THEME_KEY = "ag4_tema_sistema"; // Mantido estado dos 3 temas
+const THEME_KEY = "ag4_tema_sistema";
 const MOTORISTAS_KEY = "ag4_historico_motoristas";
 const SENHA_MESTRE = "frot@AG4";
 
@@ -19,6 +19,17 @@ let colunaOrdenacao = {
   abastecimento: { indice: 0, asc: false },
   manutencao: { indice: 0, asc: false }
 };
+
+// ============================================================
+// FUNÇÕES UTILITÁRIAS DE SANITIZAÇÃO E PARSER DE NÚMEROS
+// ============================================================
+
+function limparNumero(val) {
+  if (val === null || val === undefined || val === "") return 0;
+  if (typeof val === "number") return val;
+  const strLimpa = String(val).replace(/\./g, "").replace(",", ".");
+  return Number(strLimpa) || 0;
+}
 
 function carregarDB() {
   try {
@@ -67,10 +78,9 @@ function escaparHTML(valor) {
 }
 
 // ============================================================
-// FUNÇÕES AUXILIARES DE MÁSCARA
+// MÁSCARAS DE ENTRADA
 // ============================================================
 
-// Máscara de Litros: 3 casas decimais separadas por vírgula (ex: 123,456)
 function mascararLitros(e) {
   let v = e.target.value.replace(/\D/g, "");
   if (!v) { e.target.value = ""; return; }
@@ -80,7 +90,6 @@ function mascararLitros(e) {
   e.target.value = `${parteInteira},${parteDecimal}`;
 }
 
-// Máscara de Valor: 2 casas decimais separadas por vírgula (ex: 123,45)
 function mascararValor(e) {
   let v = e.target.value.replace(/\D/g, "");
   if (!v) { e.target.value = ""; return; }
@@ -90,7 +99,6 @@ function mascararValor(e) {
   e.target.value = `${parteInteira},${parteDecimal}`;
 }
 
-// Máscara de KM: Milhares separados por ponto (ex: 1.111.111)
 function mascararKM(e) {
   let v = e.target.value.replace(/\D/g, "");
   if (!v) { e.target.value = ""; return; }
@@ -99,7 +107,7 @@ function mascararKM(e) {
 }
 
 // ============================================================
-// LÓGICA DE GERENCIAMENTO DE MOTORISTAS (AUTOCOMPLETE + DELETE)
+// GERENCIAMENTO DE MOTORISTAS
 // ============================================================
 
 function obterMotoristasUnicos() {
@@ -141,7 +149,6 @@ function removerMotoristaDoHistorico(nomeParaRemover) {
   const novaLista = salvos.filter(m => m !== nomeParaRemover);
   localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(novaLista));
 
-  // Remove também das instâncias locais do banco para garantir que não volte
   DB.abastecimento.forEach(r => {
     if (r[3] === nomeParaRemover) {
       r[3] = "";
@@ -208,14 +215,13 @@ function configurarAutocompleteMotorista(inputId, suggestionsId) {
 }
 
 // ============================================================
-// LÓGICA DE ALTERNÂNCIA DE TEMA (CLARO / MÉDIO / ESCURO)
+// TEMAS
 // ============================================================
 
 function toggleTheme() {
   let temaAtual = localStorage.getItem(THEME_KEY) || "light";
   let novoTema = "light";
 
-  // Ciclo entre: light -> medium -> dark -> light
   if (temaAtual === "light") {
     novoTema = "medium";
   } else if (temaAtual === "medium") {
@@ -272,7 +278,7 @@ function atualizarIconeTema(tema) {
 }
 
 // ============================================================
-// GOOGLE SHEETS & AUTENTICAÇÃO
+// SHEETS & SINCRONIZAÇÃO
 // ============================================================
 
 async function enviarParaGoogleSheets(acao, dados) {
@@ -386,7 +392,7 @@ function mostrarLoading(exibir) {
 }
 
 // ============================================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO E CARREGAMENTO
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -400,7 +406,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Vincula as máscaras aos campos de entrada de abastecimento
   const elLitros = document.getElementById("litros");
   const elValor = document.getElementById("valorTotal");
   const elKM = document.getElementById("kmAtual");
@@ -429,10 +434,6 @@ function carregarDados() {
   preencherSelects(DB.veiculos);
   renderizarTabela();
 }
-
-// ============================================================
-// SENHA MESTRE
-// ============================================================
 
 function confirmarSenha() {
   const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
@@ -606,24 +607,16 @@ function excluirVeiculo() {
 }
 
 // ============================================================
-// CONSUMO E ABASTECIMENTO
+// LÓGICA CORRIGIDA DE CONSUMO E ABASTECIMENTO
 // ============================================================
 
 function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
-  // Função auxiliar para converter strings formatadas (ex: "427.316" ou "112,46") para número real
-  const limparNumero = (val) => {
-    if (!val) return 0;
-    // Remove pontos de milhar e substitui vírgula por ponto decimal se houver
-    const strLimpa = String(val).replace(/\./g, '').replace(',', '.');
-    return Number(strLimpa) || 0;
-  };
-
   const km = limparNumero(kmAtual);
   const l = limparNumero(litros);
 
   if (!placa || km <= 0 || l <= 0) return "-";
 
-  // Busca abastecimentos anteriores do mesmo veículo
+  // Filtra os abastecimentos anteriores do mesmo veículo
   const anteriores = DB.abastecimento
     .map((registro, index) => ({ registro, index }))
     .filter(item => {
@@ -634,25 +627,30 @@ function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
 
   if (!anteriores.length) return "-";
 
-  // Pega o registro anterior mais recente
   const anterior = anteriores[anteriores.length - 1].registro;
   const kmAnterior = limparNumero(anterior[6]);
 
-  // Diferença em KM (ex: 427316 - 426992 = 324 km)
   const kmRodado = km - kmAnterior;
+  if (kmRodado <= 0) return "-";
 
-  if (kmRodado <= 0) return "0.00";
-
-  // (324 km / 112.46 L) = 2.88 KM/L
   return (kmRodado / l).toFixed(2);
 }
 
 function recalcularConsumoHistorico() {
-  if (!Array.isArray(DB.abastecimento)) {
-    DB.abastecimento = [];
+  if (!Array.isArray(DB.abastecimento) || DB.abastecimento.length === 0) {
+    DB.abastecimento = DB.abastecimento || [];
     return;
   }
 
+  // Ordena por data e KM para manter a sequência lógica
+  DB.abastecimento.sort((a, b) => {
+    const dataA = new Date(a[0]).getTime() || 0;
+    const dataB = new Date(b[0]).getTime() || 0;
+    if (dataA !== dataB) return dataA - dataB;
+    return limparNumero(a[6]) - limparNumero(b[6]);
+  });
+
+  // Recalcula o consumo para cada registro
   DB.abastecimento.forEach((registro, index) => {
     registro[7] = calcularConsumoRegistro(registro[1], registro[6], registro[4], index);
   });
@@ -665,7 +663,6 @@ function registrarAbastecimento() {
   const placa = document.getElementById("selectVeiculo").value;
   const motorista = document.getElementById("motorista").value.trim().toUpperCase();
   
-  // Obtém os valores já formatados
   const litros = document.getElementById("litros").value.trim();
   const valor = document.getElementById("valorTotal").value.trim();
   const kmAtual = document.getElementById("kmAtual").value.trim();
@@ -673,7 +670,6 @@ function registrarAbastecimento() {
   const veiculo = DB.veiculos.find(v => v.placa === placa);
   const nome = veiculo?.nome || "";
 
-  // Validação considerando valores em formato string com vírgula/ponto
   if (!data || !placa || !motorista || !litros || !valor || !kmAtual) {
     alert("PREENCHA TODOS OS CAMPOS CORRETAMENTE.");
     return;
@@ -681,7 +677,6 @@ function registrarAbastecimento() {
 
   salvarNovoMotorista(motorista);
 
-  // O registro manterá as strings formatadas ("123,456", "123,45", "1.111.111")
   const registro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
 
   DB.abastecimento.push(registro);
@@ -691,7 +686,6 @@ function registrarAbastecimento() {
 
   enviarParaGoogleSheets("registrarAbastecimento", registro);
 
-  // Limpeza dos campos
   document.getElementById("dataAbastecimento").value = dataHojeInput();
   document.getElementById("selectVeiculo").value = "";
   document.getElementById("motorista").value = "";
@@ -703,7 +697,7 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL POR DATA/HORA E OBSERVAÇÃO
+// MANUTENÇÃO
 // ============================================================
 
 function toggleCamposAlarme() {
@@ -969,7 +963,7 @@ function criarModalEditarManutencao() {
 }
 
 // ============================================================
-// SISTEMA DE ORDENAÇÃO E EXIBIÇÃO DE TABELAS
+// TABELAS E EXIBIÇÃO
 // ============================================================
 
 function ordenarTabela(indiceColuna) {
@@ -1037,10 +1031,8 @@ function preencherTabelaAbastecimento(dados) {
     let valB = b.item[c.indice];
 
     if ([4, 5, 6].includes(c.indice)) {
-      const numA = Number(String(valA || "").replace(/\./g, "").replace(",", ".")) || 0;
-      const numB = Number(String(valB || "").replace(/\./g, "").replace(",", ".")) || 0;
-      valA = numA;
-      valB = numB;
+      valA = limparNumero(valA);
+      valB = limparNumero(valB);
     } else if (c.indice === 7) {
       valA = valA === "-" ? -1 : Number(valA);
       valB = valB === "-" ? -1 : Number(valB);
@@ -1168,7 +1160,7 @@ document.addEventListener("click", () => {
 });
 
 // ============================================================
-// EXCLUSÃO DE DADOS
+// EXCLUSÃO E EDIÇÃO DE ABASTECIMENTO
 // ============================================================
 
 function excluirAbastecimento(index) {
@@ -1201,10 +1193,6 @@ function excluirManutencao(index) {
   enviarParaGoogleSheets("excluirManutencao", { item });
   alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
 }
-
-// ============================================================
-// EDITAR ABASTECIMENTO
-// ============================================================
 
 function abrirModalEditarAbastecimento(index) {
   const registro = DB.abastecimento[index];
@@ -1324,7 +1312,6 @@ function criarModalEditarAbastecimento() {
   `;
   document.body.insertAdjacentHTML("beforeend", html);
 
-  // Aplica as máscaras nos campos do modal dinâmico após criação
   const editLitros = document.getElementById("editLitros");
   const editValor = document.getElementById("editValorTotal");
   const editKm = document.getElementById("editKmAtual");
@@ -1339,15 +1326,13 @@ function criarModalEditarAbastecimento() {
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
-  const limparNum = (val) => Number(String(val || "").replace(/\./g, "").replace(",", ".")) || 0;
-
   const registros = [...dados].sort((a, b) => {
     if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
     return String(a[0]).localeCompare(String(b[0]));
   });
 
-  const totalLitros = registros.reduce((sum, r) => sum + limparNum(r[4]), 0);
-  const totalValor = registros.reduce((sum, r) => sum + limparNum(r[5]), 0);
+  const totalLitros = registros.reduce((sum, r) => sum + limparNumero(r[4]), 0);
+  const totalValor = registros.reduce((sum, r) => sum + limparNumero(r[5]), 0);
 
   let linhas = "";
   let veiculoAtual = "";
