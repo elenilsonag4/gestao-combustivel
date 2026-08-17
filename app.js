@@ -1462,19 +1462,12 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 }
 
 function abrirNovaAbaComPDF(html) {
+  // Converte o HTML em um Blob URL para garantir histórico de navegação
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   
-  const aba = window.open(url, "_blank");
-  if (!aba) {
-    alert("O navegador bloqueou a janela do PDF. Permita pop-ups.");
-    return;
-  }
-
-  // Libera a memória alocada para a URL do Blob após a navegação
-  aba.addEventListener("load", () => {
-    URL.revokeObjectURL(url);
-  });
+  // Redireciona a página ATUAL em vez de abrir nova aba
+  window.location.href = url;
 }
 
 function gerarPDFGeral() {
