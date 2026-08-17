@@ -2,6 +2,7 @@
    DEFINIÇÃO DE VARIÁVEIS DE TEMA (CLARO, MÉDIO E ESCURO)
    ============================================================ */
 :root {
+  /* TEMA CLARO (Padrão) */
   --bg-color: #f8f6f4;
   --text-color: #333333;
   --primary-color: #1565c0;
@@ -27,6 +28,7 @@
 }
 
 body.theme-medium {
+  /* TEMA MÉDIO (Tons de Azul e Cinza Confortável) */
   --bg-color: #263238;
   --text-color: #eceff1;
   --primary-color: #0288d1;
@@ -52,6 +54,7 @@ body.theme-medium {
 }
 
 body.theme-dark {
+  /* TEMA ESCURO (Dark Mode Total) */
   --bg-color: #121212;
   --text-color: #e0e0e0;
   --primary-color: #64b5f6;
@@ -87,70 +90,53 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ============================================================
-   CABEÇALHO FLEXÍVEL (SEM SOBREPOSIÇÕES)
-   ============================================================ */
+.container {
+  max-width: 950px;
+  margin: auto;
+}
+
 header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 80px;
+  position: relative;
+  min-height: 70px;
   margin-bottom: 25px;
-  padding: 10px 30px;
+  padding: 10px 0;
   background: var(--header-bg);
   border-bottom: 1px solid var(--border-color);
-  width: 100%;
-  gap: 15px;
 }
 
 .logo {
-  height: 60px;
+  height: 70px;
   width: auto;
-  position: static; /* Remove o absolute que causava o bug */
+  position: absolute;
+  left: 20px;
   object-fit: contain;
-  flex-shrink: 0;
 }
 
 h1 {
   color: var(--primary-color);
-  font-size: 20px;
-  margin: 0;
+  font-size: 22px;
+  margin: 0 auto;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  text-align: center;
-  flex-grow: 1;
 }
 
 .user-bar {
-  position: static; /* Remove o absolute */
+  position: absolute;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 10px;
   font-size: 11px;
   font-weight: bold;
   color: var(--primary-color);
-  flex-shrink: 0;
 }
 
 .btn-sm {
   padding: 6px 10px;
   font-size: 11px;
-}
-
-/* ============================================================
-   BLOCOS INTERNOS COM 60% DE LARGURA E CENTRALIZADOS
-   ============================================================ */
-.container,
-.card, 
-table, 
-.table-responsive, 
-.tabs-container,
-.section-title {
-  max-width: 60% !important;
-  width: 60% !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
 }
 
 .section-title {
@@ -160,11 +146,12 @@ table,
   border-radius: 6px;
   text-align: center;
   font-weight: 700;
-  margin: 25px auto 10px auto !important;
+  margin: 25px 0 10px;
   letter-spacing: 1px;
   font-size: 15px;
   text-transform: uppercase;
   display: block;
+  width: 100%;
 }
 
 body.theme-dark .section-title {
@@ -221,6 +208,7 @@ select {
   box-sizing: border-box;
 }
 
+/* Tamanho de checkboxes */
 input[type="checkbox"] {
   width: auto !important;
   margin: 0;
@@ -251,6 +239,7 @@ input[readonly] {
   cursor: not-allowed;
 }
 
+/* ESTRUTURA DE GRID CORRIGIDA (2 COLUNAS) */
 .grid-2 {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
@@ -258,6 +247,7 @@ input[readonly] {
   width: 100%;
 }
 
+/* BOTÕES PROPORCIONAIS */
 .btn-group {
   display: flex !important;
   gap: 10px !important;
@@ -323,6 +313,7 @@ body.theme-dark .btn-primary {
 }
 
 table {
+  width: 100%;
   border-collapse: collapse;
   font-size: 12px;
   margin-top: 10px;
@@ -357,6 +348,7 @@ tbody tr:hover {
 }
 
 .table-responsive {
+  width: 100%;
   overflow-x: auto;
 }
 
@@ -438,9 +430,8 @@ body.theme-dark .tab-btn.active {
   color: var(--text-color);
   padding: 35px 30px;
   border-radius: 12px;
-  width: 90% !important;
-  max-width: 420px !important;
-  margin: auto !important;
+  width: 90%;
+  max-width: 420px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   text-align: center;
 }
@@ -589,6 +580,10 @@ input::placeholder {
   margin-bottom: 15px;
 }
 
+/* ============================================================
+   ESTILOS DO AUTOCOMPLETE / SUGESTÕES DE MOTORISTA
+   ============================================================ */
+
 .autocomplete-wrapper {
   position: relative;
   width: 100%;
@@ -651,6 +646,11 @@ input::placeholder {
   background-color: rgba(239, 83, 80, 0.2);
 }
 
+/* ============================================================
+   CORREÇÃO DE VISUALIZAÇÃO DO HISTÓRICO (TELA E PDF COM 20% DE MARGEM)
+   ============================================================ */
+
+/* Reduzir altura de elementos gerais em 30% */
 header, 
 .card, 
 .section-title, 
@@ -666,17 +666,26 @@ td {
   min-height: auto !important;
 }
 
+/* Reduzir altura do botão MAIS (action-btn) em 45% */
 .action-btn {
   padding: calc(10px * 0.55) !important;
   font-size: 10px !important;
   line-height: 1 !important;
 }
 
+/* Margens de 20% de cada lado (ocupando 60% da largura) na visualização normal e no PDF */
+.container {
+  max-width: 60% !important;
+  width: 60% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
 @media print {
   body {
     margin: 0 !important;
   }
-  .container, .card, table, .section-title {
+  .container {
     max-width: 60% !important;
     width: 60% !important;
     margin-left: auto !important;
@@ -686,18 +695,11 @@ td {
 
 @media (max-width: 768px) {
   body { padding: 10px; }
-  .container, .card, table, .section-title { 
-    max-width: 95% !important; 
-    width: 95% !important; 
-  }
-  .login-card { 
-    width: 95% !important; 
-    max-width: 95% !important; 
-  }
-  header { min-height: 65px; flex-direction: column; text-align: center; padding: 10px; }
-  .logo { margin-bottom: 5px; }
-  .user-bar { margin-top: 5px; justify-content: center; }
-  h1 { font-size: 16px; }
+  .container { max-width: 95% !important; width: 95% !important; }
+  header { min-height: 65px; flex-direction: column; text-align: center; }
+  .logo { position: static; margin-bottom: 10px; }
+  .user-bar { position: static; margin-top: 10px; justify-content: center; }
+  h1 { font-size: 18px; padding-left: 0; }
   .grid-2 { grid-template-columns: 1fr !important; }
   .btn-group { flex-direction: column; }
   .tabs-container { flex-direction: column; gap: 3px; }
