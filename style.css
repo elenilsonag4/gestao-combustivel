@@ -91,8 +91,10 @@ body {
 }
 
 .container {
-  max-width: 950px;
-  margin: auto;
+  max-width: 60% !important;
+  width: 60% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 header {
@@ -647,7 +649,7 @@ input::placeholder {
 }
 
 /* ============================================================
-   CORREÇÃO DE VISUALIZAÇÃO DO HISTÓRICO (TELA E PDF COM 20% DE MARGEM)
+   CORREÇÃO DE VISUALIZAÇÃO DO HISTÓRICO (TELA E PDF COM 60% DE OCUPAÇÃO)
    ============================================================ */
 
 /* Reduzir altura de elementos gerais em 30% */
@@ -671,14 +673,6 @@ td {
   padding: calc(10px * 0.55) !important;
   font-size: 10px !important;
   line-height: 1 !important;
-}
-
-/* Margens de 20% de cada lado (ocupando 60% da largura) na visualização normal e no PDF */
-.container {
-  max-width: 60% !important;
-  width: 60% !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
 }
 
 @media print {
