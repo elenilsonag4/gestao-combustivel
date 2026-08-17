@@ -309,8 +309,12 @@ body.theme-dark .btn-primary {
   margin-bottom: 10px;
 }
 
+/* ============================================================
+   CONFIGURAÇÃO DE TABELAS COMPACTAS (SEM ESPAÇOS SOBRANDO)
+   ============================================================ */
 table {
-  width: 100%;
+  width: auto !important;           /* Ocupa apenas o tamanho do conteúdo dos dados */
+  max-width: 100%;                  /* Impede que transborde a tela */
   border-collapse: collapse;
   font-size: 12px;
   margin-top: 7px;
@@ -320,10 +324,11 @@ table {
 th {
   background: var(--primary-color);
   color: white;
-  padding: 7px 10px;
+  padding: 6px 12px !important;     /* Espaçamento reduzido */
   font-weight: 500;
   text-transform: uppercase;
   white-space: nowrap;
+  text-align: left !important;      /* Alinhamento à esquerda para aproximar colunas */
 }
 
 body.theme-dark th {
@@ -331,13 +336,20 @@ body.theme-dark th {
 }
 
 td {
-  padding: 7px 10px;
+  padding: 6px 12px !important;     /* Espaçamento interno reduzido */
   border-bottom: 1px solid var(--table-border);
-  text-align: center;
+  text-align: left !important;      /* Alinhamento à esquerda para tirar os vazios centrais */
   position: relative;
   overflow: visible;
-  white-space: nowrap;
+  white-space: nowrap;              /* Não quebra linha nos números/valores */
   color: var(--text-color);
+}
+
+.cabecalho-veiculo td {
+  background-color: #e3f2fd;
+  font-weight: bold;
+  color: #0d47a1;
+  text-align: left !important;
 }
 
 td .btn,
@@ -688,25 +700,17 @@ input::placeholder {
     display: none !important;
   }
 
-  /* Ajustes de compactação das tabelas */
+  /* Tabela compacta alinhada para impressão */
   table {
-    width: 100% !important;
+    width: auto !important;
+    max-width: 100% !important;
     border-collapse: collapse !important;
     margin-top: 5px !important;
   }
 
   th, td {
-    padding: 4px 6px !important; /* Espaçamento interno reduzido para aproximar as colunas */
+    padding: 4px 8px !important; /* Espaçamento bem ajustado no PDF */
     font-size: 11px !important;
+    text-align: left !important;
   }
-
-  /* Distribuição equilibrada de largura para as colunas do relatório */
-  th:nth-child(1), td:nth-child(1) { width: 10%; } /* DATA */
-  th:nth-child(2), td:nth-child(2) { width: 10%; } /* PLACA */
-  th:nth-child(3), td:nth-child(3) { width: 22%; } /* VEÍCULO */
-  th:nth-child(4), td:nth-child(4) { width: 18%; } /* MOTORISTA */
-  th:nth-child(5), td:nth-child(5) { width: 10%; } /* LITROS */
-  th:nth-child(6), td:nth-child(6) { width: 10%; } /* VALOR */
-  th:nth-child(7), td:nth-child(7) { width: 10%; } /* KM */
-  th:nth-child(8), td:nth-child(8) { width: 10%; } /* CONSUMO */
 }
