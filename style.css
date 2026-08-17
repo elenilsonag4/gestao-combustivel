@@ -85,7 +85,7 @@ body {
   font-family: 'Roboto', sans-serif;
   background: var(--bg-color);
   margin: 0;
-  padding: 24px 34px; /* Altura do padding reduzida em 30% (34px -> ~24px) */
+  padding: 24px 34px;
   color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -99,15 +99,15 @@ header {
   display: flex;
   align-items: center;
   position: relative;
-  min-height: 49px; /* Reduzido 30% (70px -> 49px) */
-  margin-bottom: 17px; /* Reduzido 30% (25px -> 17px) */
-  padding: 7px 0; /* Reduzido 30% (10px -> 7px) */
+  min-height: 49px;
+  margin-bottom: 17px;
+  padding: 7px 0;
   background: var(--header-bg);
   border-bottom: 1px solid var(--border-color);
 }
 
 .logo {
-  height: 49px; /* Reduzido 30% (70px -> 49px) */
+  height: 49px;
   width: auto;
   position: absolute;
   left: 20px;
@@ -116,7 +116,7 @@ header {
 
 h1 {
   color: var(--primary-color);
-  font-size: 22px; /* Mantido original */
+  font-size: 22px;
   margin: 0 auto;
   font-weight: 700;
   text-transform: uppercase;
@@ -129,26 +129,26 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 11px; /* Mantido original */
+  font-size: 11px;
   font-weight: bold;
   color: var(--primary-color);
 }
 
 .btn-sm {
-  padding: 4px 10px; /* Padding vertical reduzido em 30% (6px -> 4px) */
-  font-size: 11px; /* Mantido original */
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 .section-title {
   background: #1565c0;
   color: white;
-  padding: 8px 12px; /* Padding vertical reduzido em 30% (12px -> 8px) */
+  padding: 8px 12px;
   border-radius: 6px;
   text-align: center;
   font-weight: 700;
-  margin: 17px 0 7px; /* Margens verticais reduzidas em 30% */
+  margin: 17px 0 7px;
   letter-spacing: 1px;
-  font-size: 15px; /* Mantido original */
+  font-size: 15px;
   text-transform: uppercase;
   display: block;
   width: 100%;
@@ -164,33 +164,33 @@ body.theme-medium .section-title {
 
 .card {
   background: var(--card-bg);
-  padding: 14px 20px; /* Padding vertical reduzido em 30% (20px -> 14px) */
+  padding: 14px 20px;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  margin-bottom: 14px; /* Reduzido 30% (20px -> 14px) */
+  margin-bottom: 14px;
   transition: background-color 0.3s ease;
 }
 
 h2 {
   color: var(--primary-color);
   border-bottom: 2px solid var(--primary-color);
-  padding-bottom: 6px; /* Reduzido 30% (8px -> 6px) */
-  font-size: 18px; /* Mantido original */
+  padding-bottom: 6px;
+  font-size: 18px;
   margin-top: 0;
-  margin-bottom: 10px; /* Reduzido 30% (15px -> 10px) */
+  margin-bottom: 10px;
   text-transform: uppercase;
 }
 
 .form-group {
-  margin-bottom: 10px; /* Reduzido 30% (15px -> 10px) */
+  margin-bottom: 10px;
   width: 100%;
 }
 
 label {
   font-weight: 500;
-  font-size: 12px; /* Mantido original */
+  font-size: 12px;
   display: block;
-  margin-bottom: 3px; /* Reduzido 30% (4px -> 3px) */
+  margin-bottom: 3px;
   color: var(--label-color);
   text-transform: uppercase;
 }
@@ -198,17 +198,16 @@ label {
 input,
 select {
   width: 100%;
-  padding: 7px 10px; /* Padding vertical reduzido em 30% (10px -> 7px) */
+  padding: 7px 10px;
   border: 1px solid var(--input-border);
   border-radius: 4px;
-  font-size: 14px; /* Mantido original */
+  font-size: 14px;
   font-family: 'Roboto', sans-serif;
   background: var(--input-bg);
   color: var(--input-text);
   box-sizing: border-box;
 }
 
-/* Tamanho de checkboxes */
 input[type="checkbox"] {
   width: auto !important;
   margin: 0;
@@ -221,7 +220,7 @@ input[type="checkbox"] {
   gap: 8px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 13px; /* Mantido original */
+  font-size: 13px;
   color: var(--primary-color);
   user-select: none;
 }
@@ -239,7 +238,6 @@ input[readonly] {
   cursor: not-allowed;
 }
 
-/* ESTRUTURA DE GRID CORRIGIDA (2 COLUNAS) */
 .grid-2 {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
@@ -247,11 +245,10 @@ input[readonly] {
   width: 100%;
 }
 
-/* BOTÕES PROPORCIONAIS */
 .btn-group {
   display: flex !important;
   gap: 10px !important;
-  margin-top: 14px !important; /* Reduzido 30% (20px -> 14px) */
+  margin-top: 14px !important;
   width: 100%;
 }
 
@@ -260,12 +257,12 @@ input[readonly] {
 }
 
 .btn {
-  padding: 8px 12px; /* Padding vertical reduzido em 30% (12px -> 8px) */
+  padding: 8px 12px;
   border: none;
   border-radius: 5px;
   font-weight: 700;
   cursor: pointer;
-  font-size: 14px; /* Mantido original */
+  font-size: 14px;
   transition: background-color .2s, transform .1s;
   text-transform: uppercase;
   display: inline-flex;
@@ -309,21 +306,21 @@ body.theme-dark .btn-primary {
 }
 
 .report-buttons {
-  margin-bottom: 10px; /* Reduzido 30% (15px -> 10px) */
+  margin-bottom: 10px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px; /* Mantido original */
-  margin-top: 7px; /* Reduzido 30% (10px -> 7px) */
-  margin-bottom: 10px; /* Reduzido 30% (15px -> 10px) */
+  font-size: 12px;
+  margin-top: 7px;
+  margin-bottom: 10px;
 }
 
 th {
   background: var(--primary-color);
   color: white;
-  padding: 7px 10px; /* Padding vertical reduzido em 30% (10px -> 7px) */
+  padding: 7px 10px;
   font-weight: 500;
   text-transform: uppercase;
   white-space: nowrap;
@@ -334,7 +331,7 @@ body.theme-dark th {
 }
 
 td {
-  padding: 7px 10px; /* Padding vertical reduzido em 30% (10px -> 7px) */
+  padding: 7px 10px;
   border-bottom: 1px solid var(--table-border);
   text-align: center;
   position: relative;
@@ -343,16 +340,15 @@ td {
   color: var(--text-color);
 }
 
-/* BOTÃO MAIS DENTRO DA TABELA - REDUZIDO EM 50% APENAS NA ALTURA */
 td .btn,
 td .btn-primary,
 td .btn-sm {
-  padding-top: 2px !important;   /* Reduzido 50% na altura (4px -> 2px) */
+  padding-top: 2px !important;
   padding-bottom: 2px !important;
   line-height: 1 !important;
   min-height: unset !important;
   height: auto !important;
-  font-size: 11px !important;    /* Fonte mantida original */
+  font-size: 11px !important;
 }
 
 tbody tr:hover {
@@ -368,11 +364,11 @@ tbody tr:hover {
   display: flex;
   gap: 10px;
   border-bottom: 2px solid var(--border-color);
-  margin-bottom: 10px; /* Reduzido 30% (15px -> 10px) */
+  margin-bottom: 10px;
 }
 
 .tab-btn {
-  padding: 7px 20px; /* Padding vertical reduzido em 30% (10px -> 7px) */
+  padding: 7px 20px;
   background-color: var(--tab-bg);
   color: var(--text-color);
   border: none;
@@ -380,7 +376,7 @@ tbody tr:hover {
   border-top-right-radius: 6px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 13px; /* Mantido original */
+  font-size: 13px;
   transition: all .3s ease;
 }
 
@@ -408,7 +404,7 @@ body.theme-dark .tab-btn.active {
   height: 100%;
   overflow-y: auto;
   background-color: rgba(0,0,0,.5);
-  padding: 14px 0; /* Padding vertical reduzido em 30% (20px -> 14px) */
+  padding: 14px 0;
 }
 
 .modal-content {
@@ -416,7 +412,7 @@ body.theme-dark .tab-btn.active {
   background-color: var(--card-bg);
   color: var(--text-color);
   margin: 3% auto;
-  padding: 14px 20px; /* Padding vertical reduzido em 30% (20px -> 14px) */
+  padding: 14px 20px;
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
@@ -440,7 +436,7 @@ body.theme-dark .tab-btn.active {
 .login-card {
   background: var(--card-bg);
   color: var(--text-color);
-  padding: 24px 30px; /* Padding vertical reduzido em 30% (35px -> 24px) */
+  padding: 24px 30px;
   border-radius: 12px;
   width: 90%;
   max-width: 420px;
@@ -449,18 +445,18 @@ body.theme-dark .tab-btn.active {
 }
 
 .login-logo {
-  height: 42px; /* Reduzido 30% (60px -> 42px) */
-  margin-bottom: 10px; /* Reduzido 30% (15px -> 10px) */
+  height: 42px;
+  margin-bottom: 10px;
 }
 
 .error-message {
   background-color: #ffebee;
   color: #c62828;
-  padding: 7px 10px; /* Padding vertical reduzido em 30% (10px -> 7px) */
+  padding: 7px 10px;
   border-radius: 4px;
-  font-size: 12px; /* Mantido original */
+  font-size: 12px;
   font-weight: bold;
-  margin-top: 7px; /* Reduzido 30% (10px -> 7px) */
+  margin-top: 7px;
   border: 1px solid #ef9a9a;
 }
 
@@ -482,8 +478,8 @@ body.theme-dark .tab-btn.active {
   border: 4px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top: 4px solid var(--primary-color);
-  width: 28px; /* Reduzido 30% (40px -> 28px) */
-  height: 28px; /* Reduzido 30% (40px -> 28px) */
+  width: 28px;
+  height: 28px;
   animation: spin 1s linear infinite;
 }
 
@@ -495,11 +491,11 @@ body.theme-dark .tab-btn.active {
 .close {
   position: absolute;
   right: 15px;
-  top: 6px; /* Reduzido 30% (8px -> 6px) */
+  top: 6px;
   color: var(--close-color);
   border: 0;
   background: transparent;
-  font-size: 28px; /* Mantido original */
+  font-size: 28px;
   font-weight: bold;
   cursor: pointer;
   line-height: 1;
@@ -534,14 +530,14 @@ body.theme-dark .tab-btn.active {
 
 .dropdown-content button {
   color: var(--text-color);
-  padding: 7px 12px; /* Padding vertical reduzido em 30% (10px -> 7px) */
+  padding: 7px 12px;
   display: block;
   width: 100%;
   border: none;
   background: var(--card-bg);
   text-align: left;
   cursor: pointer;
-  font-size: 12px; /* Mantido original */
+  font-size: 12px;
   text-transform: uppercase;
 }
 
@@ -550,17 +546,17 @@ body.theme-dark .tab-btn.active {
 }
 
 .checkbox-list {
-  max-height: 210px; /* Reduzido 30% (300px -> 210px) */
+  max-height: 210px;
   overflow-y: auto;
-  margin: 10px 0; /* Reduzido 30% (15px -> 10px) */
+  margin: 10px 0;
   border: 1px solid var(--border-color);
   border-radius: 5px;
-  padding: 7px 10px; /* Padding vertical reduzido em 30% */
+  padding: 7px 10px;
 }
 
 .checkbox-item {
-  padding: 5px 8px; /* Padding vertical reduzido em 30% (8px -> 5px) */
-  margin-bottom: 3px; /* Reduzido 30% (5px -> 3px) */
+  padding: 5px 8px;
+  margin-bottom: 3px;
   border-radius: 4px;
 }
 
@@ -586,15 +582,11 @@ input::placeholder {
 
 .alarme-box {
   background: var(--alarme-bg);
-  padding: 8px 12px; /* Padding vertical reduzido em 30% (12px -> 8px) */
+  padding: 8px 12px;
   border-radius: 6px;
   border: 1px dashed var(--alarme-border);
-  margin-bottom: 10px; /* Reduzido 30% (15px -> 10px) */
+  margin-bottom: 10px;
 }
-
-/* ============================================================
-   ESTILOS DO AUTOCOMPLETE / SUGESTÕES DE MOTORISTA
-   ============================================================ */
 
 .autocomplete-wrapper {
   position: relative;
@@ -612,7 +604,7 @@ input::placeholder {
   border-top: none;
   border-bottom-left-radius: 4px;
   border-bottom-right-radius: 4px;
-  max-height: 126px; /* Reduzido 30% (180px -> 126px) */
+  max-height: 126px;
   overflow-y: auto;
   z-index: 1050;
   box-shadow: 0 4px 10px rgba(0,0,0,0.15);
@@ -626,8 +618,8 @@ input::placeholder {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 12px; /* Padding vertical reduzido em 30% (8px -> 5px) */
-  font-size: 13px; /* Mantido original */
+  padding: 5px 12px;
+  font-size: 13px;
   font-weight: bold;
   color: var(--text-color);
   cursor: pointer;
@@ -646,8 +638,8 @@ input::placeholder {
 .btn-delete-suggestion {
   color: #ef5350;
   font-weight: bold;
-  font-size: 14px; /* Mantido original */
-  padding: 1px 6px; /* Padding vertical reduzido em 30% */
+  font-size: 14px;
+  padding: 1px 6px;
   border-radius: 3px;
   cursor: pointer;
   transition: background 0.2s;
@@ -668,4 +660,53 @@ input::placeholder {
   .btn-group { flex-direction: column; }
   .tabs-container { flex-direction: column; gap: 3px; }
   .tab-btn { border-radius: 5px; }
+}
+
+/* ============================================================
+   CONFIGURAÇÕES DE IMPRESSÃO / PDF (A4 PAISAGEM COMPACTO)
+   ============================================================ */
+@page {
+  size: A4 landscape;
+  margin: 8mm;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Oculta elementos desnecessários na visão de impressão/PDF */
+  .btn, .btn-group, .report-buttons, .user-bar, .tabs-container, .login-overlay, .loading-overlay {
+    display: none !important;
+  }
+
+  /* Ajustes de compactação das tabelas */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 5px !important;
+  }
+
+  th, td {
+    padding: 4px 6px !important; /* Espaçamento interno reduzido para aproximar as colunas */
+    font-size: 11px !important;
+  }
+
+  /* Distribuição equilibrada de largura para as colunas do relatório */
+  th:nth-child(1), td:nth-child(1) { width: 10%; } /* DATA */
+  th:nth-child(2), td:nth-child(2) { width: 10%; } /* PLACA */
+  th:nth-child(3), td:nth-child(3) { width: 22%; } /* VEÍCULO */
+  th:nth-child(4), td:nth-child(4) { width: 18%; } /* MOTORISTA */
+  th:nth-child(5), td:nth-child(5) { width: 10%; } /* LITROS */
+  th:nth-child(6), td:nth-child(6) { width: 10%; } /* VALOR */
+  th:nth-child(7), td:nth-child(7) { width: 10%; } /* KM */
+  th:nth-child(8), td:nth-child(8) { width: 10%; } /* CONSUMO */
 }
