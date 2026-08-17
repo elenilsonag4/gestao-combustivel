@@ -320,11 +320,10 @@ table {
   margin-bottom: 15px;
 }
 
-/* ESPAÇAMENTO 40% MENOR REDUZIDO DE 10px PARA 6px */
 th {
   background: var(--primary-color);
   color: white;
-  padding: 6px;
+  padding: 10px;
   font-weight: 500;
   text-transform: uppercase;
   white-space: nowrap;
@@ -334,9 +333,8 @@ body.theme-dark th {
   color: #121212;
 }
 
-/* ESPAÇAMENTO 40% MENOR REDUZIDO DE 10px PARA 6px */
 td {
-  padding: 6px;
+  padding: 10px;
   border-bottom: 1px solid var(--table-border);
   text-align: center;
   position: relative;
