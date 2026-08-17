@@ -1141,15 +1141,9 @@ function preencherTabelaManutencao(dados) {
 function formatarData(data) {
   if (!data) return "";
   const texto = String(data);
-  
-  // Tratamento para data que vem concatenada com a hora
-  const partesEspaco = texto.split(" ");
-  const soData = partesEspaco[0];
-  const hora = partesEspaco[1] ? ` ${partesEspaco[1]}` : "";
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(soData)) {
-    const [ano, mes, dia] = soData.split("-");
-    return `${dia}/${mes}/${ano}${hora}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+    const [ano, mes, dia] = texto.split("-");
+    return `${dia}/${mes}/${ano}`;
   }
   return texto;
 }
@@ -1468,9 +1462,12 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 }
 
 function abrirNovaAbaComPDF(html) {
+  // Converte o HTML em um Blob URL para garantir histórico de navegação
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  window.open(url, "_blank");
+  
+  // Redireciona a página ATUAL em vez de abrir nova aba
+  window.location.href = url;
 }
 
 function gerarPDFGeral() {
