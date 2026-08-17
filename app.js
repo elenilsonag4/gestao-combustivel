@@ -1,5 +1,148 @@
 // ============================================================
-// RELATÓRIOS PDF (COLUNAS APROXIMADAS)
+// CONFIGURAÇÕES GERAIS E AUTENTICAÇÃO
+// ============================================================
+
+const API_URL = "SUA_URL_DO_WEB_APP_AQUI"; // Cole aqui a URL /exec do Apps Script
+
+async function fazerLogin(event) {
+  if (event) event.preventDefault(); // Impede o envio padrão do formulário e o reload da página
+
+  const emailInput = document.getElementById("loginEmail").value;
+  const senhaInput = document.getElementById("loginSenha").value;
+  const loginErro = document.getElementById("loginErro");
+  const loadingSpinner = document.getElementById("loadingSpinner");
+
+  if (loginErro) loginErro.style.display = "none";
+  if (loadingSpinner) loadingSpinner.style.display = "flex";
+
+  const payload = {
+    acao: "fazerLogin",
+    dados: {
+      email: emailInput,
+      senha: senhaInput
+    }
+  };
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    const resultado = await response.json();
+
+    if (resultado.ok) {
+      document.getElementById("telaLogin").style.display = "none";
+      document.getElementById("appContainer").style.display = "block";
+
+      if (resultado.usuario && resultado.usuario.nome) {
+        document.getElementById("nomeUsuarioLogado").innerText = resultado.usuario.nome;
+      }
+
+      localStorage.setItem("usuarioLogadoAG4", JSON.stringify(resultado.usuario));
+
+      if (typeof sincronizarComNuvem === "function") {
+        sincronizarComNuvem();
+      }
+    } else {
+      if (loginErro) {
+        loginErro.innerText = resultado.mensagem || "Credenciais inválidas.";
+        loginErro.style.display = "block";
+      }
+    }
+  } catch (erro) {
+    console.error("Erro ao realizar login:", erro);
+    if (loginErro) {
+      loginErro.innerText = "Erro ao conectar com o servidor.";
+      loginErro.style.display = "block";
+    }
+  } finally {
+    if (loadingSpinner) loadingSpinner.style.display = "none";
+  }
+}
+
+function fazerLogout() {
+  localStorage.removeItem("usuarioLogadoAG4");
+  document.getElementById("telaLogin").style.display = "flex";
+  document.getElementById("appContainer").style.display = "none";
+  document.getElementById("loginEmail").value = "";
+  document.getElementById("loginSenha").value = "";
+}
+
+// ============================================================
+// CONTROLE DE RELATÓRIOS (SISTEMA DE OVERLAY SEM RECARREGAR PÁGINA)
+// ============================================================
+
+function abrirNovaAbaComPDF(html) {
+  let modalPDF = document.getElementById("overlayPDFModal");
+
+  if (!modalPDF) {
+    modalPDF = document.createElement("div");
+    modalPDF.id = "overlayPDFModal";
+    document.body.appendChild(modalPDF);
+  }
+
+  modalPDF.innerHTML = html;
+  modalPDF.style.display = "block";
+
+  // Permite fechar a visualização do relatório pelo botão 'Voltar' do navegador
+  window.history.pushState({ pdfAberto: true }, "", "#relatorio");
+}
+
+function fecharRelatorioPDF() {
+  const modalPDF = document.getElementById("overlayPDFModal");
+  if (modalPDF) {
+    modalPDF.style.display = "none";
+  }
+}
+
+// Intercepta o botão de voltar do navegador mantendo a sessão ativa
+window.addEventListener("popstate", function (event) {
+  const modalPDF = document.getElementById("overlayPDFModal");
+  if (modalPDF && modalPDF.style.display === "block") {
+    modalPDF.style.display = "none";
+  }
+});
+
+// ============================================================
+// FUNÇÕES AUXILIARES DO SISTEMA
+// ============================================================
+
+function limparNumero(valor) {
+  if (!valor) return 0;
+  if (typeof valor === 'number') return valor;
+  const textoLimpo = String(valor)
+    .replace(/[R$\s]/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.');
+  return parseFloat(textoLimpo) || 0;
+}
+
+function formatarData(dataStr) {
+  if (!dataStr) return "-";
+  if (dataStr.includes("T")) {
+    dataStr = dataStr.split("T")[0];
+  }
+  const partes = dataStr.split("-");
+  if (partes.length === 3) {
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+  return dataStr;
+}
+
+function escaparHTML(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// ============================================================
+// GERADORES DE TEMPLATE HTML PARA PDF / IMPRESSÃO
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
@@ -33,57 +176,65 @@ function gerarHTMLPDF(dados, titulo) {
   });
 
   return `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>${escaparHTML(titulo)}</title>
 <style>
-body{font-family:Arial,sans-serif;margin:20px;color:#2c3e50;background-color:#fff}
-.pdf-container{max-width:900px;margin:0 auto}
-h1{color:#1565c0;font-size:18px;margin-bottom:5px}
-.header{border-bottom:2px solid #1565c0;padding-bottom:10px;margin-bottom:15px}
-.cards{display:flex;gap:10px;margin-bottom:15px}
-.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:8px 12px}
-.card span{display:block;font-size:9px;color:#666;text-transform:uppercase}
-.card strong{font-size:14px;color:#1565c0}
-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
-th{background:#1565c0;color:#fff;padding:6px 8px;font-size:10px;text-transform:uppercase}
-td{padding:5px 8px;border-bottom:1px solid #eee;text-align:center;word-wrap:break-word}
-
-/* Larguras específicas para aproximar as colunas */
-th:nth-child(1), td:nth-child(1) { width: 11%; } /* DATA */
-th:nth-child(2), td:nth-child(2) { width: 11%; } /* PLACA */
-th:nth-child(3), td:nth-child(3) { width: 22%; } /* VEÍCULO */
-th:nth-child(4), td:nth-child(4) { width: 18%; } /* MOTORISTA */
-th:nth-child(5), td:nth-child(5) { width: 10%; } /* LITROS */
-th:nth-child(6), td:nth-child(6) { width: 10%; } /* VALOR */
-th:nth-child(7), td:nth-child(7) { width: 9%;  } /* KM */
-th:nth-child(8), td:nth-child(8) { width: 9%;  } /* CONSUMO */
-
-.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
-@media print{@page{margin:1cm}body{margin:0}.pdf-container{max-width:100%}}
+  #overlayPDFModal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #ffffff;
+    z-index: 99999;
+    overflow-y: auto;
+    padding: 30px 18% !important;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    color: #2c3e50;
+  }
+  .btn-voltar-pdf {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background-color: #1565c0;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .btn-voltar-pdf:hover { background-color: #0d47a1; }
+  h1 { color: #1565c0; font-size: 20px; margin: 0 0 5px 0; }
+  .header-pdf { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
+  .cards-pdf { display: flex; gap: 15px; margin-bottom: 25px; }
+  .card-pdf { flex: 1; background: #f8f9fa; border: 1px solid #ddd; border-left: 4px solid #1565c0; padding: 12px; }
+  .card-pdf span { display: block; font-size: 10px; color: #666; text-transform: uppercase; }
+  .card-pdf strong { font-size: 16px; color: #1565c0; }
+  .tabela-pdf { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .tabela-pdf th { background: #1565c0; color: #fff; padding: 9px; text-transform: uppercase; }
+  .tabela-pdf td { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
+  .cabecalho-veiculo td { background: #e3f2fd; font-weight: bold; color: #0d47a1; text-align: left; }
+  
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    #overlayPDFModal { padding: 0 !important; position: static; overflow: visible; }
+    .btn-voltar-pdf { display: none !important; }
+  }
 </style>
-</head>
-<body>
-<div class="pdf-container">
-  <div class="header">
-    <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
-    <div>${escaparHTML(titulo)}</div>
-    <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
-  </div>
-  <div class="cards">
-    <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
-    <div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
-    <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
-  </div>
-  <table>
-  <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
-  <tbody>${linhas}</tbody>
-  </table>
+
+<button class="btn-voltar-pdf" onclick="fecharRelatorioPDF()">← Voltar ao Sistema</button>
+<div class="header-pdf">
+  <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
+  <div><strong>${escaparHTML(titulo)}</strong></div>
+  <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
 </div>
-</body>
-</html>`;
+<div class="cards-pdf">
+  <div class="card-pdf"><span>Total Registros</span><strong>${registros.length}</strong></div>
+  <div class="card-pdf"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
+  <div class="card-pdf"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+</div>
+<table class="tabela-pdf">
+<thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
+<tbody>${linhas}</tbody>
+</table>`;
 }
 
 function gerarHTMLPDFManutencao(dados, titulo) {
@@ -115,53 +266,61 @@ function gerarHTMLPDFManutencao(dados, titulo) {
   });
 
   return `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>${escaparHTML(titulo)}</title>
 <style>
-body{font-family:Arial,sans-serif;margin:20px;color:#2c3e50;background-color:#fff}
-.pdf-container{max-width:900px;margin:0 auto}
-h1{color:#1565c0;font-size:18px;margin-bottom:5px}
-.header{border-bottom:2px solid #1565c0;padding-bottom:10px;margin-bottom:15px}
-.cards{display:flex;gap:10px;margin-bottom:15px}
-.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:8px 12px}
-.card span{display:block;font-size:9px;color:#666;text-transform:uppercase}
-.card strong{font-size:14px;color:#1565c0}
-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
-th{background:#1565c0;color:#fff;padding:6px 8px;font-size:10px;text-transform:uppercase}
-td{padding:5px 8px;border-bottom:1px solid #eee;text-align:center;word-wrap:break-word}
-
-/* Larguras específicas para manutenção */
-th:nth-child(1), td:nth-child(1) { width: 14%; } /* DATA/HORA */
-th:nth-child(2), td:nth-child(2) { width: 10%; } /* PLACA */
-th:nth-child(3), td:nth-child(3) { width: 18%; } /* VEÍCULO */
-th:nth-child(4), td:nth-child(4) { width: 18%; } /* TIPO */
-th:nth-child(5), td:nth-child(5) { width: 10%; } /* KM */
-th:nth-child(6), td:nth-child(6) { width: 10%; } /* PRÓX. TROCA */
-th:nth-child(7), td:nth-child(7) { width: 10%; } /* DATA ALARME */
-th:nth-child(8), td:nth-child(8) { width: 10%; } /* OBSERVAÇÃO */
-
-.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
-@media print{@page{margin:1cm}body{margin:0}.pdf-container{max-width:100%}}
+  #overlayPDFModal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #ffffff;
+    z-index: 99999;
+    overflow-y: auto;
+    padding: 30px 18% !important;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    color: #2c3e50;
+  }
+  .btn-voltar-pdf {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background-color: #1565c0;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .btn-voltar-pdf:hover { background-color: #0d47a1; }
+  h1 { color: #1565c0; font-size: 20px; margin: 0 0 5px 0; }
+  .header-pdf { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
+  .cards-pdf { display: flex; gap: 15px; margin-bottom: 25px; }
+  .card-pdf { flex: 1; background: #f8f9fa; border: 1px solid #ddd; border-left: 4px solid #1565c0; padding: 12px; }
+  .card-pdf span { display: block; font-size: 10px; color: #666; text-transform: uppercase; }
+  .card-pdf strong { font-size: 16px; color: #1565c0; }
+  .tabela-pdf { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .tabela-pdf th { background: #1565c0; color: #fff; padding: 9px; text-transform: uppercase; }
+  .tabela-pdf td { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
+  .cabecalho-veiculo td { background: #e3f2fd; font-weight: bold; color: #0d47a1; text-align: left; }
+  
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    #overlayPDFModal { padding: 0 !important; position: static; overflow: visible; }
+    .btn-voltar-pdf { display: none !important; }
+  }
 </style>
-</head>
-<body>
-<div class="pdf-container">
-  <div class="header">
-    <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
-    <div>${escaparHTML(titulo)}</div>
-    <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
-  </div>
-  <div class="cards">
-    <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
-  </div>
-  <table>
-  <thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
-  <tbody>${linhas}</tbody>
-  </table>
+
+<button class="btn-voltar-pdf" onclick="fecharRelatorioPDF()">← Voltar ao Sistema</button>
+<div class="header-pdf">
+  <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
+  <div><strong>${escaparHTML(titulo)}</strong></div>
+  <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
 </div>
-</body>
-</html>`;
+<div class="cards-pdf">
+  <div class="card-pdf"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
+</div>
+<table class="tabela-pdf">
+<thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
+<tbody>${linhas}</tbody>
+</table>`;
 }
