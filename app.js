@@ -34,13 +34,20 @@ function escaparHTML(str) {
     .replace(/'/g, "&#039;");
 }
 
+// Escuta a ação de voltar do navegador e recarrega o sistema principal
+window.addEventListener("popstate", function (event) {
+  window.location.reload();
+});
+
 // ============================================================
-// RELATÓRIOS PDF (SISTEMA DE ABERTURA E IMPRESSÃO CORRIGIDOS)
+// RELATÓRIOS PDF (ABERTURA NA MESMA ABA E MARGENS DE 18%)
 // ============================================================
 
 function abrirNovaAbaComPDF(html) {
-  // Escreve o relatório diretamente na página atual para que
-  // o histórico do navegador permaneça intacto e o botão "VOLTAR" funcione.
+  // Salva o estado atual para que a seta "VOLTAR" do navegador saiba onde retornar
+  window.history.pushState({ page: "pdf" }, "", window.location.href);
+
+  // Substitui o conteúdo da própria aba ativa
   document.open();
   document.write(html);
   document.close();
@@ -84,13 +91,34 @@ function gerarHTMLPDF(dados, titulo) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escaparHTML(titulo)}</title>
 <style>
+  html {
+    background-color: #f4f6f9;
+  }
   body {
     font-family: Arial, sans-serif;
-    margin: 30px auto;
-    padding: 20px 40px;
-    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 18%; /* Margens de 18% em cada lado na tela */
+    box-sizing: border-box;
     color: #2c3e50;
     background-color: #ffffff;
+    min-height: 100vh;
+  }
+  .btn-voltar {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background-color: #1565c0;
+    color: #ffffff;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .btn-voltar:hover {
+    background-color: #0d47a1;
   }
   h1 { color: #1565c0; font-size: 20px; margin: 0 0 5px 0; }
   .header { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
@@ -104,12 +132,15 @@ function gerarHTMLPDF(dados, titulo) {
   .cabecalho-veiculo td { background: #e3f2fd; font-weight: bold; color: #0d47a1; text-align: left; }
   
   @media print {
-    @page { size: A4 landscape; margin: 12mm 15mm; }
-    body { margin: 0; padding: 0; max-width: 100%; }
+    @page { size: A4 landscape; margin: 10mm; }
+    html { background-color: #ffffff; }
+    body { padding: 0; margin: 0; width: 100%; }
+    .btn-voltar { display: none !important; }
   }
 </style>
 </head>
 <body>
+<button class="btn-voltar" onclick="window.history.back()">← Voltar ao Sistema</button>
 <div class="header">
   <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
   <div><strong>${escaparHTML(titulo)}</strong></div>
@@ -164,13 +195,34 @@ function gerarHTMLPDFManutencao(dados, titulo) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escaparHTML(titulo)}</title>
 <style>
+  html {
+    background-color: #f4f6f9;
+  }
   body {
     font-family: Arial, sans-serif;
-    margin: 30px auto;
-    padding: 20px 40px;
-    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 18%; /* Margens de 18% em cada lado na tela */
+    box-sizing: border-box;
     color: #2c3e50;
     background-color: #ffffff;
+    min-height: 100vh;
+  }
+  .btn-voltar {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background-color: #1565c0;
+    color: #ffffff;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .btn-voltar:hover {
+    background-color: #0d47a1;
   }
   h1 { color: #1565c0; font-size: 20px; margin: 0 0 5px 0; }
   .header { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
@@ -184,12 +236,15 @@ function gerarHTMLPDFManutencao(dados, titulo) {
   .cabecalho-veiculo td { background: #e3f2fd; font-weight: bold; color: #0d47a1; text-align: left; }
   
   @media print {
-    @page { size: A4 landscape; margin: 12mm 15mm; }
-    body { margin: 0; padding: 0; max-width: 100%; }
+    @page { size: A4 landscape; margin: 10mm; }
+    html { background-color: #ffffff; }
+    body { padding: 0; margin: 0; width: 100%; }
+    .btn-voltar { display: none !important; }
   }
 </style>
 </head>
 <body>
+<button class="btn-voltar" onclick="window.history.back()">← Voltar ao Sistema</button>
 <div class="header">
   <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
   <div><strong>${escaparHTML(titulo)}</strong></div>
