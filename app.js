@@ -2,18 +2,18 @@
 // CONFIGURAÇÕES GERAIS E AUTENTICAÇÃO
 // ============================================================
 
-const API_URL = "AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec"; // Cole aqui a URL /exec do Apps Script
+const API_URL = "https://script.google.com/macros/s/AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec";
 
 async function fazerLogin(event) {
-  if (event) event.preventDefault(); // Impede o envio padrão do formulário e o reload da página
+  if (event) event.preventDefault(); // Impede o envio padrão do formulário e o reload da página[cite: 5, 6]
 
-  const emailInput = document.getElementById("loginEmail").value;
-  const senhaInput = document.getElementById("loginSenha").value;
-  const loginErro = document.getElementById("loginErro");
-  const loadingSpinner = document.getElementById("loadingSpinner");
+  const emailInput = document.getElementById("loginEmail").value; //[cite: 6]
+  const senhaInput = document.getElementById("loginSenha").value; //[cite: 6]
+  const loginErro = document.getElementById("loginErro"); //[cite: 6]
+  const loadingSpinner = document.getElementById("loadingSpinner"); //[cite: 6]
 
-  if (loginErro) loginErro.style.display = "none";
-  if (loadingSpinner) loadingSpinner.style.display = "flex";
+  if (loginErro) loginErro.style.display = "none"; //[cite: 6]
+  if (loadingSpinner) loadingSpinner.style.display = "flex"; //[cite: 6]
 
   const payload = {
     acao: "fazerLogin",
@@ -21,53 +21,53 @@ async function fazerLogin(event) {
       email: emailInput,
       senha: senhaInput
     }
-  };
+  }; //[cite: 6]
 
   try {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
-    });
+    }); //[cite: 6]
 
-    const resultado = await response.json();
+    const resultado = await response.json(); //[cite: 6]
 
     if (resultado.ok) {
-      document.getElementById("telaLogin").style.display = "none";
-      document.getElementById("appContainer").style.display = "block";
+      document.getElementById("telaLogin").style.display = "none"; //[cite: 6]
+      document.getElementById("appContainer").style.display = "block"; //[cite: 6]
 
       if (resultado.usuario && resultado.usuario.nome) {
-        document.getElementById("nomeUsuarioLogado").innerText = resultado.usuario.nome;
+        document.getElementById("nomeUsuarioLogado").innerText = resultado.usuario.nome; //[cite: 6]
       }
 
-      localStorage.setItem("usuarioLogadoAG4", JSON.stringify(resultado.usuario));
+      localStorage.setItem("usuarioLogadoAG4", JSON.stringify(resultado.usuario)); //[cite: 6]
 
       if (typeof sincronizarComNuvem === "function") {
-        sincronizarComNuvem();
+        sincronizarComNuvem(); //[cite: 6]
       }
     } else {
       if (loginErro) {
-        loginErro.innerText = resultado.mensagem || "Credenciais inválidas.";
-        loginErro.style.display = "block";
+        loginErro.innerText = resultado.mensagem || "Credenciais inválidas."; //[cite: 6]
+        loginErro.style.display = "block"; //[cite: 6]
       }
     }
   } catch (erro) {
-    console.error("Erro ao realizar login:", erro);
+    console.error("Erro ao realizar login:", erro); //[cite: 6]
     if (loginErro) {
-      loginErro.innerText = "Erro ao conectar com o servidor.";
-      loginErro.style.display = "block";
+      loginErro.innerText = "Erro ao conectar com o servidor."; //[cite: 6]
+      loginErro.style.display = "block"; //[cite: 6]
     }
   } finally {
-    if (loadingSpinner) loadingSpinner.style.display = "none";
+    if (loadingSpinner) loadingSpinner.style.display = "none"; //[cite: 6]
   }
 }
 
 function fazerLogout() {
-  localStorage.removeItem("usuarioLogadoAG4");
-  document.getElementById("telaLogin").style.display = "flex";
-  document.getElementById("appContainer").style.display = "none";
-  document.getElementById("loginEmail").value = "";
-  document.getElementById("loginSenha").value = "";
+  localStorage.removeItem("usuarioLogadoAG4"); //[cite: 6]
+  document.getElementById("telaLogin").style.display = "flex"; //[cite: 6]
+  document.getElementById("appContainer").style.display = "none"; //[cite: 6]
+  document.getElementById("loginEmail").value = ""; //[cite: 6]
+  document.getElementById("loginSenha").value = ""; //[cite: 6]
 }
 
 // ============================================================
@@ -75,70 +75,70 @@ function fazerLogout() {
 // ============================================================
 
 function abrirNovaAbaComPDF(html) {
-  let modalPDF = document.getElementById("overlayPDFModal");
+  let modalPDF = document.getElementById("overlayPDFModal"); //[cite: 6]
 
   if (!modalPDF) {
-    modalPDF = document.createElement("div");
-    modalPDF.id = "overlayPDFModal";
-    document.body.appendChild(modalPDF);
+    modalPDF = document.createElement("div"); //[cite: 6]
+    modalPDF.id = "overlayPDFModal"; //[cite: 6]
+    document.body.appendChild(modalPDF); //[cite: 6]
   }
 
-  modalPDF.innerHTML = html;
-  modalPDF.style.display = "block";
+  modalPDF.innerHTML = html; //[cite: 6]
+  modalPDF.style.display = "block"; //[cite: 6]
 
   // Permite fechar a visualização do relatório pelo botão 'Voltar' do navegador
-  window.history.pushState({ pdfAberto: true }, "", "#relatorio");
+  window.history.pushState({ pdfAberto: true }, "", "#relatorio"); //[cite: 6]
 }
 
 function fecharRelatorioPDF() {
-  const modalPDF = document.getElementById("overlayPDFModal");
+  const modalPDF = document.getElementById("overlayPDFModal"); //[cite: 6]
   if (modalPDF) {
-    modalPDF.style.display = "none";
+    modalPDF.style.display = "none"; //[cite: 6]
   }
 }
 
 // Intercepta o botão de voltar do navegador mantendo a sessão ativa
 window.addEventListener("popstate", function (event) {
-  const modalPDF = document.getElementById("overlayPDFModal");
+  const modalPDF = document.getElementById("overlayPDFModal"); //[cite: 6]
   if (modalPDF && modalPDF.style.display === "block") {
-    modalPDF.style.display = "none";
+    modalPDF.style.display = "none"; //[cite: 6]
   }
-});
+}); //[cite: 6]
 
 // ============================================================
 // FUNÇÕES AUXILIARES DO SISTEMA
 // ============================================================
 
 function limparNumero(valor) {
-  if (!valor) return 0;
-  if (typeof valor === 'number') return valor;
+  if (!valor) return 0; //[cite: 6]
+  if (typeof valor === 'number') return valor; //[cite: 6]
   const textoLimpo = String(valor)
     .replace(/[R$\s]/g, '')
     .replace(/\./g, '')
-    .replace(',', '.');
-  return parseFloat(textoLimpo) || 0;
+    .replace(',', '.'); //[cite: 6]
+  return parseFloat(textoLimpo) || 0; //[cite: 6]
 }
 
 function formatarData(dataStr) {
-  if (!dataStr) return "-";
+  if (!dataStr) return "-"; //[cite: 6]
   if (dataStr.includes("T")) {
-    dataStr = dataStr.split("T")[0];
+    dataStr = dataStr.split("T")[0]; //[cite: 6]
   }
-  const partes = dataStr.split("-");
+  const partes = dataStr.split("-"); //[cite: 6]
   if (partes.length === 3) {
-    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    return `${partes[2]}/${partes[1]}/${partes[0]}`; //[cite: 6]
   }
-  return dataStr;
+  return dataStr; //[cite: 6]
 }
 
 function escaparHTML(str) {
-  if (str === null || str === undefined) return "";
+  if (str === null || str === undefined) return ""; //[cite: 6]
   return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/'/g, "&#039;"); //[cite: 6]
 }
 
 // ============================================================
@@ -147,20 +147,20 @@ function escaparHTML(str) {
 
 function gerarHTMLPDF(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
-    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
-    return String(a[0]).localeCompare(String(b[0]));
-  });
+    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR"); //[cite: 6]
+    return String(a[0]).localeCompare(String(a[0])); //[cite: 6]
+  }); //[cite: 6]
 
-  const totalLitros = registros.reduce((sum, r) => sum + limparNumero(r[4]), 0);
-  const totalValor = registros.reduce((sum, r) => sum + limparNumero(r[5]), 0);
+  const totalLitros = registros.reduce((sum, r) => sum + limparNumero(r[4]), 0); //[cite: 6]
+  const totalValor = registros.reduce((sum, r) => sum + limparNumero(r[5]), 0); //[cite: 6]
 
-  let linhas = "";
-  let veiculoAtual = "";
+  let linhas = ""; //[cite: 6]
+  let veiculoAtual = ""; //[cite: 6]
 
   registros.forEach(r => {
     if (veiculoAtual !== r[2]) {
-      veiculoAtual = r[2];
-      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
+      veiculoAtual = r[2]; //[cite: 6]
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`; //[cite: 6]
     }
     linhas += `
       <tr>
@@ -172,7 +172,7 @@ function gerarHTMLPDF(dados, titulo) {
         <td>R$ ${escaparHTML(r[5])}</td>
         <td>${escaparHTML(r[6])} KM</td>
         <td>${r[7] !== "-" ? `${escaparHTML(r[7])} KM/L` : "-"}</td>
-      </tr>`;
+      </tr>`; //[cite: 6]
   });
 
   return `
@@ -234,24 +234,24 @@ function gerarHTMLPDF(dados, titulo) {
 <table class="tabela-pdf">
 <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
 <tbody>${linhas}</tbody>
-</table>`;
+</table>`; //[cite: 6]
 }
 
 function gerarHTMLPDFManutencao(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
-    if (a[3] !== b[3]) return String(a[3]).localeCompare(String(b[3]), "pt-BR");
-    return String(a[0]).localeCompare(String(b[0]));
-  });
+    if (a[3] !== b[3]) return String(a[3]).localeCompare(String(b[3]), "pt-BR"); //[cite: 6]
+    return String(a[0]).localeCompare(String(a[0])); //[cite: 6]
+  }); //[cite: 6]
 
-  let linhas = "";
-  let veiculoAtual = "";
+  let linhas = ""; //[cite: 6]
+  let veiculoAtual = ""; //[cite: 6]
 
   registros.forEach(r => {
     if (veiculoAtual !== r[3]) {
-      veiculoAtual = r[3];
-      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[3])} — PLACA: ${escaparHTML(r[2])}</td></tr>`;
+      veiculoAtual = r[3]; //[cite: 6]
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[3])} — PLACA: ${escaparHTML(r[2])}</td></tr>`; //[cite: 6]
     }
-    const dataHora = `${formatarData(r[0])} ${r[1] || ''}`.trim();
+    const dataHora = `${formatarData(r[0])} ${r[1] || ''}`.trim(); //[cite: 6]
     linhas += `
       <tr>
         <td>${escaparHTML(dataHora)}</td>
@@ -262,7 +262,7 @@ function gerarHTMLPDFManutencao(dados, titulo) {
         <td>${r[6] !== "" && r[6] !== undefined ? `${escaparHTML(r[6])} KM` : "-"}</td>
         <td>${r[7] ? formatarData(r[7]) : "-"}</td>
         <td>${escaparHTML(r[8] || "-")}</td>
-      </tr>`;
+      </tr>`; //[cite: 6]
   });
 
   return `
@@ -322,5 +322,5 @@ function gerarHTMLPDFManutencao(dados, titulo) {
 <table class="tabela-pdf">
 <thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
 <tbody>${linhas}</tbody>
-</table>`;
+</table>`; //[cite: 6]
 }
