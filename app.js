@@ -1462,9 +1462,10 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 }
 
 function abrirNovaAbaComPDF(html) {
-  const aba = window.open("", "_blank");
+  // Alterado "_blank" para "_self" para abrir na mesma aba
+  const aba = window.open("", "_self");
   if (!aba) {
-    alert("O navegador bloqueou a janela do PDF. Permita pop-ups.");
+    alert("Não foi possível abrir o PDF.");
     return;
   }
   aba.document.open();
