@@ -1,5 +1,5 @@
 // ============================================================
-// AG4 FROTA - APP.JS (COM CÁLCULO E RECALCULAGEM DE CONSUMO CORRIGIDOS)
+// AG4 FROTA - APP.JS (CÓDIGO COMPLETO E CORRIGIDO)
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -308,10 +308,11 @@ async function enviarParaGoogleSheets(acao, dados) {
 async function sincronizarComNuvem() {
   mostrarLoading(true);
   try {
+    const payload = JSON.stringify({ acao: "obterDados" });
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ payload: JSON.stringify({ acao: "obterDados" }) })
+      body: new URLSearchParams({ payload: payload })
     });
 
     const res = await response.json();
@@ -343,10 +344,11 @@ async function fazerLogin(event) {
   mostrarLoading(true);
 
   try {
+    const payload = JSON.stringify({ acao: "fazerLogin", dados: { email, senha } });
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ acao: "fazerLogin", dados: { email, senha } })
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ payload: payload })
     });
 
     const res = await response.json();
@@ -607,7 +609,7 @@ function excluirVeiculo() {
 }
 
 // ============================================================
-// LÓGICA CORRIGIDA DE CONSUMO E ABASTECIMENTO
+// CONSUMO E ABASTECIMENTO
 // ============================================================
 
 function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
@@ -616,7 +618,6 @@ function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
 
   if (!placa || km <= 0 || l <= 0) return "-";
 
-  // Filtra os abastecimentos anteriores do mesmo veículo
   const anteriores = DB.abastecimento
     .map((registro, index) => ({ registro, index }))
     .filter(item => {
@@ -642,7 +643,6 @@ function recalcularConsumoHistorico() {
     return;
   }
 
-  // Ordena por data e KM para manter a sequência lógica
   DB.abastecimento.sort((a, b) => {
     const dataA = new Date(a[0]).getTime() || 0;
     const dataB = new Date(b[0]).getTime() || 0;
@@ -650,7 +650,6 @@ function recalcularConsumoHistorico() {
     return limparNumero(a[6]) - limparNumero(b[6]);
   });
 
-  // Recalcula o consumo para cada registro
   DB.abastecimento.forEach((registro, index) => {
     registro[7] = calcularConsumoRegistro(registro[1], registro[6], registro[4], index);
   });
