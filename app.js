@@ -1321,7 +1321,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// RELATÓRIOS PDF
+// RELATÓRIOS PDF (Modificação de aba _self aplicadas)
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
@@ -1463,9 +1463,10 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 }
 
 function abrirNovaAbaComPDF(html) {
-  const aba = window.open("", "_blank");
+  // Alterado de "_blank" para "_self" para abrir na mesma aba e permitir o botão "Voltar"
+  const aba = window.open("", "_self");
   if (!aba) {
-    alert("O navegador bloqueou a janela do PDF. Permita pop-ups.");
+    alert("O navegador bloqueou a janela. Permita pop-ups.");
     return;
   }
   aba.document.open();
