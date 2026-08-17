@@ -646,6 +646,44 @@ input::placeholder {
   background-color: rgba(239, 83, 80, 0.2);
 }
 
+/* ============================================================
+   NOVAS CORREÇÕES APLICADAS (ALTURA REDUZIDA E MARGENS DO PDF)
+   ============================================================ */
+
+/* Reduzir altura de elementos gerais em 30% */
+header, 
+.card, 
+.section-title, 
+.form-group, 
+input, 
+select, 
+.btn, 
+.tab-btn, 
+th, 
+td {
+  padding-top: calc(10px * 0.7) !important;
+  padding-bottom: calc(10px * 0.7) !important;
+  min-height: auto !important;
+}
+
+/* Reduzir altura do botão MAIS (action-btn) em 45% */
+.action-btn {
+  padding: calc(10px * 0.55) !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+/* Margens de 18% para o PDF gerado via impressão */
+@media print {
+  body {
+    margin: 0 18% !important;
+  }
+  .container {
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
 @media (max-width: 768px) {
   body { padding: 10px; }
   header { min-height: 65px; flex-direction: column; text-align: center; }
