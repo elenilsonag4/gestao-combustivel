@@ -1327,7 +1327,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// RELATÓRIOS PDF
+// RELATÓRIOS PDF (COM BOTÃO DE VOLTAR AO INÍCIO)
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
@@ -1369,7 +1369,9 @@ function gerarHTMLPDF(dados, titulo) {
 <style>
 body{font-family:Arial,sans-serif;margin:30px;color:#2c3e50}
 h1{color:#1565c0;font-size:20px}
-.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px}
+.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
+.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
+.btn-voltar:hover{background:#0d47a1}
 .cards{display:flex;gap:15px;margin-bottom:25px}
 .card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px}
 .card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
@@ -1378,11 +1380,16 @@ table{width:100%;border-collapse:collapse;font-size:11px}
 th{background:#1565c0;color:#fff;padding:9px}
 td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 .cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
-@media print{@page{margin:1.5cm}body{margin:0}}
+@media print{
+  .btn-voltar{display:none}
+  @page{margin:1.5cm}
+  body{margin:0}
+}
 </style>
 </head>
 <body>
 <div class="header">
+  <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
   <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
   <div>${escaparHTML(titulo)}</div>
   <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
@@ -1396,7 +1403,6 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
-<script>window.onload=()=>window.print();</script>
 </body>
 </html>`;
 }
@@ -1438,7 +1444,9 @@ function gerarHTMLPDFManutencao(dados, titulo) {
 <style>
 body{font-family:Arial,sans-serif;margin:30px;color:#2c3e50}
 h1{color:#1565c0;font-size:20px}
-.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px}
+.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
+.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
+.btn-voltar:hover{background:#0d47a1}
 .cards{display:flex;gap:15px;margin-bottom:25px}
 .card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px}
 .card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
@@ -1447,11 +1455,16 @@ table{width:100%;border-collapse:collapse;font-size:11px}
 th{background:#1565c0;color:#fff;padding:9px}
 td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 .cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
-@media print{@page{margin:1.5cm}body{margin:0}}
+@media print{
+  .btn-voltar{display:none}
+  @page{margin:1.5cm}
+  body{margin:0}
+}
 </style>
 </head>
 <body>
 <div class="header">
+  <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
   <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
   <div>${escaparHTML(titulo)}</div>
   <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
@@ -1463,7 +1476,6 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 <thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
 <tbody>${linhas}</tbody>
 </table>
-<script>window.onload=()=>window.print();</script>
 </body>
 </html>`;
 }
