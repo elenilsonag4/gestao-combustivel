@@ -90,9 +90,11 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* CONTAINER PRINCIPAL FIXADO EM 60% E CENTRALIZADO */
 .container {
-  max-width: 950px;
-  margin: auto;
+  max-width: 60% !important;
+  width: 60% !important;
+  margin: 0 auto !important;
 }
 
 header {
@@ -411,6 +413,7 @@ body.theme-dark .tab-btn.active {
   box-shadow: 0 5px 15px rgba(0,0,0,.3);
 }
 
+/* LOGIN OVERLAY MANTIDO EM TELA CHEIA (100%) */
 .login-overlay {
   position: fixed;
   top: 0;
@@ -647,10 +650,9 @@ input::placeholder {
 }
 
 /* ============================================================
-   CORREÇÃO DE VISUALIZAÇÃO DO HISTÓRICO (TELA E PDF COM 20% DE MARGEM)
+   CORREÇÃO DE REDUÇÃO DE ESPAÇAMENTOS E ALTURAS (30%)
    ============================================================ */
 
-/* Reduzir altura de elementos gerais em 30% */
 header, 
 .card, 
 .section-title, 
@@ -666,19 +668,10 @@ td {
   min-height: auto !important;
 }
 
-/* Reduzir altura do botão MAIS (action-btn) em 45% */
 .action-btn {
   padding: calc(10px * 0.55) !important;
   font-size: 10px !important;
   line-height: 1 !important;
-}
-
-/* Margens de 20% de cada lado (ocupando 60% da largura) na visualização normal e no PDF */
-.container {
-  max-width: 60% !important;
-  width: 60% !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
 }
 
 @media print {
