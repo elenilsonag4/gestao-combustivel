@@ -1,36 +1,4 @@
 // ============================================================
-// CONTROLE DE SESSÃO E LOGIN (PERSISTÊNCIA)
-// ============================================================
-
-// Ao carregar a página, verifica se o usuário já estava logado
-document.addEventListener("DOMContentLoaded", function () {
-  verificarSessaoSalva();
-});
-
-function salvarSessao(dadosUsuario) {
-  localStorage.setItem("usuarioLogadoAG4", JSON.stringify(dadosUsuario));
-}
-
-function verificarSessaoSalva() {
-  const usuarioSalvo = localStorage.getItem("usuarioLogadoAG4");
-  if (usuarioSalvo) {
-    const usuario = JSON.parse(usuarioSalvo);
-    const telaLogin = document.getElementById("telaLogin");
-    const appContainer = document.getElementById("appContainer");
-    const nomeEl = document.getElementById("nomeUsuarioLogado");
-
-    if (telaLogin) telaLogin.style.display = "none";
-    if (appContainer) appContainer.style.display = "block";
-    if (nomeEl) nomeEl.innerText = usuario.email || usuario.nome || "USUÁRIO";
-  }
-}
-
-function fazerLogout() {
-  localStorage.removeItem("usuarioLogadoAG4");
-  window.location.reload();
-}
-
-// ============================================================
 // FUNÇÕES AUXILIARES DO SISTEMA
 // ============================================================
 
@@ -67,43 +35,16 @@ function escaparHTML(str) {
 }
 
 // ============================================================
-// VISUALIZADOR DE PDF EM OVERLAY (NÃO ATUALIZA A PÁGINA)
+// RELATÓRIOS PDF (SISTEMA DE ABERTURA E IMPRESSÃO CORRIGIDOS)
 // ============================================================
 
 function abrirNovaAbaComPDF(html) {
-  let modalPDF = document.getElementById("overlayPDFModal");
-
-  if (!modalPDF) {
-    modalPDF = document.createElement("div");
-    modalPDF.id = "overlayPDFModal";
-    document.body.appendChild(modalPDF);
-  }
-
-  modalPDF.innerHTML = html;
-  modalPDF.style.display = "block";
-
-  // Registra no histórico para o botão VOLTAR do navegador fechar a visualização
-  window.history.pushState({ pdfAberto: true }, "", "#pdf");
+  // Escreve o relatório diretamente na página atual para que
+  // o histórico do navegador permaneça intacto e o botão "VOLTAR" funcione.
+  document.open();
+  document.write(html);
+  document.close();
 }
-
-function fecharRelatorioPDF() {
-  const modalPDF = document.getElementById("overlayPDFModal");
-  if (modalPDF) {
-    modalPDF.style.display = "none";
-  }
-}
-
-// Captura a ação do botão VOLTAR do navegador e fecha apenas a modal do PDF
-window.addEventListener("popstate", function (event) {
-  const modalPDF = document.getElementById("overlayPDFModal");
-  if (modalPDF && modalPDF.style.display === "block") {
-    modalPDF.style.display = "none";
-  }
-});
-
-// ============================================================
-// GERADORES DE RELATÓRIO COM 18% DE MARGEM LATERAL
-// ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
@@ -136,65 +77,55 @@ function gerarHTMLPDF(dados, titulo) {
   });
 
   return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escaparHTML(titulo)}</title>
 <style>
-  #overlayPDFModal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: #ffffff;
-    z-index: 99999;
-    overflow-y: auto;
-    padding: 30px 18% !important; /* Margem de 18% em cada lado */
-    box-sizing: border-box;
+  body {
     font-family: Arial, sans-serif;
+    margin: 30px auto;
+    padding: 20px 40px;
+    max-width: 1200px;
     color: #2c3e50;
+    background-color: #ffffff;
   }
-  .btn-voltar-pdf {
-    display: inline-block;
-    margin-bottom: 20px;
-    padding: 8px 16px;
-    background-color: #1565c0;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    text-transform: uppercase;
-  }
-  .btn-voltar-pdf:hover { background-color: #0d47a1; }
   h1 { color: #1565c0; font-size: 20px; margin: 0 0 5px 0; }
-  .header-pdf { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
-  .cards-pdf { display: flex; gap: 15px; margin-bottom: 25px; }
-  .card-pdf { flex: 1; background: #f8f9fa; border: 1px solid #ddd; border-left: 4px solid #1565c0; padding: 12px; }
-  .card-pdf span { display: block; font-size: 10px; color: #666; text-transform: uppercase; }
-  .card-pdf strong { font-size: 16px; color: #1565c0; }
-  .tabela-pdf { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .tabela-pdf th { background: #1565c0; color: #fff; padding: 9px; text-transform: uppercase; }
-  .tabela-pdf td { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
+  .header { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
+  .cards { display: flex; gap: 15px; margin-bottom: 25px; }
+  .card { flex: 1; background: #f8f9fa; border: 1px solid #ddd; border-left: 4px solid #1565c0; padding: 12px; }
+  .card span { display: block; font-size: 10px; color: #666; text-transform: uppercase; }
+  .card strong { font-size: 16px; color: #1565c0; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: #1565c0; color: #fff; padding: 9px; text-transform: uppercase; }
+  td { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
   .cabecalho-veiculo td { background: #e3f2fd; font-weight: bold; color: #0d47a1; text-align: left; }
   
   @media print {
-    @page { size: A4 landscape; margin: 10mm; }
-    #overlayPDFModal { padding: 0 !important; position: static; overflow: visible; }
-    .btn-voltar-pdf { display: none !important; }
+    @page { size: A4 landscape; margin: 12mm 15mm; }
+    body { margin: 0; padding: 0; max-width: 100%; }
   }
 </style>
-
-<button class="btn-voltar-pdf" onclick="fecharRelatorioPDF()">← Voltar ao Sistema</button>
-<div class="header-pdf">
+</head>
+<body>
+<div class="header">
   <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
   <div><strong>${escaparHTML(titulo)}</strong></div>
   <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
 </div>
-<div class="cards-pdf">
-  <div class="card-pdf"><span>Total Registros</span><strong>${registros.length}</strong></div>
-  <div class="card-pdf"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
-  <div class="card-pdf"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+<div class="cards">
+  <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
+  <div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
+  <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
 </div>
-<table class="tabela-pdf">
+<table>
 <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
 <tbody>${linhas}</tbody>
-</table>`;
+</table>
+</body>
+</html>`;
 }
 
 function gerarHTMLPDFManutencao(dados, titulo) {
@@ -226,61 +157,51 @@ function gerarHTMLPDFManutencao(dados, titulo) {
   });
 
   return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escaparHTML(titulo)}</title>
 <style>
-  #overlayPDFModal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: #ffffff;
-    z-index: 99999;
-    overflow-y: auto;
-    padding: 30px 18% !important; /* Margem de 18% em cada lado */
-    box-sizing: border-box;
+  body {
     font-family: Arial, sans-serif;
+    margin: 30px auto;
+    padding: 20px 40px;
+    max-width: 1200px;
     color: #2c3e50;
+    background-color: #ffffff;
   }
-  .btn-voltar-pdf {
-    display: inline-block;
-    margin-bottom: 20px;
-    padding: 8px 16px;
-    background-color: #1565c0;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    text-transform: uppercase;
-  }
-  .btn-voltar-pdf:hover { background-color: #0d47a1; }
   h1 { color: #1565c0; font-size: 20px; margin: 0 0 5px 0; }
-  .header-pdf { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
-  .cards-pdf { display: flex; gap: 15px; margin-bottom: 25px; }
-  .card-pdf { flex: 1; background: #f8f9fa; border: 1px solid #ddd; border-left: 4px solid #1565c0; padding: 12px; }
-  .card-pdf span { display: block; font-size: 10px; color: #666; text-transform: uppercase; }
-  .card-pdf strong { font-size: 16px; color: #1565c0; }
-  .tabela-pdf { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .tabela-pdf th { background: #1565c0; color: #fff; padding: 9px; text-transform: uppercase; }
-  .tabela-pdf td { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
+  .header { border-bottom: 3px solid #1565c0; padding-bottom: 15px; margin-bottom: 20px; }
+  .cards { display: flex; gap: 15px; margin-bottom: 25px; }
+  .card { flex: 1; background: #f8f9fa; border: 1px solid #ddd; border-left: 4px solid #1565c0; padding: 12px; }
+  .card span { display: block; font-size: 10px; color: #666; text-transform: uppercase; }
+  .card strong { font-size: 16px; color: #1565c0; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: #1565c0; color: #fff; padding: 9px; text-transform: uppercase; }
+  td { padding: 8px; border-bottom: 1px solid #eee; text-align: center; }
   .cabecalho-veiculo td { background: #e3f2fd; font-weight: bold; color: #0d47a1; text-align: left; }
   
   @media print {
-    @page { size: A4 landscape; margin: 10mm; }
-    #overlayPDFModal { padding: 0 !important; position: static; overflow: visible; }
-    .btn-voltar-pdf { display: none !important; }
+    @page { size: A4 landscape; margin: 12mm 15mm; }
+    body { margin: 0; padding: 0; max-width: 100%; }
   }
 </style>
-
-<button class="btn-voltar-pdf" onclick="fecharRelatorioPDF()">← Voltar ao Sistema</button>
-<div class="header-pdf">
+</head>
+<body>
+<div class="header">
   <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
   <div><strong>${escaparHTML(titulo)}</strong></div>
   <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
 </div>
-<div class="cards-pdf">
-  <div class="card-pdf"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
+<div class="cards">
+  <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
 </div>
-<table class="tabela-pdf">
+<table>
 <thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
 <tbody>${linhas}</tbody>
-</table>`;
+</table>
+</body>
+</html>`;
 }
