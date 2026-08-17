@@ -372,6 +372,7 @@ async function fazerLogin(event) {
 
 function fazerLogout() {
   if (confirm("DESEJA REALMENTE SAIR DO SISTEMA?")) {
+    window.onpopstate = null; // Remove o bloqueio do botão voltar ao sair
     localStorage.removeItem(USER_KEY);
     document.getElementById("telaLogin").style.display = "flex";
     document.getElementById("appContainer").style.display = "none";
@@ -386,6 +387,12 @@ function exibirApp(usuario) {
   if (usuario && usuario.nome) {
     document.getElementById("nomeUsuarioLogado").textContent = `USUÁRIO: ${usuario.nome.toUpperCase()}`;
   }
+
+  // REQUISITO 1: Bloquear o botão "Voltar" do navegador na tela inicial
+  history.pushState(null, "", window.location.href);
+  window.onpopstate = function () {
+    history.pushState(null, "", window.location.href);
+  };
 }
 
 function mostrarLoading(exibir) {
@@ -1321,7 +1328,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// RELATÓRIOS PDF (Modificação de aba _self aplicadas)
+// RELATÓRIOS PDF (Modificação de aba _self e controle de histórico)
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
@@ -1463,7 +1470,9 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 }
 
 function abrirNovaAbaComPDF(html) {
-  // Alterado de "_blank" para "_self" para abrir na mesma aba e permitir o botão "Voltar"
+  // REQUISITO 2: Libera temporariamente o bloqueio de histórico antes de substituir o conteúdo da aba com _self
+  window.onpopstate = null;
+
   const aba = window.open("", "_self");
   if (!aba) {
     alert("O navegador bloqueou a janela. Permita pop-ups.");
