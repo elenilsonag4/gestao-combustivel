@@ -323,7 +323,7 @@ table {
 th {
   background: var(--primary-color);
   color: white;
-  padding: 10px;
+  padding: 4px 6px;
   font-weight: 500;
   text-transform: uppercase;
   white-space: nowrap;
@@ -334,13 +334,26 @@ body.theme-dark th {
 }
 
 td {
-  padding: 10px;
+  padding: 3px 6px;
   border-bottom: 1px solid var(--table-border);
   text-align: center;
   position: relative;
   overflow: visible;
   white-space: nowrap;
   color: var(--text-color);
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+/* BOTÃO MAIS REDUZIDO EM 50% */
+td .btn,
+td .btn-primary,
+td .btn-sm {
+  padding: 3px 8px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  min-height: unset !important;
+  height: auto !important;
 }
 
 tbody tr:hover {
