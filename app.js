@@ -1,5 +1,5 @@
 // ============================================================
-// AG4 FROTA - APP.JS (COM SUPORTE A TEMA INTERMEDIÁRIO)
+// AG4 FROTA - APP.JS (COM CÁLCULO E RECALCULAGEM DE CONSUMO CORRIGIDOS)
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -7,7 +7,7 @@ const APPS_SCRIPT_URL =
 
 const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
-const THEME_KEY = "ag4_tema_sistema"; // Mantido estado dos 3 temas
+const THEME_KEY = "ag4_tema_sistema";
 const MOTORISTAS_KEY = "ag4_historico_motoristas";
 const SENHA_MESTRE = "frot@AG4";
 
@@ -19,6 +19,17 @@ let colunaOrdenacao = {
   abastecimento: { indice: 0, asc: false },
   manutencao: { indice: 0, asc: false }
 };
+
+// ============================================================
+// FUNÇÕES UTILITÁRIAS DE SANITIZAÇÃO E PARSER DE NÚMEROS
+// ============================================================
+
+function limparNumero(val) {
+  if (val === null || val === undefined || val === "") return 0;
+  if (typeof val === "number") return val;
+  const strLimpa = String(val).replace(/\./g, "").replace(",", ".");
+  return Number(strLimpa) || 0;
+}
 
 function carregarDB() {
   try {
@@ -67,7 +78,36 @@ function escaparHTML(valor) {
 }
 
 // ============================================================
-// LÓGICA DE GERENCIAMENTO DE MOTORISTAS (AUTOCOMPLETE + DELETE)
+// MÁSCARAS DE ENTRADA
+// ============================================================
+
+function mascararLitros(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.padStart(4, "0");
+  const parteInteira = v.slice(0, -3).replace(/^0+(?=\d)/, "");
+  const parteDecimal = v.slice(-3);
+  e.target.value = `${parteInteira},${parteDecimal}`;
+}
+
+function mascararValor(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.padStart(3, "0");
+  const parteInteira = v.slice(0, -2).replace(/^0+(?=\d)/, "");
+  const parteDecimal = v.slice(-2);
+  e.target.value = `${parteInteira},${parteDecimal}`;
+}
+
+function mascararKM(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.replace(/^0+/, "");
+  e.target.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+// ============================================================
+// GERENCIAMENTO DE MOTORISTAS
 // ============================================================
 
 function obterMotoristasUnicos() {
@@ -109,7 +149,6 @@ function removerMotoristaDoHistorico(nomeParaRemover) {
   const novaLista = salvos.filter(m => m !== nomeParaRemover);
   localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(novaLista));
 
-  // Remove também das instâncias locais do banco para garantir que não volte
   DB.abastecimento.forEach(r => {
     if (r[3] === nomeParaRemover) {
       r[3] = "";
@@ -176,14 +215,13 @@ function configurarAutocompleteMotorista(inputId, suggestionsId) {
 }
 
 // ============================================================
-// LÓGICA DE ALTERNÂNCIA DE TEMA (CLARO / MÉDIO / ESCURO)
+// TEMAS
 // ============================================================
 
 function toggleTheme() {
   let temaAtual = localStorage.getItem(THEME_KEY) || "light";
   let novoTema = "light";
 
-  // Ciclo entre: light -> medium -> dark -> light
   if (temaAtual === "light") {
     novoTema = "medium";
   } else if (temaAtual === "medium") {
@@ -240,7 +278,7 @@ function atualizarIconeTema(tema) {
 }
 
 // ============================================================
-// GOOGLE SHEETS & AUTENTICAÇÃO
+// SHEETS & SINCRONIZAÇÃO
 // ============================================================
 
 async function enviarParaGoogleSheets(acao, dados) {
@@ -354,7 +392,7 @@ function mostrarLoading(exibir) {
 }
 
 // ============================================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO E CARREGAMENTO
 // ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -367,6 +405,14 @@ document.addEventListener("DOMContentLoaded", () => {
       e.target.value = e.target.value.toUpperCase();
     }
   });
+
+  const elLitros = document.getElementById("litros");
+  const elValor = document.getElementById("valorTotal");
+  const elKM = document.getElementById("kmAtual");
+
+  if (elLitros) elLitros.addEventListener("input", mascararLitros);
+  if (elValor) elValor.addEventListener("input", mascararValor);
+  if (elKM) elKM.addEventListener("input", mascararKM);
 
   configurarAutocompleteMotorista("motorista", "sugestoesMotorista");
 
@@ -388,10 +434,6 @@ function carregarDados() {
   preencherSelects(DB.veiculos);
   renderizarTabela();
 }
-
-// ============================================================
-// SENHA MESTRE
-// ============================================================
 
 function confirmarSenha() {
   const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
@@ -565,39 +607,50 @@ function excluirVeiculo() {
 }
 
 // ============================================================
-// CONSUMO E ABASTECIMENTO
+// LÓGICA CORRIGIDA DE CONSUMO E ABASTECIMENTO
 // ============================================================
 
 function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
-  const km = Number(kmAtual);
-  const l = Number(litros);
+  const km = limparNumero(kmAtual);
+  const l = limparNumero(litros);
 
   if (!placa || km <= 0 || l <= 0) return "-";
 
+  // Filtra os abastecimentos anteriores do mesmo veículo
   const anteriores = DB.abastecimento
     .map((registro, index) => ({ registro, index }))
-    .filter(item =>
-      item.index !== indiceIgnorado &&
-      item.registro[1] === placa &&
-      Number(item.registro[6]) < km
-    )
-    .sort((a, b) => Number(a.registro[6]) - Number(b.registro[6]));
+    .filter(item => {
+      const kmReg = limparNumero(item.registro[6]);
+      return item.index !== indiceIgnorado && item.registro[1] === placa && kmReg < km;
+    })
+    .sort((a, b) => limparNumero(a.registro[6]) - limparNumero(b.registro[6]));
 
   if (!anteriores.length) return "-";
 
   const anterior = anteriores[anteriores.length - 1].registro;
-  const kmRodado = km - Number(anterior[6]);
+  const kmAnterior = limparNumero(anterior[6]);
 
-  if (kmRodado <= 0) return "0.00";
+  const kmRodado = km - kmAnterior;
+  if (kmRodado <= 0) return "-";
+
   return (kmRodado / l).toFixed(2);
 }
 
 function recalcularConsumoHistorico() {
-  if (!Array.isArray(DB.abastecimento)) {
-    DB.abastecimento = [];
+  if (!Array.isArray(DB.abastecimento) || DB.abastecimento.length === 0) {
+    DB.abastecimento = DB.abastecimento || [];
     return;
   }
 
+  // Ordena por data e KM para manter a sequência lógica
+  DB.abastecimento.sort((a, b) => {
+    const dataA = new Date(a[0]).getTime() || 0;
+    const dataB = new Date(b[0]).getTime() || 0;
+    if (dataA !== dataB) return dataA - dataB;
+    return limparNumero(a[6]) - limparNumero(b[6]);
+  });
+
+  // Recalcula o consumo para cada registro
   DB.abastecimento.forEach((registro, index) => {
     registro[7] = calcularConsumoRegistro(registro[1], registro[6], registro[4], index);
   });
@@ -609,15 +662,16 @@ function registrarAbastecimento() {
   const data = document.getElementById("dataAbastecimento").value;
   const placa = document.getElementById("selectVeiculo").value;
   const motorista = document.getElementById("motorista").value.trim().toUpperCase();
-  const litros = Number(document.getElementById("litros").value);
-  const valor = Number(document.getElementById("valorTotal").value);
-  const kmAtual = Number(document.getElementById("kmAtual").value);
+  
+  const litros = document.getElementById("litros").value.trim();
+  const valor = document.getElementById("valorTotal").value.trim();
+  const kmAtual = document.getElementById("kmAtual").value.trim();
 
   const veiculo = DB.veiculos.find(v => v.placa === placa);
   const nome = veiculo?.nome || "";
 
-  if (!data || !placa || !motorista || litros <= 0 || valor < 0 || kmAtual <= 0) {
-    alert("PREENCHA TODOS OS CAMPOS CORRECTAMENTE.");
+  if (!data || !placa || !motorista || !litros || !valor || !kmAtual) {
+    alert("PREENCHA TODOS OS CAMPOS CORRETAMENTE.");
     return;
   }
 
@@ -643,7 +697,7 @@ function registrarAbastecimento() {
 }
 
 // ============================================================
-// MANUTENÇÃO COM ALARME OPCIONAL POR DATA/HORA E OBSERVAÇÃO
+// MANUTENÇÃO
 // ============================================================
 
 function toggleCamposAlarme() {
@@ -909,7 +963,7 @@ function criarModalEditarManutencao() {
 }
 
 // ============================================================
-// SISTEMA DE ORDENAÇÃO E EXIBIÇÃO DE TABELAS
+// TABELAS E EXIBIÇÃO
 // ============================================================
 
 function ordenarTabela(indiceColuna) {
@@ -977,8 +1031,8 @@ function preencherTabelaAbastecimento(dados) {
     let valB = b.item[c.indice];
 
     if ([4, 5, 6].includes(c.indice)) {
-      valA = Number(valA) || 0;
-      valB = Number(valB) || 0;
+      valA = limparNumero(valA);
+      valB = limparNumero(valB);
     } else if (c.indice === 7) {
       valA = valA === "-" ? -1 : Number(valA);
       valB = valB === "-" ? -1 : Number(valB);
@@ -998,8 +1052,8 @@ function preencherTabelaAbastecimento(dados) {
     tr.insertCell().textContent = r[1];
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
-    tr.insertCell().textContent = `${Number(r[4]).toFixed(2)} L`;
-    tr.insertCell().textContent = `R$ ${Number(r[5]).toFixed(2)}`;
+    tr.insertCell().textContent = `${r[4]} L`;
+    tr.insertCell().textContent = `R$ ${r[5]}`;
     tr.insertCell().textContent = `${r[6]} KM`;
     tr.insertCell().textContent = r[7] !== "-" ? `${r[7]} KM/L` : "-";
 
@@ -1106,7 +1160,7 @@ document.addEventListener("click", () => {
 });
 
 // ============================================================
-// EXCLUSÃO DE DADOS
+// EXCLUSÃO E EDIÇÃO DE ABASTECIMENTO
 // ============================================================
 
 function excluirAbastecimento(index) {
@@ -1139,10 +1193,6 @@ function excluirManutencao(index) {
   enviarParaGoogleSheets("excluirManutencao", { item });
   alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
 }
-
-// ============================================================
-// EDITAR ABASTECIMENTO
-// ============================================================
 
 function abrirModalEditarAbastecimento(index) {
   const registro = DB.abastecimento[index];
@@ -1190,12 +1240,12 @@ function salvarEdicaoAbastecimento() {
   const placa = document.getElementById("editSelectVeiculo").value;
   const nome = document.getElementById("editSelectVeiculo").selectedOptions[0]?.text.split(" - ")[0] || "";
   const motorista = document.getElementById("editMotorista").value.trim().toUpperCase();
-  const litros = Number(document.getElementById("editLitros").value);
-  const valor = Number(document.getElementById("editValorTotal").value);
-  const kmAtual = Number(document.getElementById("editKmAtual").value);
+  const litros = document.getElementById("editLitros").value.trim();
+  const valor = document.getElementById("editValorTotal").value.trim();
+  const kmAtual = document.getElementById("editKmAtual").value.trim();
 
-  if (!data || !placa || !motorista || litros <= 0 || kmAtual <= 0) {
-    alert("PREENCHA CORRETAMENTE DATA, VEÍCULO, MOTORISTA, LITROS E KM.");
+  if (!data || !placa || !motorista || !litros || !valor || !kmAtual) {
+    alert("PREENCHA CORRETAMENTE DATA, VEÍCULO, MOTORISTA, LITROS, VALOR E KM.");
     return;
   }
 
@@ -1240,17 +1290,17 @@ function criarModalEditarAbastecimento() {
           </div>
           <div class="form-group">
             <label for="editLitros">LITROS</label>
-            <input type="number" step="0.01" min="0" id="editLitros">
+            <input type="text" inputmode="numeric" id="editLitros" placeholder="0,000">
           </div>
         </div>
         <div class="grid-2">
           <div class="form-group">
             <label for="editValorTotal">VALOR TOTAL R$</label>
-            <input type="number" step="0.01" min="0" id="editValorTotal">
+            <input type="text" inputmode="numeric" id="editValorTotal" placeholder="0,00">
           </div>
           <div class="form-group">
             <label for="editKmAtual">KM ATUAL</label>
-            <input type="number" min="0" id="editKmAtual">
+            <input type="text" inputmode="numeric" id="editKmAtual" placeholder="0">
           </div>
         </div>
         <div class="btn-group">
@@ -1261,6 +1311,14 @@ function criarModalEditarAbastecimento() {
     </div>
   `;
   document.body.insertAdjacentHTML("beforeend", html);
+
+  const editLitros = document.getElementById("editLitros");
+  const editValor = document.getElementById("editValorTotal");
+  const editKm = document.getElementById("editKmAtual");
+
+  if (editLitros) editLitros.addEventListener("input", mascararLitros);
+  if (editValor) editValor.addEventListener("input", mascararValor);
+  if (editKm) editKm.addEventListener("input", mascararKM);
 }
 
 // ============================================================
@@ -1273,8 +1331,8 @@ function gerarHTMLPDF(dados, titulo) {
     return String(a[0]).localeCompare(String(b[0]));
   });
 
-  const totalLitros = registros.reduce((sum, r) => sum + (Number(r[4]) || 0), 0);
-  const totalValor = registros.reduce((sum, r) => sum + (Number(r[5]) || 0), 0);
+  const totalLitros = registros.reduce((sum, r) => sum + limparNumero(r[4]), 0);
+  const totalValor = registros.reduce((sum, r) => sum + limparNumero(r[5]), 0);
 
   let linhas = "";
   let veiculoAtual = "";
@@ -1290,8 +1348,8 @@ function gerarHTMLPDF(dados, titulo) {
         <td><strong>${escaparHTML(r[1])}</strong></td>
         <td>${escaparHTML(r[2])}</td>
         <td>${escaparHTML(r[3] || "-")}</td>
-        <td>${Number(r[4]).toFixed(2)} L</td>
-        <td>R$ ${Number(r[5]).toFixed(2)}</td>
+        <td>${escaparHTML(r[4])} L</td>
+        <td>R$ ${escaparHTML(r[5])}</td>
         <td>${escaparHTML(r[6])} KM</td>
         <td>${r[7] !== "-" ? `${escaparHTML(r[7])} KM/L` : "-"}</td>
       </tr>`;
@@ -1326,8 +1384,8 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 </div>
 <div class="cards">
   <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
-  <div class="card"><span>Total Combustível</span><strong>${totalLitros.toFixed(2)} L</strong></div>
-  <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toFixed(2)}</strong></div>
+  <div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
+  <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
 </div>
 <table>
 <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
