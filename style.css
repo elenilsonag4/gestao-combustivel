@@ -309,12 +309,8 @@ body.theme-dark .btn-primary {
   margin-bottom: 10px;
 }
 
-/* ============================================================
-   CONFIGURAÇÃO DE TABELAS COMPACTAS (SEM ESPAÇOS SOBRANDO)
-   ============================================================ */
 table {
-  width: auto !important;           /* Ocupa apenas o tamanho do conteúdo dos dados */
-  max-width: 100%;                  /* Impede que transborde a tela */
+  width: 100%;
   border-collapse: collapse;
   font-size: 12px;
   margin-top: 7px;
@@ -324,11 +320,15 @@ table {
 th {
   background: var(--primary-color);
   color: white;
-  padding: 6px 12px !important;     /* Espaçamento reduzido */
+  padding: 7px 10px;
   font-weight: 500;
   text-transform: uppercase;
   white-space: nowrap;
-  text-align: left !important;      /* Alinhamento à esquerda para aproximar colunas */
+}
+
+th.th-sortable {
+  cursor: pointer;
+  user-select: none;
 }
 
 body.theme-dark th {
@@ -336,20 +336,13 @@ body.theme-dark th {
 }
 
 td {
-  padding: 6px 12px !important;     /* Espaçamento interno reduzido */
+  padding: 7px 10px;
   border-bottom: 1px solid var(--table-border);
-  text-align: left !important;      /* Alinhamento à esquerda para tirar os vazios centrais */
+  text-align: center;
   position: relative;
   overflow: visible;
-  white-space: nowrap;              /* Não quebra linha nos números/valores */
+  white-space: nowrap;
   color: var(--text-color);
-}
-
-.cabecalho-veiculo td {
-  background-color: #e3f2fd;
-  font-weight: bold;
-  color: #0d47a1;
-  text-align: left !important;
 }
 
 td .btn,
@@ -700,17 +693,25 @@ input::placeholder {
     display: none !important;
   }
 
-  /* Tabela compacta alinhada para impressão */
+  /* Ajustes de compactação das tabelas */
   table {
-    width: auto !important;
-    max-width: 100% !important;
+    width: 100% !important;
     border-collapse: collapse !important;
     margin-top: 5px !important;
   }
 
   th, td {
-    padding: 4px 8px !important; /* Espaçamento bem ajustado no PDF */
+    padding: 4px 6px !important; /* Espaçamento interno reduzido para aproximar as colunas */
     font-size: 11px !important;
-    text-align: left !important;
   }
+
+  /* Distribuição equilibrada de largura para as colunas do relatório */
+  th:nth-child(1), td:nth-child(1) { width: 10%; } /* DATA */
+  th:nth-child(2), td:nth-child(2) { width: 10%; } /* PLACA */
+  th:nth-child(3), td:nth-child(3) { width: 22%; } /* VEÍCULO */
+  th:nth-child(4), td:nth-child(4) { width: 18%; } /* MOTORISTA */
+  th:nth-child(5), td:nth-child(5) { width: 10%; } /* LITROS */
+  th:nth-child(6), td:nth-child(6) { width: 10%; } /* VALOR */
+  th:nth-child(7), td:nth-child(7) { width: 10%; } /* KM */
+  th:nth-child(8), td:nth-child(8) { width: 10%; } /* CONSUMO */
 }
