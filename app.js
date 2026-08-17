@@ -2,7 +2,7 @@
 // CONFIGURAÇÕES GERAIS E AUTENTICAÇÃO
 // ============================================================
 
-const API_URL = "SUA_URL_DO_WEB_APP_AQUI"; // Cole aqui a URL /exec do Apps Script
+const API_URL = "AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec"; // Cole aqui a URL /exec do Apps Script
 
 async function fazerLogin(event) {
   if (event) event.preventDefault(); // Impede o envio padrão do formulário e o reload da página
