@@ -326,6 +326,11 @@ th {
   white-space: nowrap;
 }
 
+th.th-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
 body.theme-dark th {
   color: #121212;
 }
