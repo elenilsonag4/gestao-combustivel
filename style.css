@@ -647,7 +647,7 @@ input::placeholder {
 }
 
 /* ============================================================
-   NOVAS CORREÇÕES APLICADAS (ALTURA REDUZIDA E MARGENS DO PDF)
+   CORREÇÃO DE VISUALIZAÇÃO DO HISTÓRICO (TELA E PDF COM 20% DE MARGEM)
    ============================================================ */
 
 /* Reduzir altura de elementos gerais em 30% */
@@ -673,19 +673,29 @@ td {
   line-height: 1 !important;
 }
 
-/* Margens de 18% para o PDF gerado via impressão */
+/* Margens de 20% de cada lado (ocupando 60% da largura) na visualização normal e no PDF */
+.container {
+  max-width: 60% !important;
+  width: 60% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
 @media print {
   body {
-    margin: 0 18% !important;
+    margin: 0 !important;
   }
   .container {
-    max-width: 100% !important;
-    margin: 0 !important;
+    max-width: 60% !important;
+    width: 60% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 
 @media (max-width: 768px) {
   body { padding: 10px; }
+  .container { max-width: 95% !important; width: 95% !important; }
   header { min-height: 65px; flex-direction: column; text-align: center; }
   .logo { position: static; margin-bottom: 10px; }
   .user-bar { position: static; margin-top: 10px; justify-content: center; }
