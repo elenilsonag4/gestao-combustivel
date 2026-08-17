@@ -1,8 +1,8 @@
 /* ============================================================
-   1. VARIÁVEIS DE TEMA: CLARO, MÉDIO E ESCURO
+   DEFINIÇÃO DE VARIÁVEIS DE TEMA (CLARO, MÉDIO E ESCURO)
    ============================================================ */
 :root {
-  /* TEMA CLARO */
+  /* TEMA CLARO (Padrão) */
   --bg-color: #f8f6f4;
   --text-color: #333333;
   --primary-color: #1565c0;
@@ -11,10 +11,10 @@
   --header-bg: #f8f6f4;
   --border-color: #e0e0e0;
   --input-bg: #ffffff;
-  --input-text: #333;
+  --input-text: #333333;
   --input-border: #cccccc;
   --readonly-bg: #e9ecef;
-  --readonly-text: #555;
+  --readonly-text: #555555;
   --label-color: #555555;
   --table-border: #eeeeee;
   --table-hover: #f7fbff;
@@ -28,7 +28,7 @@
 }
 
 body.theme-medium {
-  /* TEMA MÉDIO */
+  /* TEMA MÉDIO (Tons de Azul e Cinza Confortável) */
   --bg-color: #263238;
   --text-color: #eceff1;
   --primary-color: #0288d1;
@@ -54,59 +54,45 @@ body.theme-medium {
 }
 
 body.theme-dark {
-  /* TEMA ESCURO */
+  /* TEMA ESCURO (Dark Mode Total) */
   --bg-color: #121212;
   --text-color: #e0e0e0;
   --primary-color: #64b5f6;
   --primary-hover: #42a5f5;
   --card-bg: #1e1e1e;
   --header-bg: #121212;
-  --border-color: #333;
+  --border-color: #333333;
   --input-bg: #2c2c2c;
   --input-text: #ffffff;
-  --input-border: #444;
+  --input-border: #444444;
   --readonly-bg: #3a3a3a;
   --readonly-text: #888888;
   --label-color: #aaaaaa;
-  --table-border: #333;
+  --table-border: #333333;
   --table-hover: #252525;
   --tab-bg: #2c2c2c;
   --tab-hover: #383838;
   --alarme-bg: #252525;
-  --alarme-border: #444;
+  --alarme-border: #444444;
   --suggestion-bg: #2c2c2c;
   --suggestion-hover: #0d47a1;
   --close-color: #aaaaaa;
 }
 
-/* ============================================================
-   2. ESTRUTURA GERAL E LAYOUT
-   ============================================================ */
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   font-family: 'Roboto', sans-serif;
   background: var(--bg-color);
-  color: var(--text-color);
   margin: 0;
-  padding: 34px 0; /* sem padding lateral pra centralizar */
+  padding: 34px;
+  color: var(--text-color);
   transition: background-color 0.3s ease, color 0.3s ease;
-  display: flex;
-  justify-content: center; /* centraliza o container */
 }
 
-/* CONTAINER PRINCIPAL: 60% DA TELA CENTRALIZADO */
 .container {
-  width: 60%!important;
-  max-width: 60%!important;
-  min-width: 320px;
-  margin: 0 auto!important;
-  background: var(--card-bg);
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  max-width: 950px;
+  margin: auto;
 }
 
 header {
@@ -148,8 +134,13 @@ h1 {
   color: var(--primary-color);
 }
 
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
 .section-title {
-  background: var(--primary-color);
+  background: #1565c0;
   color: white;
   padding: 12px;
   border-radius: 6px;
@@ -163,6 +154,14 @@ h1 {
   width: 100%;
 }
 
+body.theme-dark .section-title {
+  background: #0d47a1;
+}
+
+body.theme-medium .section-title {
+  background: #0277bd;
+}
+
 .card {
   background: var(--card-bg);
   padding: 20px;
@@ -172,9 +171,6 @@ h1 {
   transition: background-color 0.3s ease;
 }
 
-/* ============================================================
-   3. FORMULÁRIOS E GRID
-   ============================================================ */
 h2 {
   color: var(--primary-color);
   border-bottom: 2px solid var(--primary-color);
@@ -199,7 +195,8 @@ label {
   text-transform: uppercase;
 }
 
-input, select {
+input,
+select {
   width: 100%;
   padding: 10px;
   border: 1px solid var(--input-border);
@@ -208,9 +205,29 @@ input, select {
   font-family: 'Roboto', sans-serif;
   background: var(--input-bg);
   color: var(--input-text);
+  box-sizing: border-box;
 }
 
-input:focus, select:focus {
+/* Tamanho de checkboxes */
+input[type="checkbox"] {
+  width: auto !important;
+  margin: 0;
+  cursor: pointer;
+}
+
+.checkbox-alarme-label {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  color: var(--primary-color);
+  user-select: none;
+}
+
+input:focus,
+select:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(21,101,192,.10);
@@ -222,35 +239,24 @@ input[readonly] {
   cursor: not-allowed;
 }
 
-input::placeholder {
-  text-transform: uppercase;
-}
-
-input[type="checkbox"] {
-  width: auto!important;
-  margin: 0;
-  cursor: pointer;
-}
-
+/* ESTRUTURA DE GRID CORRIGIDA (2 COLUNAS) */
 .grid-2 {
-  display: grid!important;
-  grid-template-columns: 1fr 1fr!important;
-  gap: 15px!important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 15px !important;
   width: 100%;
 }
 
-/* ============================================================
-   4. BOTÕES
-   ============================================================ */
+/* BOTÕES PROPORCIONAIS */
 .btn-group {
-  display: flex!important;
-  gap: 10px!important;
-  margin-top: 20px!important;
+  display: flex !important;
+  gap: 10px !important;
+  margin-top: 20px !important;
   width: 100%;
 }
 
-.btn-group.btn {
-  flex: 1!important;
+.btn-group .btn {
+  flex: 1 !important;
 }
 
 .btn {
@@ -260,45 +266,50 @@ input[type="checkbox"] {
   font-weight: 700;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color.2s, transform.1s;
+  transition: background-color .2s, transform .1s;
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.btn:active { transform: translateY(1px); }
+.btn:active {
+  transform: translateY(1px);
+}
 
 .btn-primary {
   background-color: var(--primary-color);
   color: #fff;
 }
-.btn-primary:hover { background-color: var(--primary-hover); }
-body.theme-dark.btn-primary { color: #121212; }
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+body.theme-dark .btn-primary {
+  color: #121212;
+}
 
 .btn-danger {
   background-color: #c62828;
   color: #fff;
 }
-.btn-danger:hover { background-color: #8e0000; }
+
+.btn-danger:hover {
+  background-color: #8e0000;
+}
 
 .btn-secondary {
   background-color: #616161;
   color: #fff;
 }
-.btn-secondary:hover { background-color: #424242; }
 
-.btn-sm {
-  padding: 6px 10px;
-  font-size: 11px;
+.btn-secondary:hover {
+  background-color: #424242;
 }
 
-/* ============================================================
-   5. TABELAS E TABS
-   ============================================================ */
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
+.report-buttons {
+  margin-bottom: 15px;
 }
 
 table {
@@ -317,17 +328,29 @@ th {
   text-transform: uppercase;
   white-space: nowrap;
 }
-body.theme-dark th { color: #121212; }
+
+body.theme-dark th {
+  color: #121212;
+}
 
 td {
   padding: 10px;
   border-bottom: 1px solid var(--table-border);
   text-align: center;
+  position: relative;
+  overflow: visible;
   white-space: nowrap;
   color: var(--text-color);
 }
 
-tbody tr:hover { background: var(--table-hover); }
+tbody tr:hover {
+  background: var(--table-hover);
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
 
 .tabs-container {
   display: flex;
@@ -346,27 +369,31 @@ tbody tr:hover { background: var(--table-hover); }
   cursor: pointer;
   font-weight: bold;
   font-size: 13px;
-  transition: all.3s ease;
+  transition: all .3s ease;
 }
 
-.tab-btn:hover { background-color: var(--tab-hover); }
+.tab-btn:hover {
+  background-color: var(--tab-hover);
+}
 
 .tab-btn.active {
   background-color: var(--primary-color);
   color: #fff;
   border-bottom: 3px solid var(--primary-hover);
 }
-body.theme-dark.tab-btn.active { color: #121212; }
 
-/* ============================================================
-   6. MODAIS E OVERLAYS
-   ============================================================ */
+body.theme-dark .tab-btn.active {
+  color: #121212;
+}
+
 .modal {
   display: none;
   position: fixed;
   z-index: 1000;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
   background-color: rgba(0,0,0,.5);
   padding: 20px 0;
@@ -384,23 +411,58 @@ body.theme-dark.tab-btn.active { color: #121212; }
   box-shadow: 0 5px 15px rgba(0,0,0,.3);
 }
 
-.close {
-  position: absolute;
-  right: 15px; top: 8px;
-  color: var(--close-color);
-  border: 0; background: transparent;
-  font-size: 28px; font-weight: bold;
-  cursor: pointer; line-height: 1;
+.login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
 }
-.close:hover { color: var(--text-color); }
+
+.login-card {
+  background: var(--card-bg);
+  color: var(--text-color);
+  padding: 35px 30px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+.login-logo {
+  height: 60px;
+  margin-bottom: 15px;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 10px;
+  border: 1px solid #ef9a9a;
+}
 
 .loading-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.7);
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   z-index: 3000;
 }
 
@@ -408,38 +470,43 @@ body.theme-dark.tab-btn.active { color: #121212; }
   border: 4px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top: 4px solid var(--primary-color);
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   animation: spin 1s linear infinite;
 }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* ============================================================
-   7. COMPONENTES EXTRAS
-   ============================================================ */
-.alarme-box {
-  background: var(--alarme-bg);
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px dashed var(--alarme-border);
-  margin-bottom: 15px;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.checkbox-alarme-label {
-  display: flex!important;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
+.close {
+  position: absolute;
+  right: 15px;
+  top: 8px;
+  color: var(--close-color);
+  border: 0;
+  background: transparent;
+  font-size: 28px;
   font-weight: bold;
-  font-size: 13px;
-  color: var(--primary-color);
-  user-select: none;
+  cursor: pointer;
+  line-height: 1;
 }
 
-.dropdown { position: relative; display: inline-block; }
+.close:hover {
+  color: var(--text-color);
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
 .dropdown-content {
   display: none;
   position: absolute;
-  right: 0; top: calc(100% + 4px);
+  right: 0;
+  top: calc(100% + 4px);
   background-color: var(--card-bg);
   min-width: 130px;
   box-shadow: 0 8px 16px rgba(0,0,0,.2);
@@ -448,7 +515,11 @@ body.theme-dark.tab-btn.active { color: #121212; }
   border: 1px solid var(--input-border);
   overflow: hidden;
 }
-.dropdown-content.show { display: block; }
+
+.dropdown-content.show {
+  display: block;
+}
+
 .dropdown-content button {
   color: var(--text-color);
   padding: 10px 12px;
@@ -461,7 +532,10 @@ body.theme-dark.tab-btn.active { color: #121212; }
   font-size: 12px;
   text-transform: uppercase;
 }
-.dropdown-content button:hover { background-color: var(--tab-hover); }
+
+.dropdown-content button:hover {
+  background-color: var(--tab-hover);
+}
 
 .checkbox-list {
   max-height: 300px;
@@ -471,56 +545,163 @@ body.theme-dark.tab-btn.active { color: #121212; }
   border-radius: 5px;
   padding: 10px;
 }
-.checkbox-item { padding: 8px; margin-bottom: 5px; border-radius: 4px; }
-.checkbox-item:hover { background: var(--table-hover); }
-.checkbox-item label { display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; }
 
-.autocomplete-wrapper { position: relative; width: 100%; }
+.checkbox-item {
+  padding: 8px;
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+
+.checkbox-item:hover {
+  background: var(--table-hover);
+}
+
+.checkbox-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-item input {
+  width: auto;
+}
+
+input::placeholder {
+  text-transform: uppercase;
+}
+
+.alarme-box {
+  background: var(--alarme-bg);
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px dashed var(--alarme-border);
+  margin-bottom: 15px;
+}
+
+/* ============================================================
+   ESTILOS DO AUTOCOMPLETE / SUGESTÕES DE MOTORISTA
+   ============================================================ */
+
+.autocomplete-wrapper {
+  position: relative;
+  width: 100%;
+}
+
 .suggestions-box {
   display: none;
   position: absolute;
-  top: 100%; left: 0; right: 0;
+  top: 100%;
+  left: 0;
+  right: 0;
   background-color: var(--suggestion-bg);
   border: 1px solid var(--input-border);
   border-top: none;
-  border-radius: 0 0 4px 4px;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
   max-height: 180px;
   overflow-y: auto;
   z-index: 1050;
   box-shadow: 0 4px 10px rgba(0,0,0,0.15);
 }
-.suggestions-box.show { display: block; }
+
+.suggestions-box.show {
+  display: block;
+}
+
 .suggestion-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 12px; font-size: 13px; font-weight: bold;
-  color: var(--text-color); cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--text-color);
+  cursor: pointer;
   border-bottom: 1px solid var(--border-color);
 }
-.suggestion-item:hover { background-color: var(--suggestion-hover); color: #ffffff; }
-.btn-delete-suggestion {
-  color: #ef5350; font-weight: bold; font-size: 14px;
-  padding: 2px 6px; border-radius: 3px; cursor: pointer;
-  transition: background 0.2s; user-select: none;
+
+.suggestion-item:last-child {
+  border-bottom: none;
 }
-.btn-delete-suggestion:hover { background-color: rgba(239, 83, 80, 0.2); }
+
+.suggestion-item:hover {
+  background-color: var(--suggestion-hover);
+  color: #ffffff;
+}
+
+.btn-delete-suggestion {
+  color: #ef5350;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.btn-delete-suggestion:hover {
+  background-color: rgba(239, 83, 80, 0.2);
+}
 
 /* ============================================================
-   8. RESPONSIVO
+   CORREÇÃO DE VISUALIZAÇÃO DO HISTÓRICO (TELA E PDF COM 20% DE MARGEM)
    ============================================================ */
-@media (max-width: 768px) {
-  body { padding: 10px 0; }
 
+/* Reduzir altura de elementos gerais em 30% */
+header, 
+.card, 
+.section-title, 
+.form-group, 
+input, 
+select, 
+.btn, 
+.tab-btn, 
+th, 
+td {
+  padding-top: calc(10px * 0.7) !important;
+  padding-bottom: calc(10px * 0.7) !important;
+  min-height: auto !important;
+}
+
+/* Reduzir altura do botão MAIS (action-btn) em 45% */
+.action-btn {
+  padding: calc(10px * 0.55) !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+/* Margens de 20% de cada lado (ocupando 60% da largura) na visualização normal e no PDF */
 .container {
-    width: 90%!important; /* em mobile fica 90% */
-    max-width: 90%!important;
-  }
+  max-width: 60% !important;
+  width: 60% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
 
+@media print {
+  body {
+    margin: 0 !important;
+  }
+  .container {
+    max-width: 60% !important;
+    width: 60% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body { padding: 10px; }
+  .container { max-width: 95% !important; width: 95% !important; }
   header { min-height: 65px; flex-direction: column; text-align: center; }
- .logo { position: static; margin-bottom: 10px; }
- .user-bar { position: static; margin-top: 10px; justify-content: center; }
+  .logo { position: static; margin-bottom: 10px; }
+  .user-bar { position: static; margin-top: 10px; justify-content: center; }
   h1 { font-size: 18px; padding-left: 0; }
- .grid-2 { grid-template-columns: 1fr!important; }
- .btn-group { flex-direction: column; }
- .tabs-container { flex-direction: column; gap: 3px; }
- .tab-btn { border-radius: 5px; }
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .btn-group { flex-direction: column; }
+  .tabs-container { flex-direction: column; gap: 3px; }
+  .tab-btn { border-radius: 5px; }
 }
