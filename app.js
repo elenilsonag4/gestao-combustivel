@@ -1327,7 +1327,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// RELATÓRIOS PDF (COM BOTÃO DE VOLTAR AO INÍCIO)
+// RELATÓRIOS PDF (COM BOTÃO DE VOLTAR AO INÍCIO E MARGEM DE 20%)
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
@@ -1367,13 +1367,14 @@ function gerarHTMLPDF(dados, titulo) {
 <meta charset="UTF-8">
 <title>${escaparHTML(titulo)}</title>
 <style>
-body{font-family:Arial,sans-serif;margin:30px;color:#2c3e50}
-h1{color:#1565c0;font-size:20px}
+body{font-family:Arial,sans-serif;margin:0;padding:30px 0;background:#f8f6f4;color:#2c3e50}
+.report-container{max-width:60%;width:60%;margin:0 auto;background:#ffffff;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
+h1{color:#1565c0;font-size:20px;margin-top:0}
 .header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
 .btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
 .btn-voltar:hover{background:#0d47a1}
 .cards{display:flex;gap:15px;margin-bottom:25px}
-.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px}
+.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}
 .card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
 .card strong{font-size:16px;color:#1565c0}
 table{width:100%;border-collapse:collapse;font-size:11px}
@@ -1381,28 +1382,31 @@ th{background:#1565c0;color:#fff;padding:9px}
 td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 .cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
 @media print{
+  body{background:#fff;padding:0}
+  .report-container{max-width:60% !important;width:60% !important;margin:0 auto !important;box-shadow:none;padding:0;border-radius:0}
   .btn-voltar{display:none}
   @page{margin:1.5cm}
-  body{margin:0}
 }
 </style>
 </head>
 <body>
-<div class="header">
-  <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
-  <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
-  <div>${escaparHTML(titulo)}</div>
-  <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
+<div class="report-container">
+  <div class="header">
+    <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
+    <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
+    <div>${escaparHTML(titulo)}</div>
+    <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
+  </div>
+  <div class="cards">
+    <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
+    <div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
+    <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+  </div>
+  <table>
+  <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
+  <tbody>${linhas}</tbody>
+  </table>
 </div>
-<div class="cards">
-  <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
-  <div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
-  <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
-</div>
-<table>
-<thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
-<tbody>${linhas}</tbody>
-</table>
 </body>
 </html>`;
 }
@@ -1442,13 +1446,14 @@ function gerarHTMLPDFManutencao(dados, titulo) {
 <meta charset="UTF-8">
 <title>${escaparHTML(titulo)}</title>
 <style>
-body{font-family:Arial,sans-serif;margin:30px;color:#2c3e50}
-h1{color:#1565c0;font-size:20px}
+body{font-family:Arial,sans-serif;margin:0;padding:30px 0;background:#f8f6f4;color:#2c3e50}
+.report-container{max-width:60%;width:60%;margin:0 auto;background:#ffffff;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
+h1{color:#1565c0;font-size:20px;margin-top:0}
 .header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
 .btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
 .btn-voltar:hover{background:#0d47a1}
 .cards{display:flex;gap:15px;margin-bottom:25px}
-.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px}
+.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}
 .card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
 .card strong{font-size:16px;color:#1565c0}
 table{width:100%;border-collapse:collapse;font-size:11px}
@@ -1456,26 +1461,29 @@ th{background:#1565c0;color:#fff;padding:9px}
 td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 .cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
 @media print{
+  body{background:#fff;padding:0}
+  .report-container{max-width:60% !important;width:60% !important;margin:0 auto !important;box-shadow:none;padding:0;border-radius:0}
   .btn-voltar{display:none}
   @page{margin:1.5cm}
-  body{margin:0}
 }
 </style>
 </head>
 <body>
-<div class="header">
-  <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
-  <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
-  <div>${escaparHTML(titulo)}</div>
-  <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
+<div class="report-container">
+  <div class="header">
+    <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
+    <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
+    <div>${escaparHTML(titulo)}</div>
+    <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
+  </div>
+  <div class="cards">
+    <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
+  </div>
+  <table>
+  <thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
+  <tbody>${linhas}</tbody>
+  </table>
 </div>
-<div class="cards">
-  <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
-</div>
-<table>
-<thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
-<tbody>${linhas}</tbody>
-</table>
 </body>
 </html>`;
 }
