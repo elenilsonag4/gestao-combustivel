@@ -1392,7 +1392,7 @@ td{padding:7px;border-bottom:1px solid #eee;text-align:center}
 <body>
 <div class="report-container">
   <div class="header">
-    <a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AU SISTEMA</a>
+    <a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a>
     <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
     <div>${escaparHTML(titulo)}</div>
     <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
