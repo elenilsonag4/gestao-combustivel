@@ -1327,7 +1327,7 @@ function criarModalEditarAbastecimento() {
 }
 
 // ============================================================
-// RELATÓRIOS PDF (COM BOTÃO DE VOLTAR AO INÍCIO E MARGEM DE 20%)
+// RELATÓRIOS E IMPRESSÃO (PDF)
 // ============================================================
 
 function gerarHTMLPDF(dados, titulo) {
@@ -1367,23 +1367,23 @@ function gerarHTMLPDF(dados, titulo) {
 <meta charset="UTF-8">
 <title>${escaparHTML(titulo)}</title>
 <style>
-body{font-family:Arial,sans-serif;margin:0;padding:30px 0;background:#f8f6f4;color:#2c3e50}
-.report-container{max-width:60%;width:60%;margin:0 auto;background:#ffffff;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
+body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}
+.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
 h1{color:#1565c0;font-size:20px;margin-top:0}
 .header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
-.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
+.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
 .btn-voltar:hover{background:#0d47a1}
 .cards{display:flex;gap:15px;margin-bottom:25px}
 .card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}
 .card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
-.card strong{font-size:16px;color:#1565c0}
+.card strong{font-size:15px;color:#1565c0}
 table{width:100%;border-collapse:collapse;font-size:11px}
-th{background:#1565c0;color:#fff;padding:9px}
-td{padding:8px;border-bottom:1px solid #eee;text-align:center}
+th{background:#1565c0;color:#fff;padding:8px}
+td{padding:7px;border-bottom:1px solid #eee;text-align:center}
 .cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
 @media print{
   body{background:#fff;padding:0}
-  .report-container{max-width:60% !important;width:60% !important;margin:0 auto !important;box-shadow:none;padding:0;border-radius:0}
+  .report-container{max-width:100% !important;margin:0 !important;box-shadow:none;padding:0;border-radius:0}
   .btn-voltar{display:none}
   @page{margin:1.5cm}
 }
@@ -1392,7 +1392,7 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 <body>
 <div class="report-container">
   <div class="header">
-    <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
+    <a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AU SISTEMA</a>
     <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
     <div>${escaparHTML(titulo)}</div>
     <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
@@ -1446,23 +1446,23 @@ function gerarHTMLPDFManutencao(dados, titulo) {
 <meta charset="UTF-8">
 <title>${escaparHTML(titulo)}</title>
 <style>
-body{font-family:Arial,sans-serif;margin:0;padding:30px 0;background:#f8f6f4;color:#2c3e50}
-.report-container{max-width:60%;width:60%;margin:0 auto;background:#ffffff;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
+body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}
+.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
 h1{color:#1565c0;font-size:20px;margin-top:0}
 .header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
-.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
+.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
 .btn-voltar:hover{background:#0d47a1}
 .cards{display:flex;gap:15px;margin-bottom:25px}
 .card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}
 .card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
-.card strong{font-size:16px;color:#1565c0}
+.card strong{font-size:15px;color:#1565c0}
 table{width:100%;border-collapse:collapse;font-size:11px}
-th{background:#1565c0;color:#fff;padding:9px}
-td{padding:8px;border-bottom:1px solid #eee;text-align:center}
+th{background:#1565c0;color:#fff;padding:8px}
+td{padding:7px;border-bottom:1px solid #eee;text-align:center}
 .cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
 @media print{
   body{background:#fff;padding:0}
-  .report-container{max-width:60% !important;width:60% !important;margin:0 auto !important;box-shadow:none;padding:0;border-radius:0}
+  .report-container{max-width:100% !important;margin:0 !important;box-shadow:none;padding:0;border-radius:0}
   .btn-voltar{display:none}
   @page{margin:1.5cm}
 }
@@ -1471,7 +1471,7 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 <body>
 <div class="report-container">
   <div class="header">
-    <a href="./" class="btn-voltar">⬅ VOLTAR AO INÍCIO</a>
+    <a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a>
     <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
     <div>${escaparHTML(titulo)}</div>
     <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
@@ -1489,16 +1489,14 @@ td{padding:8px;border-bottom:1px solid #eee;text-align:center}
 }
 
 function abrirNovaAbaComPDF(html) {
-  window.onpopstate = null;
-
-  const aba = window.open("", "_self");
-  if (!aba) {
-    alert("O navegador bloqueou a janela. Permita pop-ups.");
+  const novaJanela = window.open("", "_blank");
+  if (!novaJanela) {
+    alert("O navegador bloqueou a janela do relatório. Por favor, permita pop-ups.");
     return;
   }
-  aba.document.open();
-  aba.document.write(html);
-  aba.document.close();
+  novaJanela.document.open();
+  novaJanela.document.write(html);
+  novaJanela.document.close();
 }
 
 function gerarPDFGeral() {
@@ -1568,6 +1566,10 @@ function gerarPDFSeletiva() {
 
   fecharModalSeletiva();
 }
+
+// ============================================================
+// LISTENERS PARA FECHAR MODAIS AO CLICAR FORA OU ESC
+// ============================================================
 
 window.addEventListener("click", (event) => {
   document.querySelectorAll(".modal").forEach(modal => {
