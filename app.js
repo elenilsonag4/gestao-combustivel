@@ -1489,14 +1489,10 @@ td{padding:7px;border-bottom:1px solid #eee;text-align:center}
 }
 
 function abrirNovaAbaComPDF(html) {
-  const novaJanela = window.open("", "_blank");
-  if (!novaJanela) {
-    alert("O navegador bloqueou a janela do relatório. Por favor, permita pop-ups.");
-    return;
-  }
-  novaJanela.document.open();
-  novaJanela.document.write(html);
-  novaJanela.document.close();
+  // Sobrescreve o documento atual para abrir na mesma aba
+  document.open();
+  document.write(html);
+  document.close();
 }
 
 function gerarPDFGeral() {
