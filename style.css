@@ -753,3 +753,40 @@ input::placeholder {
     white-space: nowrap;
   }
 }
+
+/* ============================================================
+   ESTILOS DE ALARME DE MANUTENÇÃO (KM ATINGIDO / ULTRAPASSADO)
+   ============================================================ */
+
+td.alarme-vermelho {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
+  font-weight: bold !important;
+  border: 1px solid #ef9a9a !important;
+  animation: pulsoAlarme 2s infinite;
+}
+
+.alarme-vermelho-texto {
+  color: #c62828 !important;
+  font-weight: bold !important;
+}
+
+@keyframes pulsoAlarme {
+  0% {
+    background-color: #ffebee;
+  }
+  50% {
+    background-color: #ffcdd2;
+  }
+  100% {
+    background-color: #ffebee;
+  }
+}
+
+/* Suporte para Temas Escuro e Médio */
+body.theme-dark td.alarme-vermelho,
+body.theme-medium td.alarme-vermelho {
+  background-color: #5c0000 !important;
+  color: #ff8a80 !important;
+  border-color: #b71c1c !important;
+}
