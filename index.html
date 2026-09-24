@@ -183,12 +183,18 @@
 
       <div class="grid-2">
         <div class="form-group">
-          <label for="kmManutencao">KM</label>
-          <input type="number" id="kmManutencao">
+          <label for="kmManutencao" id="labelKmManutencao">KM / HORAS ATUAL</label>
+          <input type="number" id="kmManutencao" placeholder="LEITURA ATUAL">
         </div>
         <div class="form-group">
-          <label for="proximaTrocaManutencao">PRÓXIMA TROCA (KM)</label>
-          <input type="number" id="proximaTrocaManutencao">
+          <label for="proximaTrocaManutencao">PRÓXIMA TROCA</label>
+          <div style="display:flex; gap:5px;">
+            <input type="number" id="proximaTrocaManutencao" placeholder="VALOR" style="flex:1;">
+            <select id="unidadeProximaTroca" style="width:90px;" onchange="atualizarLabelKm()">
+              <option value="KM">KM</option>
+              <option value="H">HORAS</option>
+            </select>
+          </div>
         </div>
       </div>
 

@@ -754,39 +754,35 @@ input::placeholder {
   }
 }
 
-/* ============================================================
-   ESTILOS DE ALARME DE MANUTENÇÃO (KM ATINGIDO / ULTRAPASSADO)
-   ============================================================ */
 
-td.alarme-vermelho {
-  background-color: #ffebee !important;
-  color: #c62828 !important;
-  font-weight: bold !important;
-  border: 1px solid #ef9a9a !important;
-  animation: pulsoAlarme 2s infinite;
+/* STATUS CORES PRÓXIMA TROCA */
+.status-verde {
+  background-color: #2e7d32!important;
+  color: white!important;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 11px;
 }
-
-.alarme-vermelho-texto {
-  color: #c62828 !important;
-  font-weight: bold !important;
+.status-laranja {
+  background-color: #ef6c00!important;
+  color: white!important;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 11px;
 }
-
-@keyframes pulsoAlarme {
-  0% {
-    background-color: #ffebee;
-  }
-  50% {
-    background-color: #ffcdd2;
-  }
-  100% {
-    background-color: #ffebee;
-  }
+.status-vermelho {
+  background-color: #c62828!important;
+  color: white!important;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 11px;
+  animation: pulse 1.5s infinite;
 }
-
-/* Suporte para Temas Escuro e Médio */
-body.theme-dark td.alarme-vermelho,
-body.theme-medium td.alarme-vermelho {
-  background-color: #5c0000 !important;
-  color: #ff8a80 !important;
-  border-color: #b71c1c !important;
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
 }

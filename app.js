@@ -663,6 +663,55 @@ function recalcularConsumoHistorico() {
   salvarDB();
 }
 
+function atualizarLabelKm() {
+  const unidade = document.getElementById("unidadeProximaTroca")?.value || "KM";
+  const label = document.getElementById("labelKmManutencao");
+  if (label) label.textContent = unidade === "H"? "HORAS ATUAL (HORÍMETRO)" : "KM ATUAL";
+}
+function atualizarLabelKmEdit() {
+  const unidade = document.getElementById("editUnidadeProximaTroca")?.value || "KM";
+  const label = document.getElementById("editLabelKmManutencao");
+  if (label) label.textContent = unidade === "H"? "HORAS ATUAL" : "KM ATUAL";
+}
+
+function getKmAtualVeiculo(placa) {
+  let maxKm = 0;
+  DB.abastecimento.forEach(r => {
+    if (r[1] === placa) {
+      const km = limparNumero(r[6]);
+      if (km > maxKm) maxKm = km;
+    }
+  });
+  DB.manutencao.forEach(r => {
+    if (r[2] === placa) {
+      const km = Number(r[5]) || 0;
+      if (km > maxKm) maxKm = km;
+    }
+  });
+  return maxKm;
+}
+
+function calcularStatusProxima(placa, kmManut, proxima, unidade) {
+  if (!proxima || proxima === "" ) return { classe: "", texto: "-", restante: null };
+
+  const proxNum = Number(proxima);
+  const kmAtual = getKmAtualVeiculo(placa);
+  // Se não tem km atual, usa o km da manutenção como base
+  const baseAtual = kmAtual > 0? kmAtual : Number(kmManut) || 0;
+
+  const restante = proxNum - baseAtual;
+
+  if (unidade === "H") {
+    if (restante <= 0) return { classe: "status-vermelho", texto: `VENCIDO`, restante };
+    if (restante <= 50) return { classe: "status-laranja", texto: `${restante}H RESTANTES`, restante };
+    return { classe: "status-verde", texto: `${restante}H RESTANTES`, restante };
+  } else {
+    if (restante <= 0) return { classe: "status-vermelho", texto: `VENCIDO`, restante };
+    if (restante <= 1000) return { classe: "status-laranja", texto: `${restante}KM REST.`, restante };
+    return { classe: "status-verde", texto: `${restante}KM REST.`, restante };
+  }
+}
+
 function registrarAbastecimento() {
   const data = document.getElementById("dataAbastecimento").value;
   const placa = document.getElementById("selectVeiculo").value;
@@ -770,21 +819,23 @@ function registrarManutencao() {
   const placa = document.getElementById("selectVeiculoManutencao").value;
   const nome = document.getElementById("nomeVeiculoManutencao").value;
   const tipo = document.getElementById("tipoManutencao").value.trim().toUpperCase();
-  const km = document.getElementById("kmManutencao").value ? Number(document.getElementById("kmManutencao").value) : "";
-  const proximaTroca = document.getElementById("proximaTrocaManutencao").value ? Number(document.getElementById("proximaTrocaManutencao").value) : "";
-  
-  const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
-  const dataAlarme = temAlarme ? document.getElementById("dataAlarme").value : "";
-  const horaAlarme = temAlarme ? (document.getElementById("horaAlarme")?.value || "") : "";
-  const obsAlarme = temAlarme ? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
+  const km = document.getElementById("kmManutencao").value? Number(document.getElementById("kmManutencao").value) : "";
+  const proximaTroca = document.getElementById("proximaTrocaManutencao").value? Number(document.getElementById("proximaTrocaManutencao").value) : "";
+  const unidade = document.getElementById("unidadeProximaTroca")?.value || "KM";
 
-  if (!data || !placa || !tipo) {
+  const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
+  const dataAlarme = temAlarme? document.getElementById("dataAlarme").value : "";
+  const horaAlarme = temAlarme? (document.getElementById("horaAlarme")?.value || "") : "";
+  const obsAlarme = temAlarme? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
+
+  if (!data ||!placa ||!tipo) {
     alert("PREENCHA DATA, VEÍCULO E TIPO.");
     return;
   }
 
   const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
-  const registro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme];
+  // NOVO: Adicionado unidade no índice 9
+  const registro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme, unidade];
 
   DB.manutencao.push(registro);
   salvarDB();
@@ -828,6 +879,8 @@ function abrirModalEditarManutencao(index) {
   document.getElementById("editTipoManutencao").value = registro[4] || "";
   document.getElementById("editKmManutencao").value = registro[5] ?? "";
   document.getElementById("editProximaTrocaManutencao").value = registro[6] ?? "";
+  document.getElementById("editUnidadeProximaTroca").value = registro[9] || "KM";
+  atualizarLabelKmEdit();
 
   const temAlarme = Boolean(registro[7] || registro[8]);
   const chk = document.getElementById("editChkAtivarAlarme");
@@ -881,7 +934,8 @@ function salvarEdicaoManutencao() {
   if (!confirmarSenha()) return;
 
   const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
-  const novoRegistro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme];
+  const unidade = document.getElementById("editUnidadeProximaTroca")?.value || "KM";
+  const novoRegistro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme, unidade];
 
   DB.manutencao[index] = novoRegistro;
   salvarDB();
@@ -925,14 +979,20 @@ function criarModalEditarManutencao() {
           <input type="text" id="editTipoManutencao">
         </div>
 
-        <div class="grid-2">
+                <div class="grid-2">
           <div class="form-group">
-            <label for="editKmManutencao">KM</label>
+            <label for="editKmManutencao" id="editLabelKmManutencao">KM / HORAS ATUAL</label>
             <input type="number" id="editKmManutencao">
           </div>
           <div class="form-group">
-            <label for="editProximaTrocaManutencao">PRÓXIMA TROCA (KM)</label>
-            <input type="number" id="editProximaTrocaManutencao">
+            <label for="editProximaTrocaManutencao">PRÓXIMA TROCA</label>
+            <div style="display:flex; gap:5px;">
+              <input type="number" id="editProximaTrocaManutencao" style="flex:1;">
+              <select id="editUnidadeProximaTroca" style="width:90px;" onchange="atualizarLabelKmEdit()">
+                <option value="KM">KM</option>
+                <option value="H">HORAS</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1085,9 +1145,9 @@ function preencherTabelaManutencao(dados) {
     <th onclick="ordenarTabela(2)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 2)}</th>
     <th onclick="ordenarTabela(3)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 3)}</th>
     <th onclick="ordenarTabela(4)" class="th-sortable">TIPO${obterIndicadorOrdem('manutencao', 4)}</th>
-    <th onclick="ordenarTabela(5)" class="th-sortable">KM${obterIndicadorOrdem('manutencao', 5)}</th>
-    <th onclick="ordenarTabela(6)" class="th-sortable">PRÓXIMA TROCA (KM)${obterIndicadorOrdem('manutencao', 6)}</th>
-    <th onclick="ordenarTabela(7)" class="th-sortable">DATA ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
+    <th onclick="ordenarTabela(5)" class="th-sortable">KM/H ATUAL${obterIndicadorOrdem('manutencao', 5)}</th>
+    <th onclick="ordenarTabela(6)" class="th-sortable">PRÓXIMA TROCA${obterIndicadorOrdem('manutencao', 6)}</th>
+    <th onclick="ordenarTabela(7)" class="th-sortable">STATUS / ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
     <th onclick="ordenarTabela(8)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 8)}</th>
     <th>AÇÕES</th>
   `;
@@ -1100,11 +1160,9 @@ function preencherTabelaManutencao(dados) {
   }
 
   let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
-
   dadosOrdenados.sort((a, b) => {
     let valA = a.item[c.indice];
     let valB = b.item[c.indice];
-
     if ([5, 6].includes(c.indice)) {
       valA = Number(valA) || 0;
       valB = Number(valB) || 0;
@@ -1112,23 +1170,32 @@ function preencherTabelaManutencao(dados) {
       valA = String(valA || "").toLowerCase();
       valB = String(valB || "").toLowerCase();
     }
-
-    if (valA < valB) return c.asc ? -1 : 1;
-    if (valA > valB) return c.asc ? 1 : -1;
+    if (valA < valB) return c.asc? -1 : 1;
+    if (valA > valB) return c.asc? 1 : -1;
     return 0;
   });
 
   dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
+    const unidade = r[9] || "KM"; // Compatibilidade com dados antigos
 
     tr.insertCell().textContent = formatarData(r[0]);
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
     tr.insertCell().textContent = r[4];
-    tr.insertCell().textContent = r[5] !== "" && r[5] !== undefined ? `${r[5]} KM` : "-";
-    tr.insertCell().textContent = r[6] !== "" && r[6] !== undefined ? `${r[6]} KM` : "-";
-    tr.insertCell().textContent = r[7] ? formatarData(r[7]) : "-";
-    tr.insertCell().textContent = r[8] ? r[8] : "-";
+    tr.insertCell().textContent = r[5]!== ""? `${r[5]} ${unidade}` : "-";
+    tr.insertCell().textContent = r[6]!== ""? `${r[6]} ${unidade}` : "-";
+
+    // COLUNA COM COR
+    const status = calcularStatusProxima(r[2], r[5], r[6], unidade);
+    const tdStatus = tr.insertCell();
+    if(status.classe) {
+      tdStatus.innerHTML = `<span class="${status.classe}">${status.texto}</span><br><small>${r[7]? formatarData(r[7]) : ""}</small>`;
+    } else {
+      tdStatus.textContent = r[7]? formatarData(r[7]) : "-";
+    }
+
+    tr.insertCell().textContent = r[8]? r[8] : "-";
 
     const td = tr.insertCell();
     td.innerHTML = `
