@@ -1,409 +1,1384 @@
 // ============================================================
-// AG4 FROTA - GOOGLE APPS SCRIPT (CORRIGIDO 10 COLUNAS)
+// AG4 FROTA - APP.JS FINAL CORRIGIDO - COM HORIMETRO MANUAL
 // ============================================================
 
-const ID_PLANILHA = "1dB54DZG1kwMFQT0DTIhaIBI3EDL2zlSyvo6_T-guhxY";
+const APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbw-pr-h9sOshx1qvI7B3G7CrIvZhfq1p3KYlXedW0gZJzsc0Gm7QVK9u4LmrecmaPnAwg/exec";
 
-function respostaJSON(ok, mensagem, extra) {
-  const resultado = Object.assign({ ok: ok, mensagem: mensagem }, extra || {});
-  return ContentService.createTextOutput(JSON.stringify(resultado)).setMimeType(ContentService.MimeType.JSON);
+const STORAGE_KEY = "ag4_frota";
+const USER_KEY = "ag4_usuario_logado";
+const THEME_KEY = "ag4_tema_sistema";
+const MOTORISTAS_KEY = "ag4_historico_motoristas";
+const KM_MANUAL_KEY = "ag4_km_atual_manual";
+const SENHA_MESTRE = "frot@AG4";
+
+let DB = carregarDB();
+let listaVeiculosGlobal = [];
+let abaAtiva = "abastecimento";
+
+let colunaOrdenacao = {
+  abastecimento: { indice: 0, asc: false },
+  manutencao: { indice: 0, asc: false }
+};
+
+function limparNumero(val) {
+  if (val === null || val === undefined || val === "") return 0;
+  if (typeof val === "number") return val;
+  const strLimpa = String(val).replace(/\./g, "").replace(",", ".");
+  return Number(strLimpa) || 0;
 }
 
-function doGet() {
-  return respostaJSON(true, "Web App AG4 FROTA ativo.");
-}
-
-function doPost(e) {
-  const lock = LockService.getScriptLock();
+function carregarDB() {
   try {
-    lock.waitLock(30000);
-    let requisicao;
-    try {
-      if (e && e.parameter && e.parameter.payload) {
-        requisicao = JSON.parse(e.parameter.payload);
-      } else if (e && e.postData && e.postData.contents) {
-        requisicao = JSON.parse(e.postData.contents);
-      } else {
-        return respostaJSON(false, "Nenhum dado recebido no corpo da requisição.");
-      }
-    } catch (erroJSON) {
-      return respostaJSON(false, "JSON inválido: " + erroJSON.message);
+    const salvo = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!salvo || typeof salvo!== "object") {
+      return { veiculos: [], abastecimento: [], manutencao: [] };
     }
-
-    const acao = requisicao.acao;
-    const dados = requisicao.dados;
-    if (!acao) return respostaJSON(false, "Ação não informada.");
-    const ss = SpreadsheetApp.openById(ID_PLANILHA);
-
-    // --------------------------------------------------------
-    // LOGIN
-    // --------------------------------------------------------
-    if (acao === "fazerLogin") {
-      let sheetUsuarios;
-      try {
-        sheetUsuarios = obterAba(ss, "Usuarios");
-      } catch (err) {
-        sheetUsuarios = ss.insertSheet("Usuarios");
-        sheetUsuarios.appendRow(["NOME", "EMAIL", "SENHA"]);
-        sheetUsuarios.appendRow(["ADMINISTRADOR", "ADMIN@AG4.COM", "123456"]);
-      }
-      const email = String(dados && dados.email || "").toLowerCase().trim();
-      const senha = String(dados && dados.senha || "").trim();
-      const ultimaLinha = sheetUsuarios.getLastRow();
-      if (ultimaLinha < 2) return respostaJSON(false, "Nenhum usuário cadastrado.");
-      const valores = sheetUsuarios.getRange(2, 1, ultimaLinha - 1, 3).getValues();
-      const usuario = valores.find(row => String(row[1]).toLowerCase().trim() === email && String(row[2]).trim() === senha);
-      if (usuario) {
-        return respostaJSON(true, "Login realizado com sucesso!", { usuario: { nome: usuario[0], email: usuario[1] } });
-      } else {
-        return respostaJSON(false, "E-mail ou senha incorretos.");
-      }
-    }
-
-    // --------------------------------------------------------
-    // OBTER DADOS - AGORA LÊ 10 COLUNAS
-    // --------------------------------------------------------
-    if (acao === "obterDados") {
-      let veiculos = [];
-      let abastecimento = [];
-      let manutencao = [];
-      try {
-        const sheetVeiculos = obterAba(ss, "Veículos");
-        if (sheetVeiculos.getLastRow() > 1) {
-          veiculos = sheetVeiculos.getRange(2, 1, sheetVeiculos.getLastRow() - 1, 2).getValues()
-           .map(r => ({ nome: String(r[0]), placa: String(r[1]) }))
-           .filter(v => v.nome && v.placa);
-        }
-      } catch (_) {}
-
-      try {
-        const sheetCombustivel = obterAba(ss, "Combustível");
-        if (sheetCombustivel.getLastRow() > 1) {
-          abastecimento = sheetCombustivel.getRange(2, 1, sheetCombustivel.getLastRow() - 1, 8).getValues()
-           .map(r => [
-              normalizarDataParaInput(r[0]),
-              String(r[1] || ""),
-              String(r[2] || ""),
-              String(r[3] || ""),
-              r[4]!== ""? String(r[4]).replace(".", ",") : "",
-              r[5]!== ""? String(r[5]).replace(".", ",") : "",
-              r[6]!== ""? String(r[6]) : "",
-              String(r[7] || "-")
-            ]);
-        }
-      } catch (_) {}
-
-      try {
-        const sheetManutencao = obterAba(ss, "Manutenção");
-        if (sheetManutencao.getLastRow() > 1) {
-          const lastCol = Math.min(10, sheetManutencao.getLastColumn());
-          manutencao = sheetManutencao.getRange(2, 1, sheetManutencao.getLastRow() - 1, lastCol).getValues()
-           .map(r => [
-              normalizarDataParaInput(r[0]),
-              normalizarHoraParaInput(r[1]),
-              String(r[2] || ""),
-              String(r[3] || ""),
-              String(r[4] || ""),
-              r[5]!== ""? Number(r[5]) : "",
-              r[6]!== ""? Number(r[6]) : "",
-              normalizarDataParaInput(r[7]),
-              String(r[8] || ""),
-              String(r[9] || "KM") // COLUNA 10 - UNIDADE
-            ]);
-        }
-      } catch (_) {}
-
-      return respostaJSON(true, "Dados obtidos com sucesso.", { DB: { veiculos, abastecimento, manutencao } });
-    }
-
-    // --------------------------------------------------------
-    // ABASTECIMENTO
-    // --------------------------------------------------------
-    if (acao === "registrarAbastecimento" || acao === "salvarCombustivel") {
-      const sheet = obterAba(ss, "Combustível");
-      sheet.appendRow(normalizarLinhaAbastecimento(dados));
-      return respostaJSON(true, "Abastecimento registrado na planilha.");
-    }
-
-    if (acao === "editarAbastecimento") {
-      const sheet = obterAba(ss, "Combustível");
-      const antigo = dados && dados.antigo;
-      const novo = dados && dados.novo;
-      if (!antigo ||!novo) return respostaJSON(false, "Dados insuficientes.");
-      let linhaEncontrada = encontrarLinhaPorCamposChave(sheet, antigo, [0, 1, 6]);
-      if (linhaEncontrada === -1) linhaEncontrada = encontrarLinhaPorCamposChave(sheet, antigo, [0, 1]);
-      if (linhaEncontrada === -1) return respostaJSON(false, "Abastecimento não localizado.");
-      sheet.getRange(linhaEncontrada, 1, 1, 8).setValues([normalizarLinhaAbastecimento(novo)]);
-      return respostaJSON(true, "Abastecimento alterado.");
-    }
-
-    if (acao === "excluirAbastecimento") {
-      const sheet = obterAba(ss, "Combustível");
-      const item = dados && dados.item;
-      let linhaEncontrada = encontrarLinhaPorCamposChave(sheet, item, [0, 1, 6]);
-      if (linhaEncontrada === -1) linhaEncontrada = encontrarLinhaPorCamposChave(sheet, item, [0, 1]);
-      if (linhaEncontrada === -1) return respostaJSON(false, "Abastecimento não localizado.");
-      sheet.deleteRow(linhaEncontrada);
-      return respostaJSON(true, "Abastecimento removido.");
-    }
-
-    // --------------------------------------------------------
-    // MANUTENÇÃO - AGORA 10 COLUNAS
-    // --------------------------------------------------------
-    if (acao === "registrarManutencao" || acao === "salvarManutencao") {
-      const sheet = obterAba(ss, "Manutenção");
-      // Garante cabeçalho com 10 colunas se for primeira vez
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow(["DATA","HORA","PLACA","VEÍCULO","TIPO","KM_ATUAL","PROXIMA_TROCA","DATA_ALARME","OBS_ALARME","UNIDADE"]);
-      } else if (sheet.getLastColumn() < 10) {
-        sheet.getRange(1, 10).setValue("UNIDADE");
-      }
-      sheet.appendRow(normalizarLinhaManutencao(dados));
-      return respostaJSON(true, "Manutenção registrada.");
-    }
-
-    if (acao === "editarManutencao") {
-      const sheet = obterAba(ss, "Manutenção");
-      const antigo = dados && dados.antigo;
-      const novo = dados && dados.novo;
-      if (!antigo ||!novo) return respostaJSON(false, "Dados insuficientes.");
-      let linhaEncontrada = encontrarLinhaFlexivel(sheet, antigo, [2, 4, 5]);
-      if (linhaEncontrada === -1) return respostaJSON(false, "Manutenção não localizada.");
-      sheet.getRange(linhaEncontrada, 1, 1, 10).setValues([normalizarLinhaManutencao(novo)]);
-      return respostaJSON(true, "Manutenção alterada.");
-    }
-
-    if (acao === "excluirManutencao") {
-      const sheet = obterAba(ss, "Manutenção");
-      const item = dados && dados.item;
-      let linhaEncontrada = encontrarLinhaPorCamposChave(sheet, item, [0, 2, 4]);
-      if (linhaEncontrada === -1) linhaEncontrada = encontrarLinhaPorCamposChave(sheet, item, [0, 2]);
-      if (linhaEncontrada === -1) return respostaJSON(false, "Manutenção não localizada.");
-      sheet.deleteRow(linhaEncontrada);
-      return respostaJSON(true, "Manutenção removida.");
-    }
-
-    // --------------------------------------------------------
-    // VEÍCULOS
-    // --------------------------------------------------------
-    if (acao === "cadastrarVeiculo") {
-      const sheet = obterAba(ss, "Veículos");
-      const nome = String(dados && dados.nome || "").trim().toUpperCase();
-      const placa = String(dados && dados.placa || "").trim().toUpperCase();
-      if (!nome ||!placa) return respostaJSON(false, "Nome e placa são obrigatórios.");
-      if (encontrarLinhaPorValor(sheet, 2, placa)!== -1) return respostaJSON(false, "Placa já existente.");
-      sheet.appendRow([nome, placa]);
-      return respostaJSON(true, "Veículo cadastrado.");
-    }
-
-    if (acao === "editarVeiculo") {
-      const placaAntiga = String(dados && dados.placaAntiga || "").trim().toUpperCase();
-      const nomeNovo = String(dados && dados.nomeNovo || "").trim().toUpperCase();
-      const placaNova = String(dados && dados.placaNova || "").trim().toUpperCase();
-      if (!placaAntiga ||!nomeNovo ||!placaNova) return respostaJSON(false, "Dados insuficientes.");
-      atualizarVeiculoNaAba(ss, "Veículos", placaAntiga, nomeNovo, placaNova);
-      atualizarHistoricoVeiculo(ss, "Combustível", placaAntiga, nomeNovo, placaNova, 2, 3);
-      atualizarHistoricoVeiculo(ss, "Manutenção", placaAntiga, nomeNovo, placaNova, 3, 4);
-      return respostaJSON(true, "Veículo atualizado.");
-    }
-
-    if (acao === "excluirVeiculo") {
-      const placa = String(typeof dados === "string"? dados : (dados && dados.placa || "")).trim().toUpperCase();
-      if (!placa) return respostaJSON(false, "Placa não informada.");
-      excluirDaAba(ss, "Veículos", 2, placa);
-      excluirDaAba(ss, "Combustível", 2, placa);
-      excluirDaAba(ss, "Manutenção", 3, placa);
-      return respostaJSON(true, "Veículo excluído.");
-    }
-
-    return respostaJSON(false, "Ação não reconhecida: " + acao);
-
+    return {
+      veiculos: Array.isArray(salvo.veiculos)? salvo.veiculos : [],
+      abastecimento: Array.isArray(salvo.abastecimento)? salvo.abastecimento : [],
+      manutencao: Array.isArray(salvo.manutencao)? salvo.manutencao : []
+    };
   } catch (erro) {
-    console.error(erro);
-    return respostaJSON(false, "Erro no servidor: " + erro.toString());
-  } finally {
-    try { lock.releaseLock(); } catch (_) {}
+    console.error("Erro ao carregar banco local:", erro);
+    return { veiculos: [], abastecimento: [], manutencao: [] };
   }
 }
 
-// ============================================================
-// FUNÇÕES AUXILIARES
-// ============================================================
-function obterAba(ss, nome) {
-  const sheet = ss.getSheetByName(nome);
-  if (!sheet) throw new Error("Aba '" + nome + "' não encontrada.");
-  return sheet;
+function salvarDB() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
 }
 
-function normalizarDataParaInput(valor) {
-  if (!valor) return "";
-  if (valor instanceof Date) return Utilities.formatDate(valor, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  let texto = String(valor).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) {
-    const p = texto.split("/");
-    return `${p[2]}-${p[1]}-${p[0]}`;
-  }
+function dataHojeInput() {
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function horaAgoraInput() {
+  const agora = new Date();
+  const horas = String(agora.getHours()).padStart(2, "0");
+  const minutos = String(agora.getMinutes()).padStart(2, "0");
+  return `${horas}:${minutos}`;
+}
+
+function escaparHTML(valor) {
+  return String(valor?? "")
+   .replaceAll("&", "&amp;")
+   .replaceAll("<", "&lt;")
+   .replaceAll(">", "&gt;")
+   .replaceAll('"', "&quot;")
+   .replaceAll("'", "&#039;");
+}
+
+function mascararLitros(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.padStart(4, "0");
+  const parteInteira = v.slice(0, -3).replace(/^0+(?=\d)/, "");
+  const parteDecimal = v.slice(-3);
+  e.target.value = `${parteInteira},${parteDecimal}`;
+}
+
+function mascararValor(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.padStart(3, "0");
+  const parteInteira = v.slice(0, -2).replace(/^0+(?=\d)/, "");
+  const parteDecimal = v.slice(-2);
+  e.target.value = `${parteInteira},${parteDecimal}`;
+}
+
+function mascararKM(e) {
+  let v = e.target.value.replace(/\D/g, "");
+  if (!v) { e.target.value = ""; return; }
+  v = v.replace(/^0+/, "");
+  e.target.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function obterMotoristasUnicos() {
+  let salvos = [];
   try {
-    const d = new Date(texto);
-    if (!isNaN(d.getTime())) return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  } catch (_) {}
+    salvos = JSON.parse(localStorage.getItem(MOTORISTAS_KEY)) || [];
+  } catch (e) {
+    salvos = [];
+  }
+  const doHistorico = DB.abastecimento
+   .map(r => r[3])
+   .filter(m => m && typeof m === "string" && m.trim()!== "");
+  const conjunto = new Set([...salvos,...doHistorico]);
+  return Array.from(conjunto).sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function salvarNovoMotorista(nome) {
+  if (!nome || typeof nome!== "string") return;
+  const limpo = nome.trim().toUpperCase();
+  if (!limpo) return;
+  const lista = obterMotoristasUnicos();
+  if (!lista.includes(limpo)) {
+    lista.push(limpo);
+    localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(lista));
+  }
+}
+
+function removerMotoristaDoHistorico(nomeParaRemover) {
+  let salvos = [];
+  try {
+    salvos = JSON.parse(localStorage.getItem(MOTORISTAS_KEY)) || [];
+  } catch (e) {
+    salvos = [];
+  }
+  const novaLista = salvos.filter(m => m!== nomeParaRemover);
+  localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(novaLista));
+  DB.abastecimento.forEach(r => {
+    if (r[3] === nomeParaRemover) {
+      r[3] = "";
+    }
+  });
+  salvarDB();
+}
+
+function configurarAutocompleteMotorista(inputId, suggestionsId) {
+  const input = document.getElementById(inputId);
+  const suggestionsBox = document.getElementById(suggestionsId);
+  if (!input ||!suggestionsBox) return;
+  function renderizarSugestoes(termo = "") {
+    const todos = obterMotoristasUnicos();
+    const filtro = termo.trim().toUpperCase();
+    const filtrados = todos.filter(m => m.includes(filtro));
+    suggestionsBox.innerHTML = "";
+    if (filtrados.length === 0) {
+      suggestionsBox.classList.remove("show");
+      return;
+    }
+    filtrados.forEach(nome => {
+      const item = document.createElement("div");
+      item.className = "suggestion-item";
+      const spanNome = document.createElement("span");
+      spanNome.textContent = nome;
+      spanNome.onclick = () => {
+        input.value = nome;
+        suggestionsBox.classList.remove("show");
+      };
+      const btnExcluir = document.createElement("span");
+      btnExcluir.className = "btn-delete-suggestion";
+      btnExcluir.textContent = "x";
+      btnExcluir.title = "Excluir nome da lista de sugestão";
+      btnExcluir.onclick = (e) => {
+        e.stopPropagation();
+        removerMotoristaDoHistorico(nome);
+        renderizarSugestoes(input.value);
+      };
+      item.appendChild(spanNome);
+      item.appendChild(btnExcluir);
+      suggestionsBox.appendChild(item);
+    });
+    suggestionsBox.classList.add("show");
+  }
+  input.addEventListener("focus", () => renderizarSugestoes(input.value));
+  input.addEventListener("input", () => renderizarSugestoes(input.value));
+  document.addEventListener("click", (e) => {
+    if (!input.contains(e.target) &&!suggestionsBox.contains(e.target)) {
+      suggestionsBox.classList.remove("show");
+    }
+  });
+}
+
+function toggleTheme() {
+  let temaAtual = localStorage.getItem(THEME_KEY) || "light";
+  let novoTema = "light";
+  if (temaAtual === "light") {
+    novoTema = "medium";
+  } else if (temaAtual === "medium") {
+    novoTema = "dark";
+  } else {
+    novoTema = "light";
+  }
+  aplicarTema(novoTema);
+  localStorage.setItem(THEME_KEY, novoTema);
+}
+
+function aplicarTema(tema) {
+  document.body.classList.remove("theme-medium", "theme-dark");
+  if (tema === "medium") {
+    document.body.classList.add("theme-medium");
+    atualizarIconeTema("medium");
+  } else if (tema === "dark") {
+    document.body.classList.add("theme-dark");
+    atualizarIconeTema("dark");
+  } else {
+    atualizarIconeTema("light");
+  }
+}
+
+function aplicarTemaSalvo() {
+  const temaSalvo = localStorage.getItem(THEME_KEY);
+  const prefereEscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (temaSalvo) {
+    aplicarTema(temaSalvo);
+  } else if (prefereEscuro) {
+    aplicarTema("dark");
+  } else {
+    aplicarTema("light");
+  }
+}
+
+function atualizarIconeTema(tema) {
+  const btn = document.getElementById("btnThemeToggle");
+  if (btn) {
+    if (tema === "medium") {
+      btn.textContent = "🟦";
+      btn.title = "Tema Atual: Médio (Clique para Escuro)";
+    } else if (tema === "dark") {
+      btn.textContent = "🌙";
+      btn.title = "Tema Atual: Escuro (Clique para Claro)";
+    } else {
+      btn.textContent = "☀️";
+      btn.title = "Tema Atual: Claro (Clique para Médio)";
+    }
+  }
+}
+
+async function enviarParaGoogleSheets(acao, dados) {
+  const payload = JSON.stringify({ acao, dados });
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ payload: payload })
+    });
+    const res = await response.json();
+    if (!res.ok) {
+      console.error("[AG4] Erro retornado pela planilha:", res.mensagem);
+      alert("ATENÇÃO: " + (res.mensagem || "Erro ao salvar na planilha."));
+      return false;
+    }
+    return true;
+  } catch (erro) {
+    console.error("[AG4] Erro de comunicação com Google Sheets:", erro);
+    alert("Erro ao conectar com o servidor. Verifique sua conexão.");
+    return false;
+  }
+}
+
+async function sincronizarComNuvem() {
+  mostrarLoading(true);
+  try {
+    const payload = JSON.stringify({ acao: "obterDados" });
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ payload: payload })
+    });
+    const res = await response.json();
+    if (res.ok && res.DB) {
+      DB = res.DB;
+      salvarDB();
+      carregarDados();
+    }
+  } catch (erro) {
+    console.error("Erro na sincronização:", erro);
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+async function fazerLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value.trim();
+  const erroEl = document.getElementById("loginErro");
+  if (!email ||!senha) {
+    erroEl.textContent = "PREENCHA E-MAIL E SENHA.";
+    erroEl.style.display = "block";
+    return;
+  }
+  erroEl.style.display = "none";
+  mostrarLoading(true);
+  try {
+    const payload = JSON.stringify({ acao: "fazerLogin", dados: { email, senha } });
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ payload: payload })
+    });
+    const res = await response.json();
+    if (res.ok) {
+      localStorage.setItem(USER_KEY, JSON.stringify(res.usuario || { email }));
+      exibirApp(res.usuario);
+      sincronizarComNuvem();
+    } else {
+      erroEl.textContent = res.mensagem || "E-MAIL OU SENHA INCORRETOS.";
+      erroEl.style.display = "block";
+    }
+  } catch (erro) {
+    console.error("Erro no login:", erro);
+    erroEl.textContent = "ERRO AO CONECTAR COM O SERVIDOR.";
+    erroEl.style.display = "block";
+  } finally {
+    mostrarLoading(false);
+  }
+}
+
+function fazerLogout() {
+  if (confirm("DESEJA REALMENTE SAIR DO SISTEMA?")) {
+    window.onpopstate = null;
+    localStorage.removeItem(USER_KEY);
+    document.getElementById("telaLogin").style.display = "flex";
+    document.getElementById("appContainer").style.display = "none";
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginSenha").value = "";
+  }
+}
+
+function exibirApp(usuario) {
+  document.getElementById("telaLogin").style.display = "none";
+  document.getElementById("appContainer").style.display = "block";
+  if (usuario && usuario.nome) {
+    document.getElementById("nomeUsuarioLogado").textContent = `USUÁRIO: ${usuario.nome.toUpperCase()}`;
+  }
+  history.pushState(null, "", window.location.href);
+  window.onpopstate = function () {
+    history.pushState(null, "", window.location.href);
+  };
+}
+
+function mostrarLoading(exibir) {
+  const spinner = document.getElementById("loadingSpinner");
+  if (spinner) spinner.style.display = exibir? "flex" : "none";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  aplicarTemaSalvo();
+  document.getElementById("dataAbastecimento").value = dataHojeInput();
+  document.addEventListener("input", (e) => {
+    if (e.target && e.target.type === "text" && e.target.id!== "loginEmail") {
+      e.target.value = e.target.value.toUpperCase();
+    }
+  });
+  const elLitros = document.getElementById("litros");
+  const elValor = document.getElementById("valorTotal");
+  const elKM = document.getElementById("kmAtual");
+  if (elLitros) elLitros.addEventListener("input", mascararLitros);
+  if (elValor) elValor.addEventListener("input", mascararValor);
+  if (elKM) elKM.addEventListener("input", mascararKM);
+  configurarAutocompleteMotorista("motorista", "sugestoesMotorista");
+  const usuarioSalvo = JSON.parse(localStorage.getItem(USER_KEY));
+  if (usuarioSalvo) {
+    exibirApp(usuarioSalvo);
+    carregarDados();
+    sincronizarComNuvem();
+  } else {
+    document.getElementById("telaLogin").style.display = "flex";
+    document.getElementById("appContainer").style.display = "none";
+  }
+});
+
+function carregarDados() {
+  DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+  listaVeiculosGlobal = DB.veiculos;
+  recalcularConsumoHistorico();
+  preencherSelects(DB.veiculos);
+  renderizarTabela();
+}
+
+function confirmarSenha() {
+  const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
+  if (senhaDigitada === null) return false;
+  if (senhaDigitada === SENHA_MESTRE) return true;
+  alert("SENHA INCORRETA! AÇÃO NÃO PERMITIDA.");
+  return false;
+}
+
+function preencherSelects(veiculos) {
+  const select1 = document.getElementById("selectVeiculo");
+  const select2 = document.getElementById("selectVeiculoManutencao");
+  const veiculosOrdenados = [...veiculos].sort((a, b) =>
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+  [select1, select2].forEach((select) => {
+    if (!select) return;
+    select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
+    veiculosOrdenados.forEach((v) => {
+      select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+    });
+  });
+}
+
+function cadastrarVeiculo() {
+  const nomeEl = document.getElementById("nomeVeiculo");
+  const placaEl = document.getElementById("placaVeiculo");
+  const nome = nomeEl.value.trim().toUpperCase();
+  const placa = placaEl.value.trim().toUpperCase();
+  if (!nome ||!placa) {
+    alert("PREENCHA NOME E PLACA.");
+    return;
+  }
+  if (DB.veiculos.some(v => v.placa === placa)) {
+    alert("PLACA JÁ CADASTRADA.");
+    return;
+  }
+  const novoVeiculo = { nome, placa };
+  DB.veiculos.push(novoVeiculo);
+  DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("cadastrarVeiculo", novoVeiculo);
+  nomeEl.value = "";
+  placaEl.value = "";
+  alert("VEÍCULO CADASTRADO COM SUCESSO!");
+}
+
+function abrirModalEditar() {
+  preencherSelectEditar();
+  const modal = document.getElementById("modalEditarVeiculo");
+  modal.style.display = "block";
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function fecharModalEditar() {
+  const modal = document.getElementById("modalEditarVeiculo");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+  document.getElementById("selectVeiculoEditar").value = "";
+  document.getElementById("nomeVeiculoEditar").value = "";
+  document.getElementById("placaVeiculoEditar").value = "";
+}
+
+function preencherSelectEditar() {
+  const select = document.getElementById("selectVeiculoEditar");
+  if (!select) return;
+  select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+  veiculosOrdenados.forEach(v => {
+    select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+  });
+}
+
+function carregarDadosEdicao() {
+  const placa = document.getElementById("selectVeiculoEditar").value;
+  const veiculo = DB.veiculos.find(v => v.placa === placa);
+  document.getElementById("nomeVeiculoEditar").value = veiculo?.nome || "";
+  document.getElementById("placaVeiculoEditar").value = veiculo?.placa || "";
+}
+
+function salvarEdicaoVeiculo() {
+  const placaAntiga = document.getElementById("selectVeiculoEditar").value;
+  const nomeNovo = document.getElementById("nomeVeiculoEditar").value.trim().toUpperCase();
+  const placaNova = document.getElementById("placaVeiculoEditar").value.trim().toUpperCase();
+  if (!placaAntiga ||!nomeNovo ||!placaNova) {
+    alert("PREENCHA TODOS OS CAMPOS.");
+    return;
+  }
+  if (!confirmarSenha()) return;
+  if (placaNova!== placaAntiga && DB.veiculos.some(v => v.placa === placaNova)) {
+    alert("A NOVA PLACA JÁ ESTÁ CADASTRADA.");
+    return;
+  }
+  const veiculo = DB.veiculos.find(v => v.placa === placaAntiga);
+  if (!veiculo) return;
+  veiculo.nome = nomeNovo;
+  veiculo.placa = placaNova;
+  DB.abastecimento.forEach(r => {
+    if (r[1] === placaAntiga) {
+      r[1] = placaNova;
+      r[2] = nomeNovo;
+    }
+  });
+  DB.manutencao.forEach(r => {
+    if (r[2] === placaAntiga) {
+      r[2] = placaNova;
+      r[3] = nomeNovo;
+    }
+  });
+  const dadosManual = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+  if (dadosManual[placaAntiga]) {
+    dadosManual[placaNova] = dadosManual[placaAntiga];
+    delete dadosManual[placaAntiga];
+    localStorage.setItem(KM_MANUAL_KEY, JSON.stringify(dadosManual));
+  }
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("editarVeiculo", { placaAntiga, nomeNovo, placaNova });
+  fecharModalEditar();
+  alert("VEÍCULO E HISTÓRICOS ATUALIZADOS COM SUCESSO!");
+}
+
+function excluirVeiculo() {
+  const placa = document.getElementById("selectVeiculoEditar").value;
+  if (!placa) {
+    alert("SELECIONE UM VEÍCULO PARA EXCLUIR.");
+    return;
+  }
+  if (!confirm(`TEM CERTEZA QUE DESEJA EXCLUIR O VEÍCULO ${placa}?\n\nTODOS OS ABASTECIMENTOS E MANUTENÇÕES VINCULADOS TAMBÉM SERÃO EXCLUÍDOS.`)) {
+    return;
+  }
+  if (!confirmarSenha()) return;
+  DB.veiculos = DB.veiculos.filter(v => v.placa!== placa);
+  DB.abastecimento = DB.abastecimento.filter(r => r[1]!== placa);
+  DB.manutencao = DB.manutencao.filter(r => r[2]!== placa);
+  const dadosManual = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+  delete dadosManual[placa];
+  localStorage.setItem(KM_MANUAL_KEY, JSON.stringify(dadosManual));
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("excluirVeiculo", { placa });
+  fecharModalEditar();
+  alert("VEÍCULO EXCLUÍDO COM SUCESSO!");
+}
+
+function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
+  const km = limparNumero(kmAtual);
+  const l = limparNumero(litros);
+  if (!placa || km <= 0 || l <= 0) return "-";
+  const anteriores = DB.abastecimento
+   .map((registro, index) => ({ registro, index }))
+   .filter(item => {
+      const kmReg = limparNumero(item.registro[6]);
+      return item.index!== indiceIgnorado && item.registro[1] === placa && kmReg < km;
+    })
+   .sort((a, b) => limparNumero(a.registro[6]) - limparNumero(b.registro[6]));
+  if (!anteriores.length) return "-";
+  const anterior = anteriores[anteriores.length - 1].registro;
+  const kmAnterior = limparNumero(anterior[6]);
+  const kmRodado = km - kmAnterior;
+  if (kmRodado <= 0) return "-";
+  return (kmRodado / l).toFixed(2);
+}
+
+function recalcularConsumoHistorico() {
+  if (!Array.isArray(DB.abastecimento) || DB.abastecimento.length === 0) {
+    DB.abastecimento = DB.abastecimento || [];
+    return;
+  }
+  DB.abastecimento.sort((a, b) => {
+    const dataA = new Date(a[0]).getTime() || 0;
+    const dataB = new Date(b[0]).getTime() || 0;
+    if (dataA!== dataB) return dataA - dataB;
+    return limparNumero(a[6]) - limparNumero(b[6]);
+  });
+  DB.abastecimento.forEach((registro, index) => {
+    registro[7] = calcularConsumoRegistro(registro[1], registro[6], registro[4], index);
+  });
+  salvarDB();
+}
+
+function atualizarLabelKm() {
+  const unidade = document.getElementById("unidadeProximaTroca")?.value || "KM";
+  const label = document.getElementById("labelKmManutencao");
+  if (label) label.textContent = unidade === "H"? "HORAS ATUAL (HORÍMETRO)" : "KM ATUAL";
+}
+function atualizarLabelKmEdit() {
+  const unidade = document.getElementById("editUnidadeProximaTroca")?.value || "KM";
+  const label = document.getElementById("editLabelKmManutencao");
+  if (label) label.textContent = unidade === "H"? "HORAS ATUAL" : "KM ATUAL";
+}
+
+// CONTROLE MANUAL DE HORIMETRO / KM ATUAL
+function getKmManual(placa) {
+  try {
+    const dados = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+    return Number(dados[placa]) || 0;
+  } catch(e) {
+    return 0;
+  }
+}
+
+function atualizarKmManual(placa) {
+  const atual = getKmManual(placa) || getKmAtualVeiculoSemManual(placa);
+  const novo = prompt(`DIGITE A LEITURA ATUAL DO HORÍMETRO/KM DO VEÍCULO ${placa}:\n(ATUAL: ${atual || 0})`);
+  if (novo === null) return;
+  const num = Number(novo.replace(",", "."));
+  if (isNaN(num) || num <= 0) {
+    alert("VALOR INVÁLIDO!");
+    return;
+  }
+  const dados = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+  dados[placa] = num;
+  localStorage.setItem(KM_MANUAL_KEY, JSON.stringify(dados));
+  carregarDados();
+  alert(`HORÍMETRO DE ${placa} ATUALIZADO PARA ${num}`);
+}
+
+function getKmAtualVeiculoSemManual(placa) {
+  let maxKm = 0;
+  DB.abastecimento.forEach(r => {
+    if (r[1] === placa) {
+      const km = limparNumero(r[6]);
+      if (km > maxKm) maxKm = km;
+    }
+  });
+  DB.manutencao.forEach(r => {
+    if (r[2] === placa) {
+      const km = Number(r[5]) || 0;
+      if (km > maxKm) maxKm = km;
+    }
+  });
+  return maxKm;
+}
+
+function getKmAtualVeiculo(placa) {
+  const manual = getKmManual(placa);
+  if (manual > 0) return manual;
+  return getKmAtualVeiculoSemManual(placa);
+}
+
+function calcularStatusProxima(placa, kmManut, proxima, unidade) {
+  if (!proxima || proxima === "" ) return { classe: "", texto: "-", restante: null };
+  const proxNum = Number(proxima);
+  const kmAtual = getKmAtualVeiculo(placa);
+  const baseAtual = kmAtual > 0? kmAtual : Number(kmManut) || 0;
+  const unidadeU = unidade || "KM";
+
+  if (unidadeU === "H") {
+    const rodadas = baseAtual - Number(kmManut);
+    const restante = proxNum - baseAtual;
+    if (rodadas > 250 || restante < 0) {
+      return { classe: "status-vermelho", texto: `VENCIDO`, restante };
+    }
+    if (rodadas >= 200) {
+      return { classe: "status-laranja", texto: `${restante}H REST.`, restante };
+    }
+    return { classe: "status-verde", texto: `${restante}H REST.`, restante };
+  } else {
+    const restante = proxNum - baseAtual;
+    if (restante <= 0) return { classe: "status-vermelho", texto: `VENCIDO`, restante };
+    if (restante <= 1000) return { classe: "status-laranja", texto: `${restante}KM REST.`, restante };
+    return { classe: "status-verde", texto: `${restante}KM REST.`, restante };
+  }
+}
+
+function registrarAbastecimento() {
+  const data = document.getElementById("dataAbastecimento").value;
+  const placa = document.getElementById("selectVeiculo").value;
+  const motorista = document.getElementById("motorista").value.trim().toUpperCase();
+  const litros = document.getElementById("litros").value.trim();
+  const valor = document.getElementById("valorTotal").value.trim();
+  const kmAtual = document.getElementById("kmAtual").value.trim();
+  const veiculo = DB.veiculos.find(v => v.placa === placa);
+  const nome = veiculo?.nome || "";
+  if (!data ||!placa ||!motorista ||!litros ||!valor ||!kmAtual) {
+    alert("PREENCHA TODOS OS CAMPOS CORRETAMENTE.");
+    return;
+  }
+  salvarNovoMotorista(motorista);
+  const registro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
+  DB.abastecimento.push(registro);
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("registrarAbastecimento", registro);
+  document.getElementById("dataAbastecimento").value = dataHojeInput();
+  document.getElementById("selectVeiculo").value = "";
+  document.getElementById("motorista").value = "";
+  document.getElementById("litros").value = "";
+  document.getElementById("valorTotal").value = "";
+  document.getElementById("kmAtual").value = "";
+  alert("ABASTECIMENTO REGISTRADO COM SUCESSO!");
+}
+
+function toggleCamposAlarme() {
+  const chk = document.getElementById("chkAtivarAlarme");
+  const container = document.getElementById("containerAlarme");
+  if (container) {
+    container.style.display = chk && chk.checked? "block" : "none";
+  }
+}
+
+function toggleCamposAlarmeEdit() {
+  const chk = document.getElementById("editChkAtivarAlarme");
+  const container = document.getElementById("editContainerAlarme");
+  if (container) {
+    container.style.display = chk && chk.checked? "block" : "none";
+  }
+}
+
+function abrirModalManutencao() {
+  const modal = document.getElementById("modalManutencao");
+  modal.style.display = "block";
+  modal.setAttribute("aria-hidden", "false");
+  document.getElementById("dataManutencao").value = dataHojeInput();
+  if (document.getElementById("horaManutencao")) {
+    document.getElementById("horaManutencao").value = horaAgoraInput();
+  }
+  const chk = document.getElementById("chkAtivarAlarme");
+  if (chk) chk.checked = false;
+  toggleCamposAlarme();
+  atualizarLabelKm();
+}
+
+function fecharModalManutencao() {
+  const modal = document.getElementById("modalManutencao");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+  document.getElementById("selectVeiculoManutencao").value = "";
+  document.getElementById("nomeVeiculoManutencao").value = "";
+  document.getElementById("tipoManutencao").value = "";
+  document.getElementById("kmManutencao").value = "";
+  document.getElementById("proximaTrocaManutencao").value = "";
+  if (document.getElementById("horaManutencao")) {
+    document.getElementById("horaManutencao").value = "";
+  }
+  const chk = document.getElementById("chkAtivarAlarme");
+  if (chk) chk.checked = false;
+  document.getElementById("dataAlarme").value = "";
+  if (document.getElementById("horaAlarme")) document.getElementById("horaAlarme").value = "";
+  document.getElementById("obsAlarme").value = "";
+  toggleCamposAlarme();
+}
+
+function carregarNomeVeiculo() {
+  const placa = document.getElementById("selectVeiculoManutencao").value;
+  const veiculo = DB.veiculos.find(v => v.placa === placa);
+  document.getElementById("nomeVeiculoManutencao").value = veiculo?.nome || "";
+}
+
+function registrarManutencao() {
+  const data = document.getElementById("dataManutencao").value;
+  const hora = document.getElementById("horaManutencao")?.value || horaAgoraInput();
+  const placa = document.getElementById("selectVeiculoManutencao").value;
+  const nome = document.getElementById("nomeVeiculoManutencao").value;
+  const tipo = document.getElementById("tipoManutencao").value.trim().toUpperCase();
+  const km = document.getElementById("kmManutencao").value? Number(document.getElementById("kmManutencao").value) : "";
+  const proximaTroca = document.getElementById("proximaTrocaManutencao").value? Number(document.getElementById("proximaTrocaManutencao").value) : "";
+  const unidade = document.getElementById("unidadeProximaTroca")?.value || "KM";
+  const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
+  const dataAlarme = temAlarme? document.getElementById("dataAlarme").value : "";
+  const horaAlarme = temAlarme? (document.getElementById("horaAlarme")?.value || "") : "";
+  const obsAlarme = temAlarme? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
+  if (!data ||!placa ||!tipo) {
+    alert("PREENCHA DATA, VEÍCULO E TIPO.");
+    return;
+  }
+  const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
+  const registro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme, unidade];
+  DB.manutencao.push(registro);
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("registrarManutencao", registro);
+  fecharModalManutencao();
+  alert("MANUTENÇÃO REGISTRADA COM SUCESSO!");
+}
+
+function abrirModalEditarManutencao(index) {
+  const registro = DB.manutencao[index];
+  if (!registro) return;
+  if (!document.getElementById("modalEditarManutencao")) {
+    criarModalEditarManutencao();
+  }
+  const select = document.getElementById("editSelectVeiculoManutencao");
+  select.innerHTML = "";
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+  veiculosOrdenados.forEach(v => {
+    select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+  });
+  document.getElementById("editManutIndex").value = index;
+  document.getElementById("editDataManutencao").value = registro[0] || "";
+  document.getElementById("editHoraManutencao").value = registro[1] || "";
+  document.getElementById("editSelectVeiculoManutencao").value = registro[2] || "";
+  const veic = DB.veiculos.find(v => v.placa === registro[2]);
+  document.getElementById("editNomeVeiculoManutencao").value = veic?.nome || registro[3] || "";
+  document.getElementById("editTipoManutencao").value = registro[4] || "";
+  document.getElementById("editKmManutencao").value = registro[5]?? "";
+  document.getElementById("editProximaTrocaManutencao").value = registro[6]?? "";
+  document.getElementById("editUnidadeProximaTroca").value = registro[9] || "KM";
+  atualizarLabelKmEdit();
+  const temAlarme = Boolean(registro[7] || registro[8]);
+  const chk = document.getElementById("editChkAtivarAlarme");
+  chk.checked = temAlarme;
+  const partesAlarme = (registro[7] || "").split(" ");
+  document.getElementById("editDataAlarme").value = partesAlarme[0] || "";
+  if (document.getElementById("editHoraAlarme")) {
+    document.getElementById("editHoraAlarme").value = partesAlarme[1] || "";
+  }
+  document.getElementById("editObsAlarme").value = registro[8] || "";
+  toggleCamposAlarmeEdit();
+  document.getElementById("modalEditarManutencao").style.display = "block";
+}
+
+function fecharModalEditarManutencao() {
+  const modal = document.getElementById("modalEditarManutencao");
+  if (modal) modal.style.display = "none";
+}
+
+function carregarNomeVeiculoEdit() {
+  const placa = document.getElementById("editSelectVeiculoManutencao").value;
+  const veiculo = DB.veiculos.find(v => v.placa === placa);
+  document.getElementById("editNomeVeiculoManutencao").value = veiculo?.nome || "";
+}
+
+function salvarEdicaoManutencao() {
+  const index = Number(document.getElementById("editManutIndex").value);
+  const antigo = DB.manutencao[index];
+  if (!antigo) return;
+  const data = document.getElementById("editDataManutencao").value;
+  const hora = document.getElementById("editHoraManutencao").value || horaAgoraInput();
+  const placa = document.getElementById("editSelectVeiculoManutencao").value;
+  const nome = document.getElementById("editNomeVeiculoManutencao").value;
+  const tipo = document.getElementById("editTipoManutencao").value.trim().toUpperCase();
+  const km = document.getElementById("editKmManutencao").value!== ""? Number(document.getElementById("editKmManutencao").value) : "";
+  const proximaTroca = document.getElementById("editProximaTrocaManutencao").value!== ""? Number(document.getElementById("editProximaTrocaManutencao").value) : "";
+  const unidade = document.getElementById("editUnidadeProximaTroca")?.value || "KM";
+  const temAlarme = document.getElementById("editChkAtivarAlarme")?.checked || false;
+  const dataAlarme = temAlarme? document.getElementById("editDataAlarme").value : "";
+  const horaAlarme = temAlarme? (document.getElementById("editHoraAlarme")?.value || "") : "";
+  const obsAlarme = temAlarme? document.getElementById("editObsAlarme").value.trim().toUpperCase() : "";
+  if (!data ||!placa ||!tipo) {
+    alert("PREENCHA DATA, VEÍCULO E TIPO.");
+    return;
+  }
+  if (!confirmarSenha()) return;
+  const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
+  const novoRegistro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme, unidade];
+  DB.manutencao[index] = novoRegistro;
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("editarManutencao", { antigo, novo: novoRegistro });
+  fecharModalEditarManutencao();
+  alert("MANUTENÇÃO ATUALIZADA COM SUCESSO!");
+}
+
+function criarModalEditarManutencao() {
+  const html = `
+    <div id="modalEditarManutencao" class="modal">
+      <div class="modal-content">
+        <button type="button" class="close" onclick="fecharModalEditarManutencao()" aria-label="Fechar">&times;</button>
+        <h2>EDITAR MANUTENÇÃO</h2>
+        <input type="hidden" id="editManutIndex">
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editDataManutencao">DATA</label>
+            <input type="date" id="editDataManutencao">
+          </div>
+          <div class="form-group">
+            <label for="editHoraManutencao">HORÁRIO</label>
+            <input type="time" id="editHoraManutencao">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editSelectVeiculoManutencao">PLACA</label>
+          <select id="editSelectVeiculoManutencao" onchange="carregarNomeVeiculoEdit()"></select>
+        </div>
+        <div class="form-group">
+          <label for="editNomeVeiculoManutencao">NOME_VEICULO</label>
+          <input type="text" id="editNomeVeiculoManutencao" readonly>
+        </div>
+        <div class="form-group">
+          <label for="editTipoManutencao">TIPO</label>
+          <input type="text" id="editTipoManutencao">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editKmManutencao" id="editLabelKmManutencao">KM / HORAS ATUAL</label>
+            <input type="number" id="editKmManutencao">
+          </div>
+          <div class="form-group">
+            <label for="editProximaTrocaManutencao">PRÓXIMA TROCA</label>
+            <div style="display:flex; gap:5px;">
+              <input type="number" id="editProximaTrocaManutencao" style="flex:1;">
+              <select id="editUnidadeProximaTroca" style="width:90px;" onchange="atualizarLabelKmEdit()">
+                <option value="KM">KM</option>
+                <option value="H">HORAS</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label class="checkbox-alarme-label">
+            <input type="checkbox" id="editChkAtivarAlarme" onchange="toggleCamposAlarmeEdit()">
+            ⏰ DEFINIR ALARME / LEMBRETE
+          </label>
+        </div>
+        <div id="editContainerAlarme" class="alarme-box" style="display: none;">
+          <div class="form-group">
+            <label for="editDataAlarme">DEFINIR ALARME / LEMBRETE (DATA / HORA)</label>
+            <div class="grid-2">
+              <input type="date" id="editDataAlarme">
+              <input type="time" id="editHoraAlarme">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="editObsAlarme">OBSERVAÇÃO (DO ALARME)</label>
+            <input type="text" id="editObsAlarme">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button type="button" class="btn btn-primary" onclick="salvarEdicaoManutencao()">SALVAR</button>
+          <button type="button" class="btn btn-secondary" onclick="fecharModalEditarManutencao()">CANCELAR</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", html);
+}
+
+function ordenarTabela(indiceColuna) {
+  const config = colunaOrdenacao[abaAtiva];
+  if (config.indice === indiceColuna) {
+    config.asc =!config.asc;
+  } else {
+    config.indice = indiceColuna;
+    config.asc = true;
+  }
+  renderizarTabela();
+}
+
+function obterIndicadorOrdem(aba, indice) {
+  const config = colunaOrdenacao[aba];
+  if (config.indice!== indice) return "";
+  return config.asc? " ▲" : " ▼";
+}
+
+function trocarAba(aba) {
+  abaAtiva = aba;
+  document.getElementById("btnTabAbastecimento").classList.toggle("active", aba === "abastecimento");
+  document.getElementById("btnTabManutencao").classList.toggle("active", aba === "manutencao");
+  renderizarTabela();
+}
+
+function renderizarTabela() {
+  if (abaAtiva === "abastecimento") {
+    preencherTabelaAbastecimento(DB.abastecimento);
+  } else {
+    preencherTabelaManutencao(DB.manutencao);
+  }
+}
+
+function preencherTabelaAbastecimento(dados) {
+  const thead = document.getElementById("cabecalhoTabela");
+  const tbody = document.querySelector("#tabelaHistorico tbody");
+  const c = colunaOrdenacao.abastecimento;
+  thead.innerHTML = `
+    <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('abastecimento', 0)}</th>
+    <th onclick="ordenarTabela(1)" class="th-sortable">PLACA${obterIndicadorOrdem('abastecimento', 1)}</th>
+    <th onclick="ordenarTabela(2)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('abastecimento', 2)}</th>
+    <th onclick="ordenarTabela(3)" class="th-sortable">MOTORISTA${obterIndicadorOrdem('abastecimento', 3)}</th>
+    <th onclick="ordenarTabela(4)" class="th-sortable">LITROS${obterIndicadorOrdem('abastecimento', 4)}</th>
+    <th onclick="ordenarTabela(5)" class="th-sortable">VALOR${obterIndicadorOrdem('abastecimento', 5)}</th>
+    <th onclick="ordenarTabela(6)" class="th-sortable">KM${obterIndicadorOrdem('abastecimento', 6)}</th>
+    <th onclick="ordenarTabela(7)" class="th-sortable">CONSUMO${obterIndicadorOrdem('abastecimento', 7)}</th>
+    <th>AÇÕES</th>
+  `;
+  tbody.innerHTML = "";
+  if (!dados.length) {
+    tbody.innerHTML = '<tr><td colspan="9">NENHUM ABASTECIMENTO REGISTRADO</td></tr>';
+    return;
+  }
+  let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
+  dadosOrdenados.sort((a, b) => {
+    let valA = a.item[c.indice];
+    let valB = b.item[c.indice];
+    if ([4, 5, 6].includes(c.indice)) {
+      valA = limparNumero(valA);
+      valB = limparNumero(valB);
+    } else if (c.indice === 7) {
+      valA = valA === "-"? -1 : Number(valA);
+      valB = valB === "-"? -1 : Number(valB);
+    } else {
+      valA = String(valA || "").toLowerCase();
+      valB = String(valB || "").toLowerCase();
+    }
+    if (valA < valB) return c.asc? -1 : 1;
+    if (valA > valB) return c.asc? 1 : -1;
+    return 0;
+  });
+  dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
+    const tr = tbody.insertRow();
+    tr.insertCell().textContent = formatarData(r[0]);
+    tr.insertCell().textContent = r[1];
+    tr.insertCell().textContent = r[2];
+    tr.insertCell().textContent = r[3];
+    tr.insertCell().textContent = `${r[4]} L`;
+    tr.insertCell().textContent = `R$ ${r[5]}`;
+    tr.insertCell().textContent = `${r[6]} KM`;
+    tr.insertCell().textContent = r[7]!== "-"? `${r[7]} KM/L` : "-";
+    const td = tr.insertCell();
+    td.innerHTML = `
+      <div class="dropdown">
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'abast_${indexOriginal}')">MAIS</button>
+        <div class="dropdown-content" id="dropdownabast_${indexOriginal}">
+          <button type="button" onclick="abrirModalEditarAbastecimento(${indexOriginal})">EDITAR</button>
+          <button type="button" onclick="excluirAbastecimento(${indexOriginal})">EXCLUIR</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function preencherTabelaManutencao(dados) {
+  const thead = document.getElementById("cabecalhoTabela");
+  const tbody = document.querySelector("#tabelaHistorico tbody");
+  const c = colunaOrdenacao.manutencao;
+  thead.innerHTML = `
+    <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('manutencao', 0)}</th>
+    <th onclick="ordenarTabela(2)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 2)}</th>
+    <th onclick="ordenarTabela(3)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 3)}</th>
+    <th onclick="ordenarTabela(4)" class="th-sortable">TIPO${obterIndicadorOrdem('manutencao', 4)}</th>
+    <th onclick="ordenarTabela(5)" class="th-sortable">KM/H ATUAL${obterIndicadorOrdem('manutencao', 5)}</th>
+    <th onclick="ordenarTabela(6)" class="th-sortable">PRÓXIMA TROCA${obterIndicadorOrdem('manutencao', 6)}</th>
+    <th onclick="ordenarTabela(7)" class="th-sortable">STATUS / ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
+    <th onclick="ordenarTabela(8)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 8)}</th>
+    <th>AÇÕES</th>
+  `;
+  tbody.innerHTML = "";
+  if (!dados.length) {
+    tbody.innerHTML = '<tr><td colspan="9">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
+    return;
+  }
+  let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
+  dadosOrdenados.sort((a, b) => {
+    let valA = a.item[c.indice];
+    let valB = b.item[c.indice];
+    if ([5, 6].includes(c.indice)) {
+      valA = Number(valA) || 0;
+      valB = Number(valB) || 0;
+    } else {
+      valA = String(valA || "").toLowerCase();
+      valB = String(valB || "").toLowerCase();
+    }
+    if (valA < valB) return c.asc? -1 : 1;
+    if (valA > valB) return c.asc? 1 : -1;
+    return 0;
+  });
+  dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
+    const tr = tbody.insertRow();
+    const unidade = r[9] || "KM";
+    const kmAtualVeiculo = getKmAtualVeiculo(r[2]);
+    const isManual = getKmManual(r[2]) > 0;
+    tr.insertCell().textContent = formatarData(r[0]);
+    tr.insertCell().textContent = r[2];
+    tr.insertCell().textContent = r[3];
+    tr.insertCell().textContent = r[4];
+    const tdAtual = tr.insertCell();
+    tdAtual.innerHTML = `${r[5]!== ""? `${r[5]} ${unidade}` : "-"}<br>
+      <small style="color:var(--primary-color)">ATUAL:${kmAtualVeiculo} ${unidade} ${isManual?'(MANUAL)':''}</small><br>
+      <button onclick="atualizarKmManual('${r[2]}')" style="font-size:9px; padding:3px 6px; cursor:pointer; background:var(--primary-color); color:white; border:none; border-radius:3px; margin-top:2px;">ATUALIZAR</button>`;
+    tr.insertCell().textContent = r[6]!== ""? `${r[6]} ${unidade}` : "-";
+    const status = calcularStatusProxima(r[2], r[5], r[6], unidade);
+    const tdStatus = tr.insertCell();
+    if(status.classe) {
+      tdStatus.innerHTML = `<span class="${status.classe}">${status.texto}</span><br><small>${r[7]? formatarData(r[7]) : ""}</small>`;
+    } else {
+      tdStatus.textContent = r[7]? formatarData(r[7]) : "-";
+    }
+    tr.insertCell().textContent = r[8]? r[8] : "-";
+    const td = tr.insertCell();
+    td.innerHTML = `
+      <div class="dropdown">
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${indexOriginal}')">MAIS</button>
+        <div class="dropdown-content" id="dropdownmanut_${indexOriginal}">
+          <button type="button" onclick="abrirModalEditarManutencao(${indexOriginal})">EDITAR</button>
+          <button type="button" onclick="excluirManutencao(${indexOriginal})">EXCLUIR</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function formatarData(data) {
+  if (!data) return "";
+  const texto = String(data);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+    const [ano, mes, dia] = texto.split("-");
+    return `${dia}/${mes}/${ano}`;
+  }
   return texto;
 }
 
-function normalizarHoraParaInput(valor) {
-  if (!valor) return "";
-  if (valor instanceof Date) return Utilities.formatDate(valor, Session.getScriptTimeZone(), "HH:mm");
-  return String(valor).trim();
+function toggleDropdown(event, idStr) {
+  event.stopPropagation();
+  document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
+  const menu = document.getElementById("dropdown" + idStr);
+  if (menu) menu.classList.toggle("show");
 }
 
-function normalizarLinhaAbastecimento(dados) {
-  if (Array.isArray(dados)) {
-    return [
-      normalizarDataParaInput(dados[0]), dados[1]||"", dados[2]||"", dados[3]||"",
-      dados[4]||"", dados[5]||"", dados[6]||"", dados[7]||"-"
-    ];
-  }
-  return [
-    normalizarDataParaInput(dados.dataAbastecimento||dados.data),
-    dados.placa||"", dados.nome||dados.veiculo||"", dados.motorista||"",
-    dados.litros||"", dados.valorTotal||dados.valor||"", dados.kmAtual||dados.km||"", dados.consumo||"-"
-  ];
+document.addEventListener("click", () => {
+  document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
+});
+
+function excluirAbastecimento(index) {
+  const item = DB.abastecimento[index];
+  if (!item) return;
+  if (!confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTE ABASTECIMENTO?")) return;
+  if (!confirmarSenha()) return;
+  DB.abastecimento.splice(index, 1);
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("excluirAbastecimento", { item });
+  alert("ABASTECIMENTO EXCLUÍDO COM SUCESSO!");
 }
 
-function normalizarLinhaManutencao(dados) {
-  if (Array.isArray(dados)) {
-    return [
-      normalizarDataParaInput(dados[0]),
-      dados[1]||"",
-      dados[2]||"",
-      dados[3]||"",
-      dados[4]||"",
-      dados[5]!==""?dados[5]:"",
-      dados[6]!==""?dados[6]:"",
-      normalizarDataParaInput(dados[7]),
-      dados[8]||"",
-      dados[9]||"KM" // NOVA COLUNA
-    ];
-  }
-  return [
-    normalizarDataParaInput(dados.data),
-    dados.hora||"",
-    dados.placa||"",
-    dados.nome||dados.veiculo||"",
-    dados.tipo||"",
-    dados.km!==""?dados.km:"",
-    dados.proximaTroca!==""?dados.proximaTroca:"",
-    normalizarDataParaInput(dados.dataAlarme||dados.alarme),
-    dados.obsAlarme||dados.observacao||"",
-    dados.unidade||"KM"
-  ];
+function excluirManutencao(index) {
+  const item = DB.manutencao[index];
+  if (!item) return;
+  if (!confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTA MANUTENÇÃO?")) return;
+  if (!confirmarSenha()) return;
+  DB.manutencao.splice(index, 1);
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("excluirManutencao", { item });
+  alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
 }
 
-function normalizarComparacao(valor) {
-  if (valor===null||valor===undefined) return "";
-  if (valor instanceof Date) return Utilities.formatDate(valor, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  if (typeof valor==="number") return String(valor).trim();
-  let texto = String(valor).trim().toUpperCase();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return texto;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) {
-    const p = texto.split("/"); return `${p[2]}-${p[1]}-${p[0]}`;
+function abrirModalEditarAbastecimento(index) {
+  const registro = DB.abastecimento[index];
+  if (!registro) return;
+  if (!document.getElementById("modalEditarAbastecimento")) {
+    criarModalEditarAbastecimento();
   }
-  if (texto.includes("-")||texto.includes("/")) {
-    try {
-      const d = new Date(texto);
-      if (!isNaN(d.getTime())) return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
-    } catch (_) {}
-  }
-  return texto;
+  const select = document.getElementById("editSelectVeiculo");
+  select.innerHTML = "";
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+  veiculosOrdenados.forEach(v => {
+    select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
+  });
+  document.getElementById("editAbastIndex").value = index;
+  document.getElementById("editDataAbastecimento").value = registro[0];
+  document.getElementById("editSelectVeiculo").value = registro[1];
+  document.getElementById("editMotorista").value = registro[3];
+  document.getElementById("editLitros").value = registro[4];
+  document.getElementById("editValorTotal").value = registro[5];
+  document.getElementById("editKmAtual").value = registro[6];
+  configurarAutocompleteMotorista("editMotorista", "editSugestoesMotorista");
+  document.getElementById("modalEditarAbastecimento").style.display = "block";
 }
 
-function obterValorDoObjetoOuArray(dado, idx) {
-  if (!dado) return "";
-  if (Array.isArray(dado)) return dado[idx]!==undefined?dado[idx]:"";
-  if (typeof dado==="object") {
-    const map = {0:dado.dataAbastecimento||dado.data,1:dado.placa,2:dado.nome||dado.veiculo,3:dado.motorista,4:dado.litros,5:dado.valorTotal||dado.valor,6:dado.kmAtual||dado.km,7:dado.consumo};
-    if (map[idx]!==undefined) return map[idx];
-    return dado[idx]!==undefined?dado[idx]:"";
-  }
-  return "";
+function fecharModalEditarAbastecimento() {
+  const modal = document.getElementById("modalEditarAbastecimento");
+  if (modal) modal.style.display = "none";
 }
 
-function encontrarLinhaPorCamposChave(sheet, item, indicesChave) {
-  if (!item) return -1;
-  const ultimaLinha = sheet.getLastRow();
-  if (ultimaLinha < 2) return -1;
-  const valores = sheet.getRange(2,1,ultimaLinha-1,sheet.getLastColumn()).getValues();
-  for (let i=valores.length-1;i>=0;i--) {
-    const linha = valores[i];
-    let bateu=true;
-    for (let k=0;k<indicesChave.length;k++) {
-      const idx=indicesChave[k];
-      if (normalizarComparacao(linha[idx])!==normalizarComparacao(obterValorDoObjetoOuArray(item,idx))) {bateu=false;break;}
+function salvarEdicaoAbastecimento() {
+  const index = Number(document.getElementById("editAbastIndex").value);
+  const antigo = DB.abastecimento[index];
+  if (!antigo) return;
+  const data = document.getElementById("editDataAbastecimento").value;
+  const placa = document.getElementById("editSelectVeiculo").value;
+  const nome = document.getElementById("editSelectVeiculo").selectedOptions[0]?.text.split(" - ")[0] || "";
+  const motorista = document.getElementById("editMotorista").value.trim().toUpperCase();
+  const litros = document.getElementById("editLitros").value.trim();
+  const valor = document.getElementById("editValorTotal").value.trim();
+  const kmAtual = document.getElementById("editKmAtual").value.trim();
+  if (!data ||!placa ||!motorista ||!litros ||!valor ||!kmAtual) {
+    alert("PREENCHA CORRETAMENTE DATA, VEÍCULO, MOTORISTA, LITROS, VALOR E KM.");
+    return;
+  }
+  if (!confirmarSenha()) return;
+  salvarNovoMotorista(motorista);
+  const novoRegistro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
+  DB.abastecimento[index] = novoRegistro;
+  recalcularConsumoHistorico();
+  salvarDB();
+  carregarDados();
+  enviarParaGoogleSheets("editarAbastecimento", { antigo, novo: novoRegistro });
+  fecharModalEditarAbastecimento();
+  alert("ABASTECIMENTO ATUALIZADO COM SUCESSO!");
+}
+
+function criarModalEditarAbastecimento() {
+  const html = `
+    <div id="modalEditarAbastecimento" class="modal">
+      <div class="modal-content">
+        <button type="button" class="close" onclick="fecharModalEditarAbastecimento()" aria-label="Fechar">&times;</button>
+        <h2>EDITAR ABASTECIMENTO</h2>
+        <input type="hidden" id="editAbastIndex">
+        <div class="form-group">
+          <label for="editDataAbastecimento">DATA</label>
+          <input type="date" id="editDataAbastecimento">
+        </div>
+        <div class="form-group">
+          <label for="editSelectVeiculo">VEÍCULO</label>
+          <select id="editSelectVeiculo"></select>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editMotorista">MOTORISTA</label>
+            <div class="autocomplete-wrapper">
+              <input type="text" id="editMotorista" autocomplete="off">
+              <div id="editSugestoesMotorista" class="suggestions-box"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="editLitros">LITROS</label>
+            <input type="text" inputmode="numeric" id="editLitros" placeholder="0,000">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="editValorTotal">VALOR TOTAL R$</label>
+            <input type="text" inputmode="numeric" id="editValorTotal" placeholder="0,00">
+          </div>
+          <div class="form-group">
+            <label for="editKmAtual">KM ATUAL</label>
+            <input type="text" inputmode="numeric" id="editKmAtual" placeholder="0">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button type="button" class="btn btn-primary" onclick="salvarEdicaoAbastecimento()">SALVAR</button>
+          <button type="button" class="btn btn-secondary" onclick="fecharModalEditarAbastecimento()">CANCELAR</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML("beforeend", html);
+  const editLitros = document.getElementById("editLitros");
+  const editValor = document.getElementById("editValorTotal");
+  const editKm = document.getElementById("editKmAtual");
+  if (editLitros) editLitros.addEventListener("input", mascararLitros);
+  if (editValor) editValor.addEventListener("input", mascararValor);
+  if (editKm) editKm.addEventListener("input", mascararKM);
+}
+
+function gerarHTMLPDF(dados, titulo) {
+  const registros = [...dados].sort((a, b) => {
+    if (a[2]!== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
+    return String(a[0]).localeCompare(String(b[0]));
+  });
+  const totalLitros = registros.reduce((sum, r) => sum + limparNumero(r[4]), 0);
+  const totalValor = registros.reduce((sum, r) => sum + limparNumero(r[5]), 0);
+  let linhas = "";
+  let veiculoAtual = "";
+  registros.forEach(r => {
+    if (veiculoAtual!== r[2]) {
+      veiculoAtual = r[2];
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
     }
-    if (bateu) return i+2;
-  }
-  return -1;
+    linhas += `
+      <tr>
+        <td>${escaparHTML(formatarData(r[0]))}</td>
+        <td><strong>${escaparHTML(r[1])}</strong></td>
+        <td>${escaparHTML(r[2])}</td>
+        <td>${escaparHTML(r[3] || "-")}</td>
+        <td>${escaparHTML(r[4])} L</td>
+        <td>R$ ${escaparHTML(r[5])}</td>
+        <td>${escaparHTML(r[6])} KM</td>
+        <td>${r[7]!== "-"? `${escaparHTML(r[7])} KM/L` : "-"}</td>
+      </tr>`;
+  });
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escaparHTML(titulo)}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}h1{color:#1565c0;font-size:20px;margin-top:0}.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}.cards{display:flex;gap:15px;margin-bottom:25px}.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}.card strong{font-size:15px;color:#1565c0}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#1565c0;color:#fff;padding:8px}td{padding:7px;border-bottom:1px solid #eee;text-align:center}.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}</style></head><body><div class="report-container"><div class="header"><a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a><h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1><div>${escaparHTML(titulo)}</div><small>Emissão: ${new Date().toLocaleString("pt-BR")}</small></div><div class="cards"><div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div><div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div><div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div></div><table><thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead><tbody>${linhas}</tbody></table></div></body></html>`;
 }
 
-function encontrarLinhaFlexivel(sheet, item, indicesChave) {
-  if (!item) return -1;
-  const ultimaLinha = sheet.getLastRow();
-  if (ultimaLinha<2) return -1;
-  const valores = sheet.getRange(2,1,ultimaLinha-1,sheet.getLastColumn()).getValues();
-  for (let i=valores.length-1;i>=0;i--) {
-    const linha=valores[i];
-    let bateuTodos=true;
-    for (let k=0;k<indicesChave.length;k++) {
-      const idx=indicesChave[k];
-      if (normalizarComparacao(linha[idx])!==normalizarComparacao(obterValorDoObjetoOuArray(item,idx))) {bateuTodos=false;break;}
+function gerarHTMLPDFManutencao(dados, titulo) {
+  const registros = [...dados].sort((a, b) => {
+    if (a[3]!== b[3]) return String(a[3]).localeCompare(String(b[3]), "pt-BR");
+    return String(a[0]).localeCompare(String(b[0]));
+  });
+  let linhas = "";
+  let veiculoAtual = "";
+  registros.forEach(r => {
+    if (veiculoAtual!== r[3]) {
+      veiculoAtual = r[3];
+      linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[3])} — PLACA: ${escaparHTML(r[2])}</td></tr>`;
     }
-    if (bateuTodos) return i+2;
+    const dataHora = `${formatarData(r[0])} ${r[1] || ''}`.trim();
+    const unidade = r[9] || "KM";
+    const status = calcularStatusProxima(r[2], r[5], r[6], unidade);
+    linhas += `
+      <tr>
+        <td>${escaparHTML(dataHora)}</td>
+        <td><strong>${escaparHTML(r[2])}</strong></td>
+        <td>${escaparHTML(r[3])}</td>
+        <td>${escaparHTML(r[4] || "-")}</td>
+        <td>${r[5]!== "" && r[5]!== undefined? `${escaparHTML(r[5])} ${unidade}` : "-"}</td>
+        <td>${r[6]!== "" && r[6]!== undefined? `${escaparHTML(r[6])} ${unidade}` : "-"}</td>
+        <td>${status.texto}</td>
+        <td>${escaparHTML(r[8] || "-")}</td>
+      </tr>`;
+  });
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escaparHTML(titulo)}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}h1{color:#1565c0;font-size:20px;margin-top:0}.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}.cards{display:flex;gap:15px;margin-bottom:25px}.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}.card strong{font-size:15px;color:#1565c0}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#1565c0;color:#fff;padding:8px}td{padding:7px;border-bottom:1px solid #eee;text-align:center}.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}</style></head><body><div class="report-container"><div class="header"><a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a><h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1><div>${escaparHTML(titulo)}</div><small>Emissão: ${new Date().toLocaleString("pt-BR")}</small></div><div class="cards"><div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div></div><table><thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM/H ATUAL</th><th>PRÓXIMA TROCA</th><th>STATUS</th><th>OBSERVAÇÃO</th></tr></thead><tbody>${linhas}</tbody></table></div></body></html>`;
+}
+
+function abrirNovaAbaComPDF(html) {
+  document.open();
+  document.write(html);
+  document.close();
+}
+
+function gerarPDFGeral() {
+  if (abaAtiva === "abastecimento") {
+    if (!DB.abastecimento.length) return alert("NÃO HÁ DADOS DE ABASTECIMENTO.");
+    abrirNovaAbaComPDF(gerarHTMLPDF(DB.abastecimento, "RELATÓRIO GERAL DE ABASTECIMENTO"));
+  } else {
+    if (!DB.manutencao.length) return alert("NÃO HÁ DADOS DE MANUTENÇÃO.");
+    abrirNovaAbaComPDF(gerarHTMLPDFManutencao(DB.manutencao, "RELATÓRIO GERAL DE MANUTENÇÃO"));
   }
-  for (let i=valores.length-1;i>=0;i--) {
-    const linha=valores[i];
-    const idxPlaca=indicesChave[0], idxData=indicesChave[1];
-    if (normalizarComparacao(linha[idxPlaca])===normalizarComparacao(obterValorDoObjetoOuArray(item,idxPlaca)) &&
-        normalizarComparacao(linha[idxData])===normalizarComparacao(obterValorDoObjetoOuArray(item,idxData))) return i+2;
+}
+
+function abrirModalSeletiva() {
+  const container = document.getElementById("listaCheckboxesVeiculos");
+  container.innerHTML = "";
+  if (!listaVeiculosGlobal.length) return alert("NÃO HÁ VEÍCULOS CADASTRADOS.");
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
+    (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
+  );
+  veiculosOrdenados.forEach(v => {
+    const div = document.createElement("div");
+    div.className = "checkbox-item";
+    div.innerHTML = `
+      <label>
+        <input type="checkbox" value="${escaparHTML(v.placa)}">
+        <span>${escaparHTML(v.nome)} - ${escaparHTML(v.placa)}</span>
+      </label>
+    `;
+    container.appendChild(div);
+  });
+  const modal = document.getElementById("modalSeletiva");
+  modal.style.display = "block";
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function fecharModalSeletiva() {
+  const modal = document.getElementById("modalSeletiva");
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function gerarPDFSeletiva() {
+  const placas = Array.from(
+    document.querySelectorAll("#listaCheckboxesVeiculos input:checked")
+  ).map(cb => cb.value);
+  if (!placas.length) return alert("SELECIONE PELO MENOS 1 VEÍCULO.");
+  const nomes = listaVeiculosGlobal
+   .filter(v => placas.includes(v.placa))
+   .map(v => v.nome)
+   .join(", ");
+  if (abaAtiva === "abastecimento") {
+    const dados = DB.abastecimento.filter(r => placas.includes(r[1]));
+    if (!dados.length) return alert("NENHUM ABASTECIMENTO ENCONTRADO.");
+    abrirNovaAbaComPDF(gerarHTMLPDF(dados, `RELATÓRIO SELETIVO: ${nomes}`));
+  } else {
+    const dados = DB.manutencao.filter(r => placas.includes(r[2]));
+    if (!dados.length) return alert("NENHUMA MANUTENÇÃO ENCONTRADA.");
+    abrirNovaAbaComPDF(gerarHTMLPDFManutencao(dados, `RELATÓRIO SELETIVO: ${nomes}`));
   }
-  return -1;
+  fecharModalSeletiva();
 }
 
-function encontrarLinhaPorValor(sheet,coluna,valor){
-  const ultimaLinha=sheet.getLastRow();
-  if(ultimaLinha<2) return -1;
-  const valores=sheet.getRange(2,coluna,ultimaLinha-1,1).getValues();
-  const procurado=normalizarComparacao(valor);
-  for(let i=0;i<valores.length;i++){if(normalizarComparacao(valores[i][0])===procurado) return i+2;}
-  return -1;
-}
-
-function atualizarVeiculoNaAba(ss,nomeAba,placaAntiga,nomeNovo,placaNova){
-  const sheet=obterAba(ss,nomeAba);
-  const linha=encontrarLinhaPorValor(sheet,2,placaAntiga);
-  if(linha===-1) return;
-  sheet.getRange(linha,1).setValue(nomeNovo);
-  sheet.getRange(linha,2).setValue(placaNova);
-}
-
-function atualizarHistoricoVeiculo(ss,nomeAba,placaAntiga,nomeNovo,placaNova,colPlaca,colNome){
-  const sheet=obterAba(ss,nomeAba);
-  const ultimaLinha=sheet.getLastRow();
-  if(ultimaLinha<2) return;
-  const dados=sheet.getRange(2,1,ultimaLinha-1,sheet.getLastColumn()).getValues();
-  for(let i=0;i<dados.length;i++){
-    if(normalizarComparacao(dados[i][colPlaca-1])===normalizarComparacao(placaAntiga)){
-      sheet.getRange(i+2,colPlaca).setValue(placaNova);
-      sheet.getRange(i+2,colNome).setValue(nomeNovo);
+window.addEventListener("click", (event) => {
+  document.querySelectorAll(".modal").forEach(modal => {
+    if (event.target === modal && modal.id!== "telaLogin") {
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
     }
-  }
-}
+  });
+});
 
-function excluirDaAba(ss,nomeAba,coluna,valor){
-  const sheet=obterAba(ss,nomeAba);
-  const ultimaLinha=sheet.getLastRow();
-  if(ultimaLinha<2) return;
-  const valores=sheet.getRange(2,coluna,ultimaLinha-1,1).getValues();
-  const procurado=normalizarComparacao(valor);
-  for(let i=valores.length-1;i>=0;i--){if(normalizarComparacao(valores[i][0])===procurado) sheet.deleteRow(i+2);}
-}
+window.addEventListener("keydown", (event) => {
+  if (event.key!== "Escape") return;
+  document.querySelectorAll(".modal").forEach(modal => {
+    if (modal.id!== "telaLogin") {
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+    }
+  });
+});
