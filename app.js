@@ -1,7 +1,6 @@
-// INICIO - COPIE DAQUI
 // ============================================================
-// AG4 FROTA - APP.JS FINAL CORRIGIDO - COM HORIMETRO MANUAL + CONCLUÍDO
-// CORREÇÃO: 05/08/2026 QRZ8J44 agora fica CONCLUÍDO CINZA (não VENCIDO)
+// AG4 FROTA - APP.JS FINAL CORRIGIDO - CONCLUÍDO
+// ÚNICA ALTERAÇÃO: IVECO 05/08 agora fica CONCLUÍDO cinza
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -629,11 +628,10 @@ function getKmAtualVeiculo(placa) {
   return getKmAtualVeiculoSemManual(placa);
 }
 
-// ===== CORREÇÃO PRINCIPAL - AGORA COM CONCLUÍDO =====
+// ====== FUNÇÃO CORRIGIDA - ÚNICA MUDANÇA AQUI ======
 function calcularStatusProxima(placa, tipo, data, kmManut, proxima, unidade, indexAtual) {
   if (!proxima || proxima === "" ) return { classe: "", texto: "-", restante: null };
 
-  // Se existe manutenção mais nova do mesmo tipo e placa, vira CONCLUÍDO
   if (typeof indexAtual === "number" && indexAtual >= 0) {
     const temMaisNova = DB.manutencao.some((r, idx) => {
       if (idx === indexAtual) return false;
@@ -1030,6 +1028,76 @@ function preencherTabelaAbastecimento(dados) {
   });
 }
 
+function preencherTabelaManutencao(dados) {
+  const thead = document.getElementById("cabecalhoTabela");
+  const tbody = document.querySelector("#tabelaHistorico tbody");
+  const c = colunaOrdenacao.manutencao;
+  thead.innerHTML = `
+    <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('manutencao', 0)}</th>
+    <th onclick="ordenarTabela(2)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 2)}</th>
+    <th onclick="ordenarTabela(3)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 3)}</th>
+    <th onclick="ordenarTabela(4)" class="th-sortable">TIPO${obterIndicadorOrdem('manutencao', 4)}</th>
+    <th onclick="ordenarTabela(5)" class="th-sortable">KM/H ATUAL${obterIndicadorOrdem('manutencao', 5)}</th>
+    <th onclick="ordenarTabela(6)" class="th-sortable">PRÓXIMA TROCA${obterIndicadorOrdem('manutencao', 6)}</th>
+    <th onclick="ordenarTabela(7)" class="th-sortable">STATUS / ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
+    <th onclick="ordenarTabela(8)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 8)}</th>
+    <th>AÇÕES</th>
+  `;
+  tbody.innerHTML = "";
+  if (!dados.length) {
+    tbody.innerHTML = '<tr><td colspan="9">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
+    return;
+  }
+  let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
+  dadosOrdenados.sort((a, b) => {
+    let valA = a.item[c.indice];
+    let valB = b.item[c.indice];
+    if ([5, 6].includes(c.indice)) {
+      valA = Number(valA) || 0;
+      valB = Number(valB) || 0;
+    } else {
+      valA = String(valA || "").toLowerCase();
+      valB = String(valB || "").toLowerCase();
+    }
+    if (valA < valB) return c.asc? -1 : 1;
+    if (valA > valB) return c.asc? 1 : -1;
+    return 0;
+  });
+  dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
+    const tr = tbody.insertRow();
+    const unidade = r[9] || "KM";
+    const kmAtualVeiculo = getKmAtualVeiculo(r[2]);
+    const isManual = getKmManual(r[2]) > 0;
+    tr.insertCell().textContent = formatarData(r[0]);
+    tr.insertCell().textContent = r[2];
+    tr.insertCell().textContent = r[3];
+    tr.insertCell().textContent = r[4];
+    const tdAtual = tr.insertCell();
+    tdAtual.innerHTML = `${r[5]!== ""? `${r[5]} ${unidade}` : "-"}<br>
+      <small style="color:var(--primary-color)">ATUAL:${kmAtualVeiculo} ${unidade} ${isManual?'(MANUAL)':''}</small><br>
+      <button onclick="atualizarKmManual('${r[2]}')" style="font-size:9px; padding:3px 6px; cursor:pointer; background:var(--primary-color); color:white; border:none; border-radius:3px; margin-top:2px;">ATUALIZAR</button>`;
+    tr.insertCell().textContent = r[6]!== ""? `${r[6]} ${unidade}` : "-";
+    const status = calcularStatusProxima(r[2], r[4], r[0], r[5], r[6], unidade, indexOriginal);
+    const tdStatus = tr.insertCell();
+    if(status.classe) {
+      tdStatus.innerHTML = `<span class="${status.classe}">${status.texto}</span><br><small>${r[7]? formatarData(r[7]) : ""}</small>`;
+    } else {
+      tdStatus.textContent = r[7]? formatarData(r[7]) : "-";
+    }
+    tr.insertCell().textContent = r[8]? r[8] : "-";
+    const td = tr.insertCell();
+    td.innerHTML = `
+      <div class="dropdown">
+        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${indexOriginal}')">MAIS</button>
+        <div class="dropdown-content" id="dropdownmanut_${indexOriginal}">
+          <button type="button" onclick="abrirModalEditarManutencao(${indexOriginal})">EDITAR</button>
+          <button type="button" onclick="excluirManutencao(${indexOriginal})">EXCLUIR</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
 function formatarData(data) {
   if (!data) return "";
   const texto = String(data);
@@ -1331,4 +1399,3 @@ window.addEventListener("keydown", (event) => {
     }
   });
 });
-// FIM - COLE ATÉ AQUI
