@@ -1,5 +1,5 @@
 // ============================================================
-// AG4 FROTA - APP.JS (CÓDIGO COMPLETO E CORRIGIDO)
+// AG4 FROTA - APP.JS FINAL CORRIGIDO - COM HORIMETRO MANUAL
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -9,6 +9,7 @@ const STORAGE_KEY = "ag4_frota";
 const USER_KEY = "ag4_usuario_logado";
 const THEME_KEY = "ag4_tema_sistema";
 const MOTORISTAS_KEY = "ag4_historico_motoristas";
+const KM_MANUAL_KEY = "ag4_km_atual_manual";
 const SENHA_MESTRE = "frot@AG4";
 
 let DB = carregarDB();
@@ -20,10 +21,6 @@ let colunaOrdenacao = {
   manutencao: { indice: 0, asc: false }
 };
 
-// ============================================================
-// FUNÇÕES UTILITÁRIAS DE SANITIZAÇÃO E PARSER DE NÚMEROS
-// ============================================================
-
 function limparNumero(val) {
   if (val === null || val === undefined || val === "") return 0;
   if (typeof val === "number") return val;
@@ -34,14 +31,13 @@ function limparNumero(val) {
 function carregarDB() {
   try {
     const salvo = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!salvo || typeof salvo !== "object") {
+    if (!salvo || typeof salvo!== "object") {
       return { veiculos: [], abastecimento: [], manutencao: [] };
     }
-
     return {
-      veiculos: Array.isArray(salvo.veiculos) ? salvo.veiculos : [],
-      abastecimento: Array.isArray(salvo.abastecimento) ? salvo.abastecimento : [],
-      manutencao: Array.isArray(salvo.manutencao) ? salvo.manutencao : []
+      veiculos: Array.isArray(salvo.veiculos)? salvo.veiculos : [],
+      abastecimento: Array.isArray(salvo.abastecimento)? salvo.abastecimento : [],
+      manutencao: Array.isArray(salvo.manutencao)? salvo.manutencao : []
     };
   } catch (erro) {
     console.error("Erro ao carregar banco local:", erro);
@@ -69,17 +65,13 @@ function horaAgoraInput() {
 }
 
 function escaparHTML(valor) {
-  return String(valor ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(valor?? "")
+   .replaceAll("&", "&amp;")
+   .replaceAll("<", "&lt;")
+   .replaceAll(">", "&gt;")
+   .replaceAll('"', "&quot;")
+   .replaceAll("'", "&#039;");
 }
-
-// ============================================================
-// MÁSCARAS DE ENTRADA
-// ============================================================
 
 function mascararLitros(e) {
   let v = e.target.value.replace(/\D/g, "");
@@ -106,10 +98,6 @@ function mascararKM(e) {
   e.target.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-// ============================================================
-// GERENCIAMENTO DE MOTORISTAS
-// ============================================================
-
 function obterMotoristasUnicos() {
   let salvos = [];
   try {
@@ -117,20 +105,17 @@ function obterMotoristasUnicos() {
   } catch (e) {
     salvos = [];
   }
-
   const doHistorico = DB.abastecimento
-    .map(r => r[3])
-    .filter(m => m && typeof m === "string" && m.trim() !== "");
-
-  const conjunto = new Set([...salvos, ...doHistorico]);
+   .map(r => r[3])
+   .filter(m => m && typeof m === "string" && m.trim()!== "");
+  const conjunto = new Set([...salvos,...doHistorico]);
   return Array.from(conjunto).sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 function salvarNovoMotorista(nome) {
-  if (!nome || typeof nome !== "string") return;
+  if (!nome || typeof nome!== "string") return;
   const limpo = nome.trim().toUpperCase();
   if (!limpo) return;
-
   const lista = obterMotoristasUnicos();
   if (!lista.includes(limpo)) {
     lista.push(limpo);
@@ -145,10 +130,8 @@ function removerMotoristaDoHistorico(nomeParaRemover) {
   } catch (e) {
     salvos = [];
   }
-
-  const novaLista = salvos.filter(m => m !== nomeParaRemover);
+  const novaLista = salvos.filter(m => m!== nomeParaRemover);
   localStorage.setItem(MOTORISTAS_KEY, JSON.stringify(novaLista));
-
   DB.abastecimento.forEach(r => {
     if (r[3] === nomeParaRemover) {
       r[3] = "";
@@ -160,32 +143,25 @@ function removerMotoristaDoHistorico(nomeParaRemover) {
 function configurarAutocompleteMotorista(inputId, suggestionsId) {
   const input = document.getElementById(inputId);
   const suggestionsBox = document.getElementById(suggestionsId);
-
-  if (!input || !suggestionsBox) return;
-
+  if (!input ||!suggestionsBox) return;
   function renderizarSugestoes(termo = "") {
     const todos = obterMotoristasUnicos();
     const filtro = termo.trim().toUpperCase();
     const filtrados = todos.filter(m => m.includes(filtro));
-
     suggestionsBox.innerHTML = "";
-
     if (filtrados.length === 0) {
       suggestionsBox.classList.remove("show");
       return;
     }
-
     filtrados.forEach(nome => {
       const item = document.createElement("div");
       item.className = "suggestion-item";
-
       const spanNome = document.createElement("span");
       spanNome.textContent = nome;
       spanNome.onclick = () => {
         input.value = nome;
         suggestionsBox.classList.remove("show");
       };
-
       const btnExcluir = document.createElement("span");
       btnExcluir.className = "btn-delete-suggestion";
       btnExcluir.textContent = "x";
@@ -195,33 +171,24 @@ function configurarAutocompleteMotorista(inputId, suggestionsId) {
         removerMotoristaDoHistorico(nome);
         renderizarSugestoes(input.value);
       };
-
       item.appendChild(spanNome);
       item.appendChild(btnExcluir);
       suggestionsBox.appendChild(item);
     });
-
     suggestionsBox.classList.add("show");
   }
-
   input.addEventListener("focus", () => renderizarSugestoes(input.value));
   input.addEventListener("input", () => renderizarSugestoes(input.value));
-
   document.addEventListener("click", (e) => {
-    if (!input.contains(e.target) && !suggestionsBox.contains(e.target)) {
+    if (!input.contains(e.target) &&!suggestionsBox.contains(e.target)) {
       suggestionsBox.classList.remove("show");
     }
   });
 }
 
-// ============================================================
-// TEMAS
-// ============================================================
-
 function toggleTheme() {
   let temaAtual = localStorage.getItem(THEME_KEY) || "light";
   let novoTema = "light";
-
   if (temaAtual === "light") {
     novoTema = "medium";
   } else if (temaAtual === "medium") {
@@ -229,14 +196,12 @@ function toggleTheme() {
   } else {
     novoTema = "light";
   }
-
   aplicarTema(novoTema);
   localStorage.setItem(THEME_KEY, novoTema);
 }
 
 function aplicarTema(tema) {
   document.body.classList.remove("theme-medium", "theme-dark");
-
   if (tema === "medium") {
     document.body.classList.add("theme-medium");
     atualizarIconeTema("medium");
@@ -251,7 +216,6 @@ function aplicarTema(tema) {
 function aplicarTemaSalvo() {
   const temaSalvo = localStorage.getItem(THEME_KEY);
   const prefereEscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
   if (temaSalvo) {
     aplicarTema(temaSalvo);
   } else if (prefereEscuro) {
@@ -277,10 +241,6 @@ function atualizarIconeTema(tema) {
   }
 }
 
-// ============================================================
-// SHEETS & SINCRONIZAÇÃO
-// ============================================================
-
 async function enviarParaGoogleSheets(acao, dados) {
   const payload = JSON.stringify({ acao, dados });
   try {
@@ -289,14 +249,12 @@ async function enviarParaGoogleSheets(acao, dados) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ payload: payload })
     });
-
     const res = await response.json();
     if (!res.ok) {
       console.error("[AG4] Erro retornado pela planilha:", res.mensagem);
       alert("ATENÇÃO: " + (res.mensagem || "Erro ao salvar na planilha."));
       return false;
     }
-
     return true;
   } catch (erro) {
     console.error("[AG4] Erro de comunicação com Google Sheets:", erro);
@@ -314,7 +272,6 @@ async function sincronizarComNuvem() {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ payload: payload })
     });
-
     const res = await response.json();
     if (res.ok && res.DB) {
       DB = res.DB;
@@ -333,16 +290,13 @@ async function fazerLogin(event) {
   const email = document.getElementById("loginEmail").value.trim();
   const senha = document.getElementById("loginSenha").value.trim();
   const erroEl = document.getElementById("loginErro");
-
-  if (!email || !senha) {
+  if (!email ||!senha) {
     erroEl.textContent = "PREENCHA E-MAIL E SENHA.";
     erroEl.style.display = "block";
     return;
   }
-
   erroEl.style.display = "none";
   mostrarLoading(true);
-
   try {
     const payload = JSON.stringify({ acao: "fazerLogin", dados: { email, senha } });
     const response = await fetch(APPS_SCRIPT_URL, {
@@ -350,9 +304,7 @@ async function fazerLogin(event) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ payload: payload })
     });
-
     const res = await response.json();
-
     if (res.ok) {
       localStorage.setItem(USER_KEY, JSON.stringify(res.usuario || { email }));
       exibirApp(res.usuario);
@@ -387,7 +339,6 @@ function exibirApp(usuario) {
   if (usuario && usuario.nome) {
     document.getElementById("nomeUsuarioLogado").textContent = `USUÁRIO: ${usuario.nome.toUpperCase()}`;
   }
-
   history.pushState(null, "", window.location.href);
   window.onpopstate = function () {
     history.pushState(null, "", window.location.href);
@@ -396,34 +347,24 @@ function exibirApp(usuario) {
 
 function mostrarLoading(exibir) {
   const spinner = document.getElementById("loadingSpinner");
-  if (spinner) spinner.style.display = exibir ? "flex" : "none";
+  if (spinner) spinner.style.display = exibir? "flex" : "none";
 }
-
-// ============================================================
-// INICIALIZAÇÃO E CARREGAMENTO
-// ============================================================
 
 document.addEventListener("DOMContentLoaded", () => {
   aplicarTemaSalvo();
-
   document.getElementById("dataAbastecimento").value = dataHojeInput();
-
   document.addEventListener("input", (e) => {
-    if (e.target && e.target.type === "text" && e.target.id !== "loginEmail") {
+    if (e.target && e.target.type === "text" && e.target.id!== "loginEmail") {
       e.target.value = e.target.value.toUpperCase();
     }
   });
-
   const elLitros = document.getElementById("litros");
   const elValor = document.getElementById("valorTotal");
   const elKM = document.getElementById("kmAtual");
-
   if (elLitros) elLitros.addEventListener("input", mascararLitros);
   if (elValor) elValor.addEventListener("input", mascararValor);
   if (elKM) elKM.addEventListener("input", mascararKM);
-
   configurarAutocompleteMotorista("motorista", "sugestoesMotorista");
-
   const usuarioSalvo = JSON.parse(localStorage.getItem(USER_KEY));
   if (usuarioSalvo) {
     exibirApp(usuarioSalvo);
@@ -447,23 +388,16 @@ function confirmarSenha() {
   const senhaDigitada = prompt("DIGITE A SENHA DE CONFIRMAÇÃO PARA CONTINUAR:");
   if (senhaDigitada === null) return false;
   if (senhaDigitada === SENHA_MESTRE) return true;
-
   alert("SENHA INCORRETA! AÇÃO NÃO PERMITIDA.");
   return false;
 }
 
-// ============================================================
-// VEÍCULOS
-// ============================================================
-
 function preencherSelects(veiculos) {
   const select1 = document.getElementById("selectVeiculo");
   const select2 = document.getElementById("selectVeiculoManutencao");
-
-  const veiculosOrdenados = [...veiculos].sort((a, b) => 
+  const veiculosOrdenados = [...veiculos].sort((a, b) =>
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
-
   [select1, select2].forEach((select) => {
     if (!select) return;
     select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
@@ -476,29 +410,22 @@ function preencherSelects(veiculos) {
 function cadastrarVeiculo() {
   const nomeEl = document.getElementById("nomeVeiculo");
   const placaEl = document.getElementById("placaVeiculo");
-
   const nome = nomeEl.value.trim().toUpperCase();
   const placa = placaEl.value.trim().toUpperCase();
-
-  if (!nome || !placa) {
+  if (!nome ||!placa) {
     alert("PREENCHA NOME E PLACA.");
     return;
   }
-
   if (DB.veiculos.some(v => v.placa === placa)) {
     alert("PLACA JÁ CADASTRADA.");
     return;
   }
-
   const novoVeiculo = { nome, placa };
   DB.veiculos.push(novoVeiculo);
   DB.veiculos.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
-
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("cadastrarVeiculo", novoVeiculo);
-
   nomeEl.value = "";
   placaEl.value = "";
   alert("VEÍCULO CADASTRADO COM SUCESSO!");
@@ -515,7 +442,6 @@ function fecharModalEditar() {
   const modal = document.getElementById("modalEditarVeiculo");
   modal.style.display = "none";
   modal.setAttribute("aria-hidden", "true");
-
   document.getElementById("selectVeiculoEditar").value = "";
   document.getElementById("nomeVeiculoEditar").value = "";
   document.getElementById("placaVeiculoEditar").value = "";
@@ -524,12 +450,10 @@ function fecharModalEditar() {
 function preencherSelectEditar() {
   const select = document.getElementById("selectVeiculoEditar");
   if (!select) return;
-
   select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
-  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
-
   veiculosOrdenados.forEach(v => {
     select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
   });
@@ -538,7 +462,6 @@ function preencherSelectEditar() {
 function carregarDadosEdicao() {
   const placa = document.getElementById("selectVeiculoEditar").value;
   const veiculo = DB.veiculos.find(v => v.placa === placa);
-
   document.getElementById("nomeVeiculoEditar").value = veiculo?.nome || "";
   document.getElementById("placaVeiculoEditar").value = veiculo?.placa || "";
 }
@@ -547,43 +470,40 @@ function salvarEdicaoVeiculo() {
   const placaAntiga = document.getElementById("selectVeiculoEditar").value;
   const nomeNovo = document.getElementById("nomeVeiculoEditar").value.trim().toUpperCase();
   const placaNova = document.getElementById("placaVeiculoEditar").value.trim().toUpperCase();
-
-  if (!placaAntiga || !nomeNovo || !placaNova) {
+  if (!placaAntiga ||!nomeNovo ||!placaNova) {
     alert("PREENCHA TODOS OS CAMPOS.");
     return;
   }
-
   if (!confirmarSenha()) return;
-
-  if (placaNova !== placaAntiga && DB.veiculos.some(v => v.placa === placaNova)) {
+  if (placaNova!== placaAntiga && DB.veiculos.some(v => v.placa === placaNova)) {
     alert("A NOVA PLACA JÁ ESTÁ CADASTRADA.");
     return;
   }
-
   const veiculo = DB.veiculos.find(v => v.placa === placaAntiga);
   if (!veiculo) return;
-
   veiculo.nome = nomeNovo;
   veiculo.placa = placaNova;
-
   DB.abastecimento.forEach(r => {
     if (r[1] === placaAntiga) {
       r[1] = placaNova;
       r[2] = nomeNovo;
     }
   });
-
   DB.manutencao.forEach(r => {
     if (r[2] === placaAntiga) {
       r[2] = placaNova;
       r[3] = nomeNovo;
     }
   });
-
+  const dadosManual = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+  if (dadosManual[placaAntiga]) {
+    dadosManual[placaNova] = dadosManual[placaAntiga];
+    delete dadosManual[placaAntiga];
+    localStorage.setItem(KM_MANUAL_KEY, JSON.stringify(dadosManual));
+  }
   recalcularConsumoHistorico();
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("editarVeiculo", { placaAntiga, nomeNovo, placaNova });
   fecharModalEditar();
   alert("VEÍCULO E HISTÓRICOS ATUALIZADOS COM SUCESSO!");
@@ -595,51 +515,39 @@ function excluirVeiculo() {
     alert("SELECIONE UM VEÍCULO PARA EXCLUIR.");
     return;
   }
-
   if (!confirm(`TEM CERTEZA QUE DESEJA EXCLUIR O VEÍCULO ${placa}?\n\nTODOS OS ABASTECIMENTOS E MANUTENÇÕES VINCULADOS TAMBÉM SERÃO EXCLUÍDOS.`)) {
     return;
   }
-
   if (!confirmarSenha()) return;
-
-  DB.veiculos = DB.veiculos.filter(v => v.placa !== placa);
-  DB.abastecimento = DB.abastecimento.filter(r => r[1] !== placa);
-  DB.manutencao = DB.manutencao.filter(r => r[2] !== placa);
-
+  DB.veiculos = DB.veiculos.filter(v => v.placa!== placa);
+  DB.abastecimento = DB.abastecimento.filter(r => r[1]!== placa);
+  DB.manutencao = DB.manutencao.filter(r => r[2]!== placa);
+  const dadosManual = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+  delete dadosManual[placa];
+  localStorage.setItem(KM_MANUAL_KEY, JSON.stringify(dadosManual));
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("excluirVeiculo", { placa });
   fecharModalEditar();
   alert("VEÍCULO EXCLUÍDO COM SUCESSO!");
 }
 
-// ============================================================
-// CONSUMO E ABASTECIMENTO
-// ============================================================
-
 function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
   const km = limparNumero(kmAtual);
   const l = limparNumero(litros);
-
   if (!placa || km <= 0 || l <= 0) return "-";
-
   const anteriores = DB.abastecimento
-    .map((registro, index) => ({ registro, index }))
-    .filter(item => {
+   .map((registro, index) => ({ registro, index }))
+   .filter(item => {
       const kmReg = limparNumero(item.registro[6]);
-      return item.index !== indiceIgnorado && item.registro[1] === placa && kmReg < km;
+      return item.index!== indiceIgnorado && item.registro[1] === placa && kmReg < km;
     })
-    .sort((a, b) => limparNumero(a.registro[6]) - limparNumero(b.registro[6]));
-
+   .sort((a, b) => limparNumero(a.registro[6]) - limparNumero(b.registro[6]));
   if (!anteriores.length) return "-";
-
   const anterior = anteriores[anteriores.length - 1].registro;
   const kmAnterior = limparNumero(anterior[6]);
-
   const kmRodado = km - kmAnterior;
   if (kmRodado <= 0) return "-";
-
   return (kmRodado / l).toFixed(2);
 }
 
@@ -648,18 +556,15 @@ function recalcularConsumoHistorico() {
     DB.abastecimento = DB.abastecimento || [];
     return;
   }
-
   DB.abastecimento.sort((a, b) => {
     const dataA = new Date(a[0]).getTime() || 0;
     const dataB = new Date(b[0]).getTime() || 0;
-    if (dataA !== dataB) return dataA - dataB;
+    if (dataA!== dataB) return dataA - dataB;
     return limparNumero(a[6]) - limparNumero(b[6]);
   });
-
   DB.abastecimento.forEach((registro, index) => {
     registro[7] = calcularConsumoRegistro(registro[1], registro[6], registro[4], index);
   });
-
   salvarDB();
 }
 
@@ -674,7 +579,33 @@ function atualizarLabelKmEdit() {
   if (label) label.textContent = unidade === "H"? "HORAS ATUAL" : "KM ATUAL";
 }
 
-function getKmAtualVeiculo(placa) {
+// CONTROLE MANUAL DE HORIMETRO / KM ATUAL
+function getKmManual(placa) {
+  try {
+    const dados = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+    return Number(dados[placa]) || 0;
+  } catch(e) {
+    return 0;
+  }
+}
+
+function atualizarKmManual(placa) {
+  const atual = getKmManual(placa) || getKmAtualVeiculoSemManual(placa);
+  const novo = prompt(`DIGITE A LEITURA ATUAL DO HORÍMETRO/KM DO VEÍCULO ${placa}:\n(ATUAL: ${atual || 0})`);
+  if (novo === null) return;
+  const num = Number(novo.replace(",", "."));
+  if (isNaN(num) || num <= 0) {
+    alert("VALOR INVÁLIDO!");
+    return;
+  }
+  const dados = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
+  dados[placa] = num;
+  localStorage.setItem(KM_MANUAL_KEY, JSON.stringify(dados));
+  carregarDados();
+  alert(`HORÍMETRO DE ${placa} ATUALIZADO PARA ${num}`);
+}
+
+function getKmAtualVeiculoSemManual(placa) {
   let maxKm = 0;
   DB.abastecimento.forEach(r => {
     if (r[1] === placa) {
@@ -691,21 +622,31 @@ function getKmAtualVeiculo(placa) {
   return maxKm;
 }
 
+function getKmAtualVeiculo(placa) {
+  const manual = getKmManual(placa);
+  if (manual > 0) return manual;
+  return getKmAtualVeiculoSemManual(placa);
+}
+
 function calcularStatusProxima(placa, kmManut, proxima, unidade) {
   if (!proxima || proxima === "" ) return { classe: "", texto: "-", restante: null };
-
   const proxNum = Number(proxima);
   const kmAtual = getKmAtualVeiculo(placa);
-  // Se não tem km atual, usa o km da manutenção como base
   const baseAtual = kmAtual > 0? kmAtual : Number(kmManut) || 0;
+  const unidadeU = unidade || "KM";
 
-  const restante = proxNum - baseAtual;
-
-  if (unidade === "H") {
-    if (restante <= 0) return { classe: "status-vermelho", texto: `VENCIDO`, restante };
-    if (restante <= 50) return { classe: "status-laranja", texto: `${restante}H RESTANTES`, restante };
-    return { classe: "status-verde", texto: `${restante}H RESTANTES`, restante };
+  if (unidadeU === "H") {
+    const rodadas = baseAtual - Number(kmManut);
+    const restante = proxNum - baseAtual;
+    if (rodadas > 250 || restante < 0) {
+      return { classe: "status-vermelho", texto: `VENCIDO`, restante };
+    }
+    if (rodadas >= 200) {
+      return { classe: "status-laranja", texto: `${restante}H REST.`, restante };
+    }
+    return { classe: "status-verde", texto: `${restante}H REST.`, restante };
   } else {
+    const restante = proxNum - baseAtual;
     if (restante <= 0) return { classe: "status-vermelho", texto: `VENCIDO`, restante };
     if (restante <= 1000) return { classe: "status-laranja", texto: `${restante}KM REST.`, restante };
     return { classe: "status-verde", texto: `${restante}KM REST.`, restante };
@@ -716,49 +657,36 @@ function registrarAbastecimento() {
   const data = document.getElementById("dataAbastecimento").value;
   const placa = document.getElementById("selectVeiculo").value;
   const motorista = document.getElementById("motorista").value.trim().toUpperCase();
-  
   const litros = document.getElementById("litros").value.trim();
   const valor = document.getElementById("valorTotal").value.trim();
   const kmAtual = document.getElementById("kmAtual").value.trim();
-
   const veiculo = DB.veiculos.find(v => v.placa === placa);
   const nome = veiculo?.nome || "";
-
-  if (!data || !placa || !motorista || !litros || !valor || !kmAtual) {
+  if (!data ||!placa ||!motorista ||!litros ||!valor ||!kmAtual) {
     alert("PREENCHA TODOS OS CAMPOS CORRETAMENTE.");
     return;
   }
-
   salvarNovoMotorista(motorista);
-
   const registro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
-
   DB.abastecimento.push(registro);
   recalcularConsumoHistorico();
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("registrarAbastecimento", registro);
-
   document.getElementById("dataAbastecimento").value = dataHojeInput();
   document.getElementById("selectVeiculo").value = "";
   document.getElementById("motorista").value = "";
   document.getElementById("litros").value = "";
   document.getElementById("valorTotal").value = "";
   document.getElementById("kmAtual").value = "";
-
   alert("ABASTECIMENTO REGISTRADO COM SUCESSO!");
 }
-
-// ============================================================
-// MANUTENÇÃO
-// ============================================================
 
 function toggleCamposAlarme() {
   const chk = document.getElementById("chkAtivarAlarme");
   const container = document.getElementById("containerAlarme");
   if (container) {
-    container.style.display = chk && chk.checked ? "block" : "none";
+    container.style.display = chk && chk.checked? "block" : "none";
   }
 }
 
@@ -766,7 +694,7 @@ function toggleCamposAlarmeEdit() {
   const chk = document.getElementById("editChkAtivarAlarme");
   const container = document.getElementById("editContainerAlarme");
   if (container) {
-    container.style.display = chk && chk.checked ? "block" : "none";
+    container.style.display = chk && chk.checked? "block" : "none";
   }
 }
 
@@ -774,22 +702,20 @@ function abrirModalManutencao() {
   const modal = document.getElementById("modalManutencao");
   modal.style.display = "block";
   modal.setAttribute("aria-hidden", "false");
-  
   document.getElementById("dataManutencao").value = dataHojeInput();
   if (document.getElementById("horaManutencao")) {
     document.getElementById("horaManutencao").value = horaAgoraInput();
   }
-
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
   toggleCamposAlarme();
+  atualizarLabelKm();
 }
 
 function fecharModalManutencao() {
   const modal = document.getElementById("modalManutencao");
   modal.style.display = "none";
   modal.setAttribute("aria-hidden", "true");
-
   document.getElementById("selectVeiculoManutencao").value = "";
   document.getElementById("nomeVeiculoManutencao").value = "";
   document.getElementById("tipoManutencao").value = "";
@@ -798,7 +724,6 @@ function fecharModalManutencao() {
   if (document.getElementById("horaManutencao")) {
     document.getElementById("horaManutencao").value = "";
   }
-  
   const chk = document.getElementById("chkAtivarAlarme");
   if (chk) chk.checked = false;
   document.getElementById("dataAlarme").value = "";
@@ -822,77 +747,58 @@ function registrarManutencao() {
   const km = document.getElementById("kmManutencao").value? Number(document.getElementById("kmManutencao").value) : "";
   const proximaTroca = document.getElementById("proximaTrocaManutencao").value? Number(document.getElementById("proximaTrocaManutencao").value) : "";
   const unidade = document.getElementById("unidadeProximaTroca")?.value || "KM";
-
   const temAlarme = document.getElementById("chkAtivarAlarme")?.checked || false;
   const dataAlarme = temAlarme? document.getElementById("dataAlarme").value : "";
   const horaAlarme = temAlarme? (document.getElementById("horaAlarme")?.value || "") : "";
   const obsAlarme = temAlarme? document.getElementById("obsAlarme").value.trim().toUpperCase() : "";
-
   if (!data ||!placa ||!tipo) {
     alert("PREENCHA DATA, VEÍCULO E TIPO.");
     return;
   }
-
   const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
-  // NOVO: Adicionado unidade no índice 9
   const registro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme, unidade];
-
   DB.manutencao.push(registro);
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("registrarManutencao", registro);
   fecharModalManutencao();
   alert("MANUTENÇÃO REGISTRADA COM SUCESSO!");
 }
 
-// ============================================================
-// EDITAR MANUTENÇÃO
-// ============================================================
-
 function abrirModalEditarManutencao(index) {
   const registro = DB.manutencao[index];
   if (!registro) return;
-
   if (!document.getElementById("modalEditarManutencao")) {
     criarModalEditarManutencao();
   }
-
   const select = document.getElementById("editSelectVeiculoManutencao");
   select.innerHTML = "";
-
-  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
-
   veiculosOrdenados.forEach(v => {
     select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
   });
-
   document.getElementById("editManutIndex").value = index;
   document.getElementById("editDataManutencao").value = registro[0] || "";
   document.getElementById("editHoraManutencao").value = registro[1] || "";
   document.getElementById("editSelectVeiculoManutencao").value = registro[2] || "";
-  
   const veic = DB.veiculos.find(v => v.placa === registro[2]);
   document.getElementById("editNomeVeiculoManutencao").value = veic?.nome || registro[3] || "";
   document.getElementById("editTipoManutencao").value = registro[4] || "";
-  document.getElementById("editKmManutencao").value = registro[5] ?? "";
-  document.getElementById("editProximaTrocaManutencao").value = registro[6] ?? "";
+  document.getElementById("editKmManutencao").value = registro[5]?? "";
+  document.getElementById("editProximaTrocaManutencao").value = registro[6]?? "";
   document.getElementById("editUnidadeProximaTroca").value = registro[9] || "KM";
   atualizarLabelKmEdit();
-
   const temAlarme = Boolean(registro[7] || registro[8]);
   const chk = document.getElementById("editChkAtivarAlarme");
   chk.checked = temAlarme;
-  
   const partesAlarme = (registro[7] || "").split(" ");
   document.getElementById("editDataAlarme").value = partesAlarme[0] || "";
   if (document.getElementById("editHoraAlarme")) {
     document.getElementById("editHoraAlarme").value = partesAlarme[1] || "";
   }
   document.getElementById("editObsAlarme").value = registro[8] || "";
-
   toggleCamposAlarmeEdit();
   document.getElementById("modalEditarManutencao").style.display = "block";
 }
@@ -912,35 +818,28 @@ function salvarEdicaoManutencao() {
   const index = Number(document.getElementById("editManutIndex").value);
   const antigo = DB.manutencao[index];
   if (!antigo) return;
-
   const data = document.getElementById("editDataManutencao").value;
   const hora = document.getElementById("editHoraManutencao").value || horaAgoraInput();
   const placa = document.getElementById("editSelectVeiculoManutencao").value;
   const nome = document.getElementById("editNomeVeiculoManutencao").value;
   const tipo = document.getElementById("editTipoManutencao").value.trim().toUpperCase();
-  const km = document.getElementById("editKmManutencao").value !== "" ? Number(document.getElementById("editKmManutencao").value) : "";
-  const proximaTroca = document.getElementById("editProximaTrocaManutencao").value !== "" ? Number(document.getElementById("editProximaTrocaManutencao").value) : "";
-
+  const km = document.getElementById("editKmManutencao").value!== ""? Number(document.getElementById("editKmManutencao").value) : "";
+  const proximaTroca = document.getElementById("editProximaTrocaManutencao").value!== ""? Number(document.getElementById("editProximaTrocaManutencao").value) : "";
+  const unidade = document.getElementById("editUnidadeProximaTroca")?.value || "KM";
   const temAlarme = document.getElementById("editChkAtivarAlarme")?.checked || false;
-  const dataAlarme = temAlarme ? document.getElementById("editDataAlarme").value : "";
-  const horaAlarme = temAlarme ? (document.getElementById("editHoraAlarme")?.value || "") : "";
-  const obsAlarme = temAlarme ? document.getElementById("editObsAlarme").value.trim().toUpperCase() : "";
-
-  if (!data || !placa || !tipo) {
+  const dataAlarme = temAlarme? document.getElementById("editDataAlarme").value : "";
+  const horaAlarme = temAlarme? (document.getElementById("editHoraAlarme")?.value || "") : "";
+  const obsAlarme = temAlarme? document.getElementById("editObsAlarme").value.trim().toUpperCase() : "";
+  if (!data ||!placa ||!tipo) {
     alert("PREENCHA DATA, VEÍCULO E TIPO.");
     return;
   }
-
   if (!confirmarSenha()) return;
-
   const alarmeFormatado = [dataAlarme, horaAlarme].filter(Boolean).join(" ");
-  const unidade = document.getElementById("editUnidadeProximaTroca")?.value || "KM";
   const novoRegistro = [data, hora, placa, nome, tipo, km, proximaTroca, alarmeFormatado, obsAlarme, unidade];
-
   DB.manutencao[index] = novoRegistro;
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("editarManutencao", { antigo, novo: novoRegistro });
   fecharModalEditarManutencao();
   alert("MANUTENÇÃO ATUALIZADA COM SUCESSO!");
@@ -963,23 +862,19 @@ function criarModalEditarManutencao() {
             <input type="time" id="editHoraManutencao">
           </div>
         </div>
-
         <div class="form-group">
           <label for="editSelectVeiculoManutencao">PLACA</label>
           <select id="editSelectVeiculoManutencao" onchange="carregarNomeVeiculoEdit()"></select>
         </div>
-
         <div class="form-group">
           <label for="editNomeVeiculoManutencao">NOME_VEICULO</label>
           <input type="text" id="editNomeVeiculoManutencao" readonly>
         </div>
-
         <div class="form-group">
           <label for="editTipoManutencao">TIPO</label>
           <input type="text" id="editTipoManutencao">
         </div>
-
-                <div class="grid-2">
+        <div class="grid-2">
           <div class="form-group">
             <label for="editKmManutencao" id="editLabelKmManutencao">KM / HORAS ATUAL</label>
             <input type="number" id="editKmManutencao">
@@ -995,14 +890,12 @@ function criarModalEditarManutencao() {
             </div>
           </div>
         </div>
-
         <div class="form-group" style="margin-top: 15px;">
           <label class="checkbox-alarme-label">
             <input type="checkbox" id="editChkAtivarAlarme" onchange="toggleCamposAlarmeEdit()">
             ⏰ DEFINIR ALARME / LEMBRETE
           </label>
         </div>
-
         <div id="editContainerAlarme" class="alarme-box" style="display: none;">
           <div class="form-group">
             <label for="editDataAlarme">DEFINIR ALARME / LEMBRETE (DATA / HORA)</label>
@@ -1016,7 +909,6 @@ function criarModalEditarManutencao() {
             <input type="text" id="editObsAlarme">
           </div>
         </div>
-
         <div class="btn-group">
           <button type="button" class="btn btn-primary" onclick="salvarEdicaoManutencao()">SALVAR</button>
           <button type="button" class="btn btn-secondary" onclick="fecharModalEditarManutencao()">CANCELAR</button>
@@ -1027,27 +919,21 @@ function criarModalEditarManutencao() {
   document.body.insertAdjacentHTML("beforeend", html);
 }
 
-// ============================================================
-// TABELAS E EXIBIÇÃO
-// ============================================================
-
 function ordenarTabela(indiceColuna) {
   const config = colunaOrdenacao[abaAtiva];
-  
   if (config.indice === indiceColuna) {
-    config.asc = !config.asc;
+    config.asc =!config.asc;
   } else {
     config.indice = indiceColuna;
     config.asc = true;
   }
-
   renderizarTabela();
 }
 
 function obterIndicadorOrdem(aba, indice) {
   const config = colunaOrdenacao[aba];
-  if (config.indice !== indice) return "";
-  return config.asc ? " ▲" : " ▼";
+  if (config.indice!== indice) return "";
+  return config.asc? " ▲" : " ▼";
 }
 
 function trocarAba(aba) {
@@ -1069,7 +955,6 @@ function preencherTabelaAbastecimento(dados) {
   const thead = document.getElementById("cabecalhoTabela");
   const tbody = document.querySelector("#tabelaHistorico tbody");
   const c = colunaOrdenacao.abastecimento;
-
   thead.innerHTML = `
     <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('abastecimento', 0)}</th>
     <th onclick="ordenarTabela(1)" class="th-sortable">PLACA${obterIndicadorOrdem('abastecimento', 1)}</th>
@@ -1081,36 +966,29 @@ function preencherTabelaAbastecimento(dados) {
     <th onclick="ordenarTabela(7)" class="th-sortable">CONSUMO${obterIndicadorOrdem('abastecimento', 7)}</th>
     <th>AÇÕES</th>
   `;
-
   tbody.innerHTML = "";
-
   if (!dados.length) {
     tbody.innerHTML = '<tr><td colspan="9">NENHUM ABASTECIMENTO REGISTRADO</td></tr>';
     return;
   }
-
   let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
-
   dadosOrdenados.sort((a, b) => {
     let valA = a.item[c.indice];
     let valB = b.item[c.indice];
-
     if ([4, 5, 6].includes(c.indice)) {
       valA = limparNumero(valA);
       valB = limparNumero(valB);
     } else if (c.indice === 7) {
-      valA = valA === "-" ? -1 : Number(valA);
-      valB = valB === "-" ? -1 : Number(valB);
+      valA = valA === "-"? -1 : Number(valA);
+      valB = valB === "-"? -1 : Number(valB);
     } else {
       valA = String(valA || "").toLowerCase();
       valB = String(valB || "").toLowerCase();
     }
-
-    if (valA < valB) return c.asc ? -1 : 1;
-    if (valA > valB) return c.asc ? 1 : -1;
+    if (valA < valB) return c.asc? -1 : 1;
+    if (valA > valB) return c.asc? 1 : -1;
     return 0;
   });
-
   dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
     tr.insertCell().textContent = formatarData(r[0]);
@@ -1120,8 +998,7 @@ function preencherTabelaAbastecimento(dados) {
     tr.insertCell().textContent = `${r[4]} L`;
     tr.insertCell().textContent = `R$ ${r[5]}`;
     tr.insertCell().textContent = `${r[6]} KM`;
-    tr.insertCell().textContent = r[7] !== "-" ? `${r[7]} KM/L` : "-";
-
+    tr.insertCell().textContent = r[7]!== "-"? `${r[7]} KM/L` : "-";
     const td = tr.insertCell();
     td.innerHTML = `
       <div class="dropdown">
@@ -1139,7 +1016,6 @@ function preencherTabelaManutencao(dados) {
   const thead = document.getElementById("cabecalhoTabela");
   const tbody = document.querySelector("#tabelaHistorico tbody");
   const c = colunaOrdenacao.manutencao;
-
   thead.innerHTML = `
     <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('manutencao', 0)}</th>
     <th onclick="ordenarTabela(2)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 2)}</th>
@@ -1151,14 +1027,11 @@ function preencherTabelaManutencao(dados) {
     <th onclick="ordenarTabela(8)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 8)}</th>
     <th>AÇÕES</th>
   `;
-
   tbody.innerHTML = "";
-
   if (!dados.length) {
     tbody.innerHTML = '<tr><td colspan="9">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
     return;
   }
-
   let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
   dadosOrdenados.sort((a, b) => {
     let valA = a.item[c.indice];
@@ -1174,19 +1047,20 @@ function preencherTabelaManutencao(dados) {
     if (valA > valB) return c.asc? 1 : -1;
     return 0;
   });
-
   dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
     const tr = tbody.insertRow();
-    const unidade = r[9] || "KM"; // Compatibilidade com dados antigos
-
+    const unidade = r[9] || "KM";
+    const kmAtualVeiculo = getKmAtualVeiculo(r[2]);
+    const isManual = getKmManual(r[2]) > 0;
     tr.insertCell().textContent = formatarData(r[0]);
     tr.insertCell().textContent = r[2];
     tr.insertCell().textContent = r[3];
     tr.insertCell().textContent = r[4];
-    tr.insertCell().textContent = r[5]!== ""? `${r[5]} ${unidade}` : "-";
+    const tdAtual = tr.insertCell();
+    tdAtual.innerHTML = `${r[5]!== ""? `${r[5]} ${unidade}` : "-"}<br>
+      <small style="color:var(--primary-color)">ATUAL:${kmAtualVeiculo} ${unidade} ${isManual?'(MANUAL)':''}</small><br>
+      <button onclick="atualizarKmManual('${r[2]}')" style="font-size:9px; padding:3px 6px; cursor:pointer; background:var(--primary-color); color:white; border:none; border-radius:3px; margin-top:2px;">ATUALIZAR</button>`;
     tr.insertCell().textContent = r[6]!== ""? `${r[6]} ${unidade}` : "-";
-
-    // COLUNA COM COR
     const status = calcularStatusProxima(r[2], r[5], r[6], unidade);
     const tdStatus = tr.insertCell();
     if(status.classe) {
@@ -1194,9 +1068,7 @@ function preencherTabelaManutencao(dados) {
     } else {
       tdStatus.textContent = r[7]? formatarData(r[7]) : "-";
     }
-
     tr.insertCell().textContent = r[8]? r[8] : "-";
-
     const td = tr.insertCell();
     td.innerHTML = `
       <div class="dropdown">
@@ -1231,22 +1103,15 @@ document.addEventListener("click", () => {
   document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
 });
 
-// ============================================================
-// EXCLUSÃO E EDIÇÃO DE ABASTECIMENTO
-// ============================================================
-
 function excluirAbastecimento(index) {
   const item = DB.abastecimento[index];
   if (!item) return;
-
   if (!confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTE ABASTECIMENTO?")) return;
   if (!confirmarSenha()) return;
-
   DB.abastecimento.splice(index, 1);
   recalcularConsumoHistorico();
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("excluirAbastecimento", { item });
   alert("ABASTECIMENTO EXCLUÍDO COM SUCESSO!");
 }
@@ -1254,14 +1119,11 @@ function excluirAbastecimento(index) {
 function excluirManutencao(index) {
   const item = DB.manutencao[index];
   if (!item) return;
-
   if (!confirm("TEM CERTEZA QUE DESEJA EXCLUIR ESTA MANUTENÇÃO?")) return;
   if (!confirmarSenha()) return;
-
   DB.manutencao.splice(index, 1);
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("excluirManutencao", { item });
   alert("MANUTENÇÃO EXCLUÍDA COM SUCESSO!");
 }
@@ -1269,22 +1131,17 @@ function excluirManutencao(index) {
 function abrirModalEditarAbastecimento(index) {
   const registro = DB.abastecimento[index];
   if (!registro) return;
-
   if (!document.getElementById("modalEditarAbastecimento")) {
     criarModalEditarAbastecimento();
   }
-
   const select = document.getElementById("editSelectVeiculo");
   select.innerHTML = "";
-
-  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
-
   veiculosOrdenados.forEach(v => {
     select.add(new Option(`${v.nome} - ${v.placa}`, v.placa));
   });
-
   document.getElementById("editAbastIndex").value = index;
   document.getElementById("editDataAbastecimento").value = registro[0];
   document.getElementById("editSelectVeiculo").value = registro[1];
@@ -1292,9 +1149,7 @@ function abrirModalEditarAbastecimento(index) {
   document.getElementById("editLitros").value = registro[4];
   document.getElementById("editValorTotal").value = registro[5];
   document.getElementById("editKmAtual").value = registro[6];
-
   configurarAutocompleteMotorista("editMotorista", "editSugestoesMotorista");
-
   document.getElementById("modalEditarAbastecimento").style.display = "block";
 }
 
@@ -1307,7 +1162,6 @@ function salvarEdicaoAbastecimento() {
   const index = Number(document.getElementById("editAbastIndex").value);
   const antigo = DB.abastecimento[index];
   if (!antigo) return;
-
   const data = document.getElementById("editDataAbastecimento").value;
   const placa = document.getElementById("editSelectVeiculo").value;
   const nome = document.getElementById("editSelectVeiculo").selectedOptions[0]?.text.split(" - ")[0] || "";
@@ -1315,23 +1169,17 @@ function salvarEdicaoAbastecimento() {
   const litros = document.getElementById("editLitros").value.trim();
   const valor = document.getElementById("editValorTotal").value.trim();
   const kmAtual = document.getElementById("editKmAtual").value.trim();
-
-  if (!data || !placa || !motorista || !litros || !valor || !kmAtual) {
+  if (!data ||!placa ||!motorista ||!litros ||!valor ||!kmAtual) {
     alert("PREENCHA CORRETAMENTE DATA, VEÍCULO, MOTORISTA, LITROS, VALOR E KM.");
     return;
   }
-
   if (!confirmarSenha()) return;
-
   salvarNovoMotorista(motorista);
-
   const novoRegistro = [data, placa, nome, motorista, litros, valor, kmAtual, "-"];
-
   DB.abastecimento[index] = novoRegistro;
   recalcularConsumoHistorico();
   salvarDB();
   carregarDados();
-
   enviarParaGoogleSheets("editarAbastecimento", { antigo, novo: novoRegistro });
   fecharModalEditarAbastecimento();
   alert("ABASTECIMENTO ATUALIZADO COM SUCESSO!");
@@ -1383,34 +1231,25 @@ function criarModalEditarAbastecimento() {
     </div>
   `;
   document.body.insertAdjacentHTML("beforeend", html);
-
   const editLitros = document.getElementById("editLitros");
   const editValor = document.getElementById("editValorTotal");
   const editKm = document.getElementById("editKmAtual");
-
   if (editLitros) editLitros.addEventListener("input", mascararLitros);
   if (editValor) editValor.addEventListener("input", mascararValor);
   if (editKm) editKm.addEventListener("input", mascararKM);
 }
 
-// ============================================================
-// RELATÓRIOS E IMPRESSÃO (PDF)
-// ============================================================
-
 function gerarHTMLPDF(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
-    if (a[2] !== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
+    if (a[2]!== b[2]) return String(a[2]).localeCompare(String(b[2]), "pt-BR");
     return String(a[0]).localeCompare(String(b[0]));
   });
-
   const totalLitros = registros.reduce((sum, r) => sum + limparNumero(r[4]), 0);
   const totalValor = registros.reduce((sum, r) => sum + limparNumero(r[5]), 0);
-
   let linhas = "";
   let veiculoAtual = "";
-
   registros.forEach(r => {
-    if (veiculoAtual !== r[2]) {
+    if (veiculoAtual!== r[2]) {
       veiculoAtual = r[2];
       linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[2])} — PLACA: ${escaparHTML(r[1])}</td></tr>`;
     }
@@ -1423,140 +1262,43 @@ function gerarHTMLPDF(dados, titulo) {
         <td>${escaparHTML(r[4])} L</td>
         <td>R$ ${escaparHTML(r[5])}</td>
         <td>${escaparHTML(r[6])} KM</td>
-        <td>${r[7] !== "-" ? `${escaparHTML(r[7])} KM/L` : "-"}</td>
+        <td>${r[7]!== "-"? `${escaparHTML(r[7])} KM/L` : "-"}</td>
       </tr>`;
   });
-
-  return `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>${escaparHTML(titulo)}</title>
-<style>
-body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}
-.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
-h1{color:#1565c0;font-size:20px;margin-top:0}
-.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
-.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
-.btn-voltar:hover{background:#0d47a1}
-.cards{display:flex;gap:15px;margin-bottom:25px}
-.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}
-.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
-.card strong{font-size:15px;color:#1565c0}
-table{width:100%;border-collapse:collapse;font-size:11px}
-th{background:#1565c0;color:#fff;padding:8px}
-td{padding:7px;border-bottom:1px solid #eee;text-align:center}
-.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
-@media print{
-  body{background:#fff;padding:0}
-  .report-container{max-width:100% !important;margin:0 !important;box-shadow:none;padding:0;border-radius:0}
-  .btn-voltar{display:none}
-  @page{margin:1.5cm}
-}
-</style>
-</head>
-<body>
-<div class="report-container">
-  <div class="header">
-    <a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a>
-    <h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1>
-    <div>${escaparHTML(titulo)}</div>
-    <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
-  </div>
-  <div class="cards">
-    <div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div>
-    <div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div>
-    <div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
-  </div>
-  <table>
-  <thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead>
-  <tbody>${linhas}</tbody>
-  </table>
-</div>
-</body>
-</html>`;
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escaparHTML(titulo)}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}h1{color:#1565c0;font-size:20px;margin-top:0}.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}.cards{display:flex;gap:15px;margin-bottom:25px}.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}.card strong{font-size:15px;color:#1565c0}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#1565c0;color:#fff;padding:8px}td{padding:7px;border-bottom:1px solid #eee;text-align:center}.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}</style></head><body><div class="report-container"><div class="header"><a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a><h1>AG4 FROTA — GESTÃO DE COMBUSTÍVEL</h1><div>${escaparHTML(titulo)}</div><small>Emissão: ${new Date().toLocaleString("pt-BR")}</small></div><div class="cards"><div class="card"><span>Total Registros</span><strong>${registros.length}</strong></div><div class="card"><span>Total Combustível</span><strong>${totalLitros.toLocaleString("pt-BR", { minimumFractionDigits: 3 })} L</strong></div><div class="card"><span>Investimento Total</span><strong>R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div></div><table><thead><tr><th>DATA</th><th>PLACA</th><th>VEÍCULO</th><th>MOTORISTA</th><th>LITROS</th><th>VALOR</th><th>KM</th><th>CONSUMO</th></tr></thead><tbody>${linhas}</tbody></table></div></body></html>`;
 }
 
 function gerarHTMLPDFManutencao(dados, titulo) {
   const registros = [...dados].sort((a, b) => {
-    if (a[3] !== b[3]) return String(a[3]).localeCompare(String(b[3]), "pt-BR");
+    if (a[3]!== b[3]) return String(a[3]).localeCompare(String(b[3]), "pt-BR");
     return String(a[0]).localeCompare(String(b[0]));
   });
-
   let linhas = "";
   let veiculoAtual = "";
-
   registros.forEach(r => {
-    if (veiculoAtual !== r[3]) {
+    if (veiculoAtual!== r[3]) {
       veiculoAtual = r[3];
       linhas += `<tr class="cabecalho-veiculo"><td colspan="8">VEÍCULO: ${escaparHTML(r[3])} — PLACA: ${escaparHTML(r[2])}</td></tr>`;
     }
     const dataHora = `${formatarData(r[0])} ${r[1] || ''}`.trim();
+    const unidade = r[9] || "KM";
+    const status = calcularStatusProxima(r[2], r[5], r[6], unidade);
     linhas += `
       <tr>
         <td>${escaparHTML(dataHora)}</td>
         <td><strong>${escaparHTML(r[2])}</strong></td>
         <td>${escaparHTML(r[3])}</td>
         <td>${escaparHTML(r[4] || "-")}</td>
-        <td>${r[5] !== "" && r[5] !== undefined ? `${escaparHTML(r[5])} KM` : "-"}</td>
-        <td>${r[6] !== "" && r[6] !== undefined ? `${escaparHTML(r[6])} KM` : "-"}</td>
-        <td>${r[7] ? formatarData(r[7]) : "-"}</td>
+        <td>${r[5]!== "" && r[5]!== undefined? `${escaparHTML(r[5])} ${unidade}` : "-"}</td>
+        <td>${r[6]!== "" && r[6]!== undefined? `${escaparHTML(r[6])} ${unidade}` : "-"}</td>
+        <td>${status.texto}</td>
         <td>${escaparHTML(r[8] || "-")}</td>
       </tr>`;
   });
-
-  return `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>${escaparHTML(titulo)}</title>
-<style>
-body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}
-.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}
-h1{color:#1565c0;font-size:20px;margin-top:0}
-.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}
-.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}
-.btn-voltar:hover{background:#0d47a1}
-.cards{display:flex;gap:15px;margin-bottom:25px}
-.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}
-.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}
-.card strong{font-size:15px;color:#1565c0}
-table{width:100%;border-collapse:collapse;font-size:11px}
-th{background:#1565c0;color:#fff;padding:8px}
-td{padding:7px;border-bottom:1px solid #eee;text-align:center}
-.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}
-@media print{
-  body{background:#fff;padding:0}
-  .report-container{max-width:100% !important;margin:0 !important;box-shadow:none;padding:0;border-radius:0}
-  .btn-voltar{display:none}
-  @page{margin:1.5cm}
-}
-</style>
-</head>
-<body>
-<div class="report-container">
-  <div class="header">
-    <a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a>
-    <h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1>
-    <div>${escaparHTML(titulo)}</div>
-    <small>Emissão: ${new Date().toLocaleString("pt-BR")}</small>
-  </div>
-  <div class="cards">
-    <div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div>
-  </div>
-  <table>
-  <thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM</th><th>PRÓXIMA TROCA</th><th>DATA ALARME</th><th>OBSERVAÇÃO</th></tr></thead>
-  <tbody>${linhas}</tbody>
-  </table>
-</div>
-</body>
-</html>`;
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escaparHTML(titulo)}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#f8f6f4;color:#2c3e50}.report-container{max-width:90%;margin:0 auto;background:#ffffff;padding:25px;box-shadow:0 2px 10px rgba(0,0,0,0.1);border-radius:8px;position:relative}h1{color:#1565c0;font-size:20px;margin-top:0}.header{border-bottom:3px solid #1565c0;padding-bottom:15px;margin-bottom:20px;position:relative}.btn-voltar{position:absolute;right:0;top:0;background:#1565c0;color:#fff;border:none;padding:8px 15px;border-radius:4px;cursor:pointer;font-weight:bold;text-decoration:none;font-size:12px}.cards{display:flex;gap:15px;margin-bottom:25px}.card{flex:1;background:#f8f9fa;border:1px solid #ddd;border-left:4px solid #1565c0;padding:12px;border-radius:4px}.card span{display:block;font-size:10px;color:#666;text-transform:uppercase}.card strong{font-size:15px;color:#1565c0}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#1565c0;color:#fff;padding:8px}td{padding:7px;border-bottom:1px solid #eee;text-align:center}.cabecalho-veiculo td{background:#e3f2fd;font-weight:bold;color:#0d47a1;text-align:left}</style></head><body><div class="report-container"><div class="header"><a href="javascript:window.close()" class="btn-voltar">⬅ VOLTAR AO SISTEMA</a><h1>AG4 FROTA — HISTÓRICO DE MANUTENÇÃO</h1><div>${escaparHTML(titulo)}</div><small>Emissão: ${new Date().toLocaleString("pt-BR")}</small></div><div class="cards"><div class="card"><span>Total de Manutenções</span><strong>${registros.length}</strong></div></div><table><thead><tr><th>DATA/HORA REGISTRO</th><th>PLACA</th><th>VEÍCULO</th><th>TIPO SERVIÇO</th><th>KM/H ATUAL</th><th>PRÓXIMA TROCA</th><th>STATUS</th><th>OBSERVAÇÃO</th></tr></thead><tbody>${linhas}</tbody></table></div></body></html>`;
 }
 
 function abrirNovaAbaComPDF(html) {
-  // Sobrescreve o documento atual para abrir na mesma aba
   document.open();
   document.write(html);
   document.close();
@@ -1575,13 +1317,10 @@ function gerarPDFGeral() {
 function abrirModalSeletiva() {
   const container = document.getElementById("listaCheckboxesVeiculos");
   container.innerHTML = "";
-
   if (!listaVeiculosGlobal.length) return alert("NÃO HÁ VEÍCULOS CADASTRADOS.");
-
-  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) => 
+  const veiculosOrdenados = [...listaVeiculosGlobal].sort((a, b) =>
     (a.nome || "").localeCompare(b.nome || "", 'pt-BR')
   );
-
   veiculosOrdenados.forEach(v => {
     const div = document.createElement("div");
     div.className = "checkbox-item";
@@ -1593,7 +1332,6 @@ function abrirModalSeletiva() {
     `;
     container.appendChild(div);
   });
-
   const modal = document.getElementById("modalSeletiva");
   modal.style.display = "block";
   modal.setAttribute("aria-hidden", "false");
@@ -1609,14 +1347,11 @@ function gerarPDFSeletiva() {
   const placas = Array.from(
     document.querySelectorAll("#listaCheckboxesVeiculos input:checked")
   ).map(cb => cb.value);
-
   if (!placas.length) return alert("SELECIONE PELO MENOS 1 VEÍCULO.");
-
   const nomes = listaVeiculosGlobal
-    .filter(v => placas.includes(v.placa))
-    .map(v => v.nome)
-    .join(", ");
-
+   .filter(v => placas.includes(v.placa))
+   .map(v => v.nome)
+   .join(", ");
   if (abaAtiva === "abastecimento") {
     const dados = DB.abastecimento.filter(r => placas.includes(r[1]));
     if (!dados.length) return alert("NENHUM ABASTECIMENTO ENCONTRADO.");
@@ -1626,17 +1361,12 @@ function gerarPDFSeletiva() {
     if (!dados.length) return alert("NENHUMA MANUTENÇÃO ENCONTRADA.");
     abrirNovaAbaComPDF(gerarHTMLPDFManutencao(dados, `RELATÓRIO SELETIVO: ${nomes}`));
   }
-
   fecharModalSeletiva();
 }
 
-// ============================================================
-// LISTENERS PARA FECHAR MODAIS AO CLICAR FORA OU ESC
-// ============================================================
-
 window.addEventListener("click", (event) => {
   document.querySelectorAll(".modal").forEach(modal => {
-    if (event.target === modal && modal.id !== "telaLogin") {
+    if (event.target === modal && modal.id!== "telaLogin") {
       modal.style.display = "none";
       modal.setAttribute("aria-hidden", "true");
     }
@@ -1644,9 +1374,9 @@ window.addEventListener("click", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
-  if (event.key !== "Escape") return;
+  if (event.key!== "Escape") return;
   document.querySelectorAll(".modal").forEach(modal => {
-    if (modal.id !== "telaLogin") {
+    if (modal.id!== "telaLogin") {
       modal.style.display = "none";
       modal.setAttribute("aria-hidden", "true");
     }
