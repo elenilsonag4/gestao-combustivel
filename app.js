@@ -1,5 +1,7 @@
+// INICIO - COPIE DAQUI
 // ============================================================
-// AG4 FROTA - APP.JS FINAL CORRIGIDO - COM HORIMETRO MANUAL
+// AG4 FROTA - APP.JS FINAL CORRIGIDO - COM HORIMETRO MANUAL + CONCLUÍDO
+// CORREÇÃO: 05/08/2026 QRZ8J44 agora fica CONCLUÍDO CINZA (não VENCIDO)
 // ============================================================
 
 const APPS_SCRIPT_URL =
@@ -66,11 +68,11 @@ function horaAgoraInput() {
 
 function escaparHTML(valor) {
   return String(valor?? "")
-   .replaceAll("&", "&amp;")
-   .replaceAll("<", "&lt;")
-   .replaceAll(">", "&gt;")
-   .replaceAll('"', "&quot;")
-   .replaceAll("'", "&#039;");
+  .replaceAll("&", "&amp;")
+  .replaceAll("<", "&lt;")
+  .replaceAll(">", "&gt;")
+  .replaceAll('"', "&quot;")
+  .replaceAll("'", "&#039;");
 }
 
 function mascararLitros(e) {
@@ -106,8 +108,8 @@ function obterMotoristasUnicos() {
     salvos = [];
   }
   const doHistorico = DB.abastecimento
-   .map(r => r[3])
-   .filter(m => m && typeof m === "string" && m.trim()!== "");
+  .map(r => r[3])
+  .filter(m => m && typeof m === "string" && m.trim()!== "");
   const conjunto = new Set([...salvos,...doHistorico]);
   return Array.from(conjunto).sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
@@ -537,12 +539,12 @@ function calcularConsumoRegistro(placa, kmAtual, litros, indiceIgnorado = -1) {
   const l = limparNumero(litros);
   if (!placa || km <= 0 || l <= 0) return "-";
   const anteriores = DB.abastecimento
-   .map((registro, index) => ({ registro, index }))
-   .filter(item => {
+  .map((registro, index) => ({ registro, index }))
+  .filter(item => {
       const kmReg = limparNumero(item.registro[6]);
       return item.index!== indiceIgnorado && item.registro[1] === placa && kmReg < km;
     })
-   .sort((a, b) => limparNumero(a.registro[6]) - limparNumero(b.registro[6]));
+  .sort((a, b) => limparNumero(a.registro[6]) - limparNumero(b.registro[6]));
   if (!anteriores.length) return "-";
   const anterior = anteriores[anteriores.length - 1].registro;
   const kmAnterior = limparNumero(anterior[6]);
@@ -579,7 +581,6 @@ function atualizarLabelKmEdit() {
   if (label) label.textContent = unidade === "H"? "HORAS ATUAL" : "KM ATUAL";
 }
 
-// CONTROLE MANUAL DE HORIMETRO / KM ATUAL
 function getKmManual(placa) {
   try {
     const dados = JSON.parse(localStorage.getItem(KM_MANUAL_KEY) || "{}");
@@ -628,8 +629,25 @@ function getKmAtualVeiculo(placa) {
   return getKmAtualVeiculoSemManual(placa);
 }
 
-function calcularStatusProxima(placa, kmManut, proxima, unidade) {
+// ===== CORREÇÃO PRINCIPAL - AGORA COM CONCLUÍDO =====
+function calcularStatusProxima(placa, tipo, data, kmManut, proxima, unidade, indexAtual) {
   if (!proxima || proxima === "" ) return { classe: "", texto: "-", restante: null };
+
+  // Se existe manutenção mais nova do mesmo tipo e placa, vira CONCLUÍDO
+  if (typeof indexAtual === "number" && indexAtual >= 0) {
+    const temMaisNova = DB.manutencao.some((r, idx) => {
+      if (idx === indexAtual) return false;
+      if (r[2]!== placa) return false;
+      if (r[4]!== tipo) return false;
+      if (r[0] > data) return true;
+      if (r[0] === data && Number(r[5]) > Number(kmManut)) return true;
+      return false;
+    });
+    if (temMaisNova) {
+      return { classe: "status-concluido", texto: "CONCLUÍDO", restante: null };
+    }
+  }
+
   const proxNum = Number(proxima);
   const kmAtual = getKmAtualVeiculo(placa);
   const baseAtual = kmAtual > 0? kmAtual : Number(kmManut) || 0;
@@ -1012,76 +1030,6 @@ function preencherTabelaAbastecimento(dados) {
   });
 }
 
-function preencherTabelaManutencao(dados) {
-  const thead = document.getElementById("cabecalhoTabela");
-  const tbody = document.querySelector("#tabelaHistorico tbody");
-  const c = colunaOrdenacao.manutencao;
-  thead.innerHTML = `
-    <th onclick="ordenarTabela(0)" class="th-sortable">DATA${obterIndicadorOrdem('manutencao', 0)}</th>
-    <th onclick="ordenarTabela(2)" class="th-sortable">PLACA${obterIndicadorOrdem('manutencao', 2)}</th>
-    <th onclick="ordenarTabela(3)" class="th-sortable">VEÍCULO${obterIndicadorOrdem('manutencao', 3)}</th>
-    <th onclick="ordenarTabela(4)" class="th-sortable">TIPO${obterIndicadorOrdem('manutencao', 4)}</th>
-    <th onclick="ordenarTabela(5)" class="th-sortable">KM/H ATUAL${obterIndicadorOrdem('manutencao', 5)}</th>
-    <th onclick="ordenarTabela(6)" class="th-sortable">PRÓXIMA TROCA${obterIndicadorOrdem('manutencao', 6)}</th>
-    <th onclick="ordenarTabela(7)" class="th-sortable">STATUS / ALARME${obterIndicadorOrdem('manutencao', 7)}</th>
-    <th onclick="ordenarTabela(8)" class="th-sortable">OBS ALARME${obterIndicadorOrdem('manutencao', 8)}</th>
-    <th>AÇÕES</th>
-  `;
-  tbody.innerHTML = "";
-  if (!dados.length) {
-    tbody.innerHTML = '<tr><td colspan="9">NENHUMA MANUTENÇÃO REGISTRADA</td></tr>';
-    return;
-  }
-  let dadosOrdenados = dados.map((item, indexOriginal) => ({ item, indexOriginal }));
-  dadosOrdenados.sort((a, b) => {
-    let valA = a.item[c.indice];
-    let valB = b.item[c.indice];
-    if ([5, 6].includes(c.indice)) {
-      valA = Number(valA) || 0;
-      valB = Number(valB) || 0;
-    } else {
-      valA = String(valA || "").toLowerCase();
-      valB = String(valB || "").toLowerCase();
-    }
-    if (valA < valB) return c.asc? -1 : 1;
-    if (valA > valB) return c.asc? 1 : -1;
-    return 0;
-  });
-  dadosOrdenados.forEach(({ item: r, indexOriginal }) => {
-    const tr = tbody.insertRow();
-    const unidade = r[9] || "KM";
-    const kmAtualVeiculo = getKmAtualVeiculo(r[2]);
-    const isManual = getKmManual(r[2]) > 0;
-    tr.insertCell().textContent = formatarData(r[0]);
-    tr.insertCell().textContent = r[2];
-    tr.insertCell().textContent = r[3];
-    tr.insertCell().textContent = r[4];
-    const tdAtual = tr.insertCell();
-    tdAtual.innerHTML = `${r[5]!== ""? `${r[5]} ${unidade}` : "-"}<br>
-      <small style="color:var(--primary-color)">ATUAL:${kmAtualVeiculo} ${unidade} ${isManual?'(MANUAL)':''}</small><br>
-      <button onclick="atualizarKmManual('${r[2]}')" style="font-size:9px; padding:3px 6px; cursor:pointer; background:var(--primary-color); color:white; border:none; border-radius:3px; margin-top:2px;">ATUALIZAR</button>`;
-    tr.insertCell().textContent = r[6]!== ""? `${r[6]} ${unidade}` : "-";
-    const status = calcularStatusProxima(r[2], r[5], r[6], unidade);
-    const tdStatus = tr.insertCell();
-    if(status.classe) {
-      tdStatus.innerHTML = `<span class="${status.classe}">${status.texto}</span><br><small>${r[7]? formatarData(r[7]) : ""}</small>`;
-    } else {
-      tdStatus.textContent = r[7]? formatarData(r[7]) : "-";
-    }
-    tr.insertCell().textContent = r[8]? r[8] : "-";
-    const td = tr.insertCell();
-    td.innerHTML = `
-      <div class="dropdown">
-        <button type="button" class="btn btn-primary action-btn" onclick="toggleDropdown(event, 'manut_${indexOriginal}')">MAIS</button>
-        <div class="dropdown-content" id="dropdownmanut_${indexOriginal}">
-          <button type="button" onclick="abrirModalEditarManutencao(${indexOriginal})">EDITAR</button>
-          <button type="button" onclick="excluirManutencao(${indexOriginal})">EXCLUIR</button>
-        </div>
-      </div>
-    `;
-  });
-}
-
 function formatarData(data) {
   if (!data) return "";
   const texto = String(data);
@@ -1282,7 +1230,8 @@ function gerarHTMLPDFManutencao(dados, titulo) {
     }
     const dataHora = `${formatarData(r[0])} ${r[1] || ''}`.trim();
     const unidade = r[9] || "KM";
-    const status = calcularStatusProxima(r[2], r[5], r[6], unidade);
+    const idxOriginal = DB.manutencao.indexOf(r);
+    const status = calcularStatusProxima(r[2], r[4], r[0], r[5], r[6], unidade, idxOriginal);
     linhas += `
       <tr>
         <td>${escaparHTML(dataHora)}</td>
@@ -1349,9 +1298,9 @@ function gerarPDFSeletiva() {
   ).map(cb => cb.value);
   if (!placas.length) return alert("SELECIONE PELO MENOS 1 VEÍCULO.");
   const nomes = listaVeiculosGlobal
-   .filter(v => placas.includes(v.placa))
-   .map(v => v.nome)
-   .join(", ");
+  .filter(v => placas.includes(v.placa))
+  .map(v => v.nome)
+  .join(", ");
   if (abaAtiva === "abastecimento") {
     const dados = DB.abastecimento.filter(r => placas.includes(r[1]));
     if (!dados.length) return alert("NENHUM ABASTECIMENTO ENCONTRADO.");
@@ -1382,3 +1331,4 @@ window.addEventListener("keydown", (event) => {
     }
   });
 });
+// FIM - COLE ATÉ AQUI
