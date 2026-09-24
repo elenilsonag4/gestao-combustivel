@@ -628,26 +628,43 @@ function getKmAtualVeiculo(placa) {
   return getKmAtualVeiculoSemManual(placa);
 }
 
-function calcularStatusProxima(placa, kmManut, proxima, unidade) {
-  if (!proxima || proxima === "" ) return { classe: "", texto: "-", restante: null };
+function calcularStatusProxima(placa, tipo, data, kmManut, proxima, unidade, indexAtual) {
+  if (!proxima || proxima === "") return { classe: "", texto: "-", restante: null };
+
+  // VERIFICA SE ESSA MANUTENÇÃO É A ÚLTIMA DO MESMO TIPO E MESMO VEÍCULO
+  const ehUltima =!DB.manutencao.some((r, idx) => {
+    if (idx === indexAtual) return false;
+    if (r[2]!== placa) return false;
+    if (r[4]!== tipo) return false; // mesmo tipo: TROCA DE ÓLEO
+    // Se tem data maior, é mais nova
+    if (r[0] > data) return true;
+    // Se mesma data mas KM maior, é mais nova
+    if (r[0] === data && Number(r[5]) > Number(kmManut)) return true;
+    return false;
+  });
+
+  if (!ehUltima) {
+    return { classe: "status-concluido", texto: "CONCLUÍDO", restante: null };
+  }
+
   const proxNum = Number(proxima);
-  const kmAtual = getKmAtualVeiculo(placa);
-  const baseAtual = kmAtual > 0? kmAtual : Number(kmManut) || 0;
+  const kmNum = Number(kmManut) || 0;
+  const restante = proxNum - kmNum;
   const unidadeU = unidade || "KM";
 
   if (unidadeU === "H") {
-    const rodadas = baseAtual - Number(kmManut);
-    const restante = proxNum - baseAtual;
-    if (rodadas > 250 || restante < 0) {
-      return { classe: "status-vermelho", texto: `VENCIDO`, restante };
+    // REGRA GERADOR: até 200H verde, 201-250H laranja, >250H vermelho
+    const rodadas = 0; // para registro atual, rodadas = 0
+    // Na verdade para última troca, o restante é que importa
+    if (restante <= 0) {
+      return { classe: "status-vermelho", texto: "VENCIDO", restante };
     }
-    if (rodadas >= 200) {
+    if (restante <= 50) {
       return { classe: "status-laranja", texto: `${restante}H REST.`, restante };
     }
     return { classe: "status-verde", texto: `${restante}H REST.`, restante };
   } else {
-    const restante = proxNum - baseAtual;
-    if (restante <= 0) return { classe: "status-vermelho", texto: `VENCIDO`, restante };
+    if (restante <= 0) return { classe: "status-vermelho", texto: "VENCIDO", restante };
     if (restante <= 1000) return { classe: "status-laranja", texto: `${restante}KM REST.`, restante };
     return { classe: "status-verde", texto: `${restante}KM REST.`, restante };
   }
